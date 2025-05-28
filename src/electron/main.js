@@ -98,14 +98,24 @@ function stopPythonServer() {
 }
 
 // IPC handlers for communication with renderer
-ipcMain.handle('dialog:openFile', async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-        properties: ['openFile', 'multiSelections'],
+ipcMain.handle('dialog:openFile', async (event, options = {}) => {
+    const defaultOptions = {
+        properties: ['openFile'],
         filters: [
             { name: 'Excel Files', extensions: ['xlsx', 'xls'] },
             { name: 'All Files', extensions: ['*'] }
         ]
-    });
+    };
+    
+    // Merge with provided options
+    const dialogOptions = { ...defaultOptions, ...options };
+    
+    // Add multiSelections if needed
+    if (options.multiple) {
+        dialogOptions.properties.push('multiSelections');
+    }
+    
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, dialogOptions);
     
     if (!canceled) {
         return filePaths;

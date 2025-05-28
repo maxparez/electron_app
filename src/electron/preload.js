@@ -4,7 +4,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
     // File dialogs
-    openFile: () => ipcRenderer.invoke('dialog:openFile'),
+    openFile: (options) => ipcRenderer.invoke('dialog:openFile', options),
     saveFile: (defaultName) => ipcRenderer.invoke('dialog:saveFile', defaultName),
     
     // API calls to Python backend
@@ -44,12 +44,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     
     // File operations
-    uploadFiles: async (endpoint, files, options = {}) => {
+    uploadFiles: async (endpoint, files, template = null, options = {}) => {
         const formData = new FormData();
         
         // Add files to form data
         for (const file of files) {
             formData.append('files', file);
+        }
+        
+        // Add template if provided
+        if (template) {
+            formData.append('template', template);
         }
         
         // Add options if provided

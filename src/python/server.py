@@ -7,8 +7,8 @@ import logging
 # Add tools directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
 
-# Import tools (to be implemented)
-# from tools.inv_vzd_processor import InvVzdProcessor
+# Import tools
+from tools.inv_vzd_processor import InvVzdProcessor
 # from tools.zor_spec_processor import ZorSpecProcessor
 # from tools.plakat_generator import PlakatGenerator
 
@@ -49,21 +49,160 @@ def process_inv_vzd():
             }), 400
         
         files = request.files.getlist('files')
-        options = request.form.get('options', {})
         
-        # TODO: Implement processing logic
-        logger.info(f"Processing {len(files)} files for inv-vzd")
+        # Get template file
+        if 'template' not in request.files:
+            return jsonify({
+                "status": "error", 
+                "message": "No template file provided"
+            }), 400
+            
+        template_file = request.files['template']
         
-        return jsonify({
-            "status": "success",
-            "message": f"Processing {len(files)} files",
-            "data": {
-                "processed": len(files)
-            }
-        })
+        # Parse options
+        import json
+        options = json.loads(request.form.get('options', '{}'))
+        
+        # Save files temporarily
+        import tempfile
+        temp_dir = tempfile.mkdtemp()
+        file_paths = []
+        
+        try:
+            # Save source files
+            for file in files:
+                file_path = os.path.join(temp_dir, file.filename)
+                file.save(file_path)
+                file_paths.append(file_path)
+                
+            # Save template
+            template_path = os.path.join(temp_dir, template_file.filename)
+            template_file.save(template_path)
+            
+            # Process with InvVzdProcessor
+            processor = InvVzdProcessor(logger)
+            
+            # Add template to options
+            options['template'] = template_path
+            options['output_dir'] = temp_dir
+            
+            # Process files
+            result = processor.process(file_paths, options)
+            
+            if result['success']:
+                # Read output files and prepare response
+                output_files = []
+                for processed in result['data']['processed_files']:
+                    output_path = processed['output']
+                    with open(output_path, 'rb') as f:
+                        output_content = f.read()
+                        output_files.append({
+                            'filename': os.path.basename(output_path),
+                            'content': output_content.hex(),  # Convert to hex for JSON
+                            'source': os.path.basename(processed['source']),
+                            'hours': processed['hours']
+                        })
+                
+                return jsonify({
+                    "status": "success",
+                    "message": f"Úspěšně zpracováno {len(output_files)} souborů",
+                    "data": {
+                        "processed": len(output_files),
+                        "files": output_files
+                    },
+                    "errors": result.get('errors', []),
+                    "warnings": result.get('warnings', []),
+                    "info": result.get('info', [])
+                })
+            else:
+                return jsonify({
+                    "status": "error",
+                    "message": "Zpracování selhalo",
+                    "errors": result.get('errors', []),
+                    "warnings": result.get('warnings', [])
+                }), 400
+                
+        finally:
+            # Cleanup temp files
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
         
     except Exception as e:
         logger.error(f"Error processing inv-vzd: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@app.route('/api/process/inv-vzd-paths', methods=['POST'])
+def process_inv_vzd_paths():
+    """Process innovative education attendance files using file paths"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+            
+        file_paths = data.get('filePaths', [])
+        template_path = data.get('templatePath')
+        options = data.get('options', {})
+        
+        if not file_paths:
+            return jsonify({
+                "status": "error",
+                "message": "No file paths provided"
+            }), 400
+            
+        if not template_path:
+            return jsonify({
+                "status": "error",
+                "message": "No template path provided"
+            }), 400
+            
+        # Process with InvVzdProcessor
+        processor = InvVzdProcessor(logger)
+        
+        # Add template to options
+        options['template'] = template_path
+        
+        # Process files
+        result = processor.process(file_paths, options)
+        
+        if result['success']:
+            # Prepare response
+            output_files = []
+            for processed in result['data']['processed_files']:
+                output_files.append({
+                    'filename': os.path.basename(processed['output']),
+                    'source': os.path.basename(processed['source']),
+                    'hours': processed['hours'],
+                    'path': processed['output']
+                })
+            
+            return jsonify({
+                "status": "success",
+                "message": f"Úspěšně zpracováno {len(output_files)} souborů",
+                "data": {
+                    "processed": len(output_files),
+                    "files": output_files
+                },
+                "errors": result.get('errors', []),
+                "warnings": result.get('warnings', []),
+                "info": result.get('info', [])
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "Zpracování selhalo",
+                "errors": result.get('errors', []),
+                "warnings": result.get('warnings', [])
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Error processing inv-vzd-paths: {str(e)}")
         return jsonify({
             "status": "error",
             "message": str(e)

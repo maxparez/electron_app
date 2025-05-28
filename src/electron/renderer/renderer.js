@@ -6,6 +6,9 @@ const state = {
     selectedFiles: {
         'inv-vzd': [],
         'zor-spec': []
+    },
+    selectedTemplate: {
+        'inv-vzd': null
     }
 };
 
@@ -20,6 +23,8 @@ const elements = {
     invFilesList: document.getElementById('inv-files-list'),
     invProcessBtn: document.getElementById('process-inv-vzd'),
     invResults: document.getElementById('inv-vzd-results'),
+    invTemplateBtn: document.getElementById('select-inv-template'),
+    invTemplateName: document.getElementById('inv-template-name'),
     
     // Zor Spec elements
     zorSelectBtn: document.getElementById('select-zor-files'),
@@ -45,6 +50,7 @@ function init() {
     // Setup file selection buttons
     elements.invSelectBtn.addEventListener('click', () => selectFiles('inv-vzd'));
     elements.zorSelectBtn.addEventListener('click', () => selectFiles('zor-spec'));
+    elements.invTemplateBtn.addEventListener('click', selectInvTemplate);
     
     // Setup process buttons
     elements.invProcessBtn.addEventListener('click', processInvVzd);
@@ -90,14 +96,14 @@ async function checkBackendConnection() {
 // File selection
 async function selectFiles(tool) {
     try {
-        const filePaths = await window.electronAPI.openFile();
+        const filePaths = await window.electronAPI.openFile({ multiple: true });
         if (filePaths.length > 0) {
             state.selectedFiles[tool] = filePaths;
             updateFilesList(tool);
             
             // Enable process button
             if (tool === 'inv-vzd') {
-                elements.invProcessBtn.disabled = false;
+                checkInvVzdReady();
             } else if (tool === 'zor-spec') {
                 elements.zorProcessBtn.disabled = false;
             }
@@ -128,6 +134,31 @@ function updateFilesList(tool) {
     }
 }
 
+// Select template for Inv Vzd
+async function selectInvTemplate() {
+    try {
+        const filePaths = await window.electronAPI.openFile();
+        if (filePaths.length > 0) {
+            state.selectedTemplate['inv-vzd'] = filePaths[0];
+            const fileName = filePaths[0].split(/[\\/]/).pop();
+            elements.invTemplateName.textContent = fileName;
+            
+            // Enable process button if both template and files are selected
+            checkInvVzdReady();
+        }
+    } catch (error) {
+        console.error('Template selection error:', error);
+        showMessage('Chyba při výběru šablony', 'error');
+    }
+}
+
+// Check if Inv Vzd is ready to process
+function checkInvVzdReady() {
+    const hasTemplate = state.selectedTemplate['inv-vzd'] !== null;
+    const hasFiles = state.selectedFiles['inv-vzd'].length > 0;
+    elements.invProcessBtn.disabled = !(hasTemplate && hasFiles);
+}
+
 // Process Inv Vzd
 async function processInvVzd() {
     try {
@@ -136,30 +167,54 @@ async function processInvVzd() {
         // Get course type
         const courseType = document.querySelector('input[name="course-type"]:checked').value;
         
-        // Create file objects from paths
-        const files = await Promise.all(
-            state.selectedFiles['inv-vzd'].map(async (filePath) => {
-                const response = await fetch(`file://${filePath}`);
-                const blob = await response.blob();
-                const fileName = filePath.split(/[\\/]/).pop();
-                return new File([blob], fileName);
-            })
-        );
-        
-        // Upload and process files
-        const result = await window.electronAPI.uploadFiles('process/inv-vzd', files, {
-            courseType: courseType
+        // For now, we'll send file paths and let the backend handle file reading
+        // This is because we can't use file:// protocol in renderer
+        const result = await window.electronAPI.apiCall('process/inv-vzd-paths', 'POST', {
+            filePaths: state.selectedFiles['inv-vzd'],
+            templatePath: state.selectedTemplate['inv-vzd'],
+            options: {
+                courseType: courseType,
+                keep_filename: true,
+                optimize: false
+            }
         });
         
         showLoading(false);
         
-        // Display results
-        elements.invResults.innerHTML = `
-            <h3>Zpracování dokončeno</h3>
-            <p>${result.message}</p>
-            <p>Zpracováno souborů: ${result.data.processed}</p>
-        `;
-        elements.invResults.classList.add('show');
+        if (result.status === 'success') {
+            // Display results
+            let resultHtml = `
+                <h3>Zpracování dokončeno</h3>
+                <p>${result.message}</p>
+            `;
+            
+            if (result.data && result.data.files) {
+                resultHtml += '<h4>Zpracované soubory:</h4><ul>';
+                result.data.files.forEach(file => {
+                    resultHtml += `<li>${file.source} → ${file.filename} (${file.hours} hodin)</li>`;
+                });
+                resultHtml += '</ul>';
+            }
+            
+            // Show info messages
+            if (result.info && result.info.length > 0) {
+                resultHtml += '<h4>Informace:</h4><ul class="info-messages">';
+                result.info.forEach(msg => {
+                    resultHtml += `<li>${msg}</li>`;
+                });
+                resultHtml += '</ul>';
+            }
+            
+            elements.invResults.innerHTML = resultHtml;
+            elements.invResults.classList.add('show');
+        } else {
+            // Show errors
+            let errorMsg = result.message || 'Zpracování selhalo';
+            if (result.errors && result.errors.length > 0) {
+                errorMsg += '\n\nChyby:\n' + result.errors.join('\n');
+            }
+            showMessage(errorMsg, 'error');
+        }
         
     } catch (error) {
         showLoading(false);
