@@ -501,29 +501,73 @@ async function processZorSpec() {
         if (result.status === 'success') {
             // Display results with detailed information
             let resultHtml = `
-                <h3>Zpracování dokončeno ✅</h3>
-                <div class="result-summary">
-                    <p><strong>Zpracováno souborů:</strong> ${result.data.files_processed}</p>
-                    <p><strong>Unikátní žáci:</strong> ${result.data.unique_students}</p>
+                <div class="success-banner">
+                    <h3>✅ Zpracování dokončeno</h3>
+                    <div class="result-summary">
+                        <div class="summary-item">
+                            <span class="summary-icon">📊</span>
+                            <div>
+                                <div class="summary-label">Zpracováno souborů</div>
+                                <div class="summary-value">${result.data.files_processed}</div>
+                            </div>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-icon">👥</span>
+                            <div>
+                                <div class="summary-label">Unikátní žáci</div>
+                                <div class="summary-value">${result.data.unique_students}</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
             
             // Show output files with appropriate actions
             if (result.data.output_files && result.data.output_files.length > 0) {
                 if (result.data.auto_saved) {
-                    resultHtml += `<h4>Výstupní soubory (uloženy v ${result.data.output_directory}):</h4><div class="output-files">`;
+                    // Convert WSL path back to Windows format
+                    let displayPath = result.data.output_directory;
+                    let windowsPath = displayPath;
+                    
+                    // Convert /mnt/x/ to X:\ for Windows
+                    if (displayPath.startsWith('/mnt/')) {
+                        const driveLetter = displayPath[5].toUpperCase();
+                        windowsPath = `${driveLetter}:${displayPath.substring(6).replace(/\//g, '\\')}`;
+                        displayPath = windowsPath;
+                    }
+                    
+                    resultHtml += `
+                        <div class="output-section">
+                            <h4>📁 Výstupní soubory</h4>
+                            <p class="output-path">Uloženo v: <strong>${displayPath}</strong></p>
+                            <div class="output-files-grid">
+                    `;
+                    
                     result.data.output_files.forEach(file => {
-                        const fullPath = `${result.data.output_directory}/${file.filename}`.replace(/\\/g, '/');
+                        // Build correct Windows path for file
+                        const fullPath = windowsPath + '\\' + file.filename;
+                        const icon = file.filename.endsWith('.html') ? '📄' : '📝';
+                        
                         resultHtml += `
-                            <div class="file-item">
-                                <span class="file-name">${file.filename}</span>
-                                <span class="file-size">(${Math.round(file.size / 1024)} KB)</span>
-                                <button class="btn btn-small" onclick="openFile('${fullPath}')">
+                            <div class="output-file-card">
+                                <div class="file-info">
+                                    <span class="file-icon">${icon}</span>
+                                    <div class="file-details">
+                                        <span class="file-name">${file.filename}</span>
+                                        <span class="file-size">${Math.round(file.size / 1024)} KB</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary btn-small" onclick="openFile('${fullPath.replace(/\\/g, '\\\\')}')">
                                     👁️ Zobrazit
                                 </button>
                             </div>
                         `;
                     });
+                    
+                    resultHtml += `
+                            </div>
+                        </div>
+                    `;
                 } else {
                     resultHtml += '<h4>Výstupní soubory:</h4><div class="output-files">';
                     result.data.output_files.forEach(file => {
@@ -543,11 +587,18 @@ async function processZorSpec() {
             
             // Show info messages
             if (result.info && result.info.length > 0) {
-                resultHtml += '<h4>Informace:</h4><ul class="info-messages">';
+                resultHtml += `
+                    <div class="info-section">
+                        <h4>ℹ️ Informace</h4>
+                        <ul class="info-messages">
+                `;
                 result.info.forEach(msg => {
-                    resultHtml += `<li>ℹ️ ${msg}</li>`;
+                    resultHtml += `<li>${msg}</li>`;
                 });
-                resultHtml += '</ul>';
+                resultHtml += `
+                        </ul>
+                    </div>
+                `;
             }
             
             // Show warnings
