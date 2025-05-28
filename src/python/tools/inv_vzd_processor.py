@@ -747,6 +747,15 @@ class InvVzdProcessor(BaseTool):
                 self.add_info(f"Zapisuji {len(activities_data)} aktivit do Seznam aktivit")
                 sheet.range("C3").options(ndim="expand").value = activities_data.values
             
+            # STEP 3: Write overview to "Přehled" sheet at C3
+            sheet = wb.sheets['Přehled']
+            
+            # Create overview data (student-activity combinations)
+            overview_data = self._create_overview_data(student_names, data)
+            if len(overview_data) > 0:
+                self.add_info(f"Zapisuji {len(overview_data)} záznamů do Přehled")
+                sheet.range("C3").options(ndim="expand").value = overview_data
+            
             # Save as new file and close
             wb.save(output_path)
             wb.close()
@@ -784,6 +793,25 @@ class InvVzdProcessor(BaseTool):
             
         except Exception as e:
             self.add_error(f"Chyba při načítání jmen žáků: {str(e)}")
+            return []
+    
+    def _create_overview_data(self, student_names: List[str], activities_data: pd.DataFrame) -> List[List]:
+        """Create overview data combining students with activity numbers"""
+        try:
+            # Following original logic from create_orginal_file
+            overview_result = []
+            
+            # For each activity (numbered 1, 2, 3...)
+            for activity_num, (_, activity) in enumerate(activities_data.iterrows(), 1):
+                # Add all students for this activity
+                for student_name in student_names:
+                    overview_result.append([activity_num, student_name])
+            
+            self.add_info(f"Vytvořen přehled: {len(activities_data)} aktivit × {len(student_names)} žáků = {len(overview_result)} záznamů")
+            return overview_result
+            
+        except Exception as e:
+            self.add_error(f"Chyba při vytváření přehledu: {str(e)}")
             return []
             
     def process_paths(self, source_files: List[str], template_path: str, 
