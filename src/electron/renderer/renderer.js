@@ -593,7 +593,31 @@ async function processZorSpec() {
                         <ul class="info-messages">
                 `;
                 result.info.forEach(msg => {
-                    resultHtml += `<li>${msg}</li>`;
+                    // Check if message contains path info (format: "text: path||filename")
+                    if (msg.includes('||')) {
+                        const parts = msg.split('||');
+                        const text = parts[0];
+                        const filename = parts[1];
+                        
+                        // Extract full path from text
+                        const pathMatch = text.match(/: (.+)$/);
+                        if (pathMatch) {
+                            let fullPath = pathMatch[1];
+                            const description = text.substring(0, text.indexOf(':'));
+                            
+                            // Convert WSL path to Windows if needed
+                            if (fullPath.startsWith('/mnt/')) {
+                                const driveLetter = fullPath[5].toUpperCase();
+                                fullPath = `${driveLetter}:${fullPath.substring(6).replace(/\//g, '\\')}`;
+                            }
+                            
+                            resultHtml += `<li>${description}: <a href="#" onclick="openFile('${fullPath.replace(/\\/g, '\\\\')}'); return false;" class="file-link">${filename}</a></li>`;
+                        } else {
+                            resultHtml += `<li>${msg}</li>`;
+                        }
+                    } else {
+                        resultHtml += `<li>${msg}</li>`;
+                    }
                 });
                 resultHtml += `
                         </ul>

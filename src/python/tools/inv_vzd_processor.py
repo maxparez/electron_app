@@ -73,16 +73,20 @@ class InvVzdProcessor(BaseTool):
     def validate_inputs(self, files: List[str], options: Dict[str, Any]) -> bool:
         """Validate input files and options"""
         self.clear_messages()
+        self.logger.info(f"Validating inputs: {len(files)} files")
         
         # Check if files provided
         if not files:
             self.add_error("Žádné soubory nebyly poskytnuty")
+            self.logger.error("No files provided")
             return False
             
         # Check if template provided
         template = options.get('template')
+        self.logger.info(f"Template path: {template}")
         if not template:
             self.add_error("Šablona nebyla poskytnuta")
+            self.logger.error("No template provided")
             return False
             
         # Check if template exists
@@ -110,7 +114,11 @@ class InvVzdProcessor(BaseTool):
         
     def process(self, files: List[str], options: Dict[str, Any]) -> Dict[str, Any]:
         """Process attendance files"""
+        self.logger.info(f"InvVzdProcessor.process called with {len(files)} files")
+        self.logger.info(f"Options: {options}")
+        
         if not self.validate_inputs(files, options):
+            self.logger.error("Input validation failed")
             return self.get_result(False)
             
         try:

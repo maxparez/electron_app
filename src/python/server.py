@@ -277,9 +277,12 @@ def process_inv_vzd():
 def process_inv_vzd_paths():
     """Process innovative education attendance files using file paths"""
     try:
+        logger.info("=== InvVzd Processing Started ===")
         data = request.get_json()
+        logger.info(f"Received data: {data}")
         
         if not data:
+            logger.error("No data provided in request")
             return jsonify({
                 "status": "error",
                 "message": "No data provided"
@@ -324,19 +327,24 @@ def process_inv_vzd_paths():
             }), 400
             
         if not template_path:
+            logger.error("No template path provided")
             return jsonify({
                 "status": "error",
                 "message": "No template path provided"
             }), 400
-            
+        
+        logger.info("Creating InvVzdProcessor...")
         # Process with InvVzdProcessor
         processor = InvVzdProcessor(logger)
         
         # Add template to options
         options['template'] = template_path
+        logger.info(f"Processing with options: {options}")
         
         # Process files
+        logger.info(f"Starting to process {len(file_paths)} files...")
         result = processor.process(file_paths, options)
+        logger.info(f"Processing result: success={result.get('success')}, errors={result.get('errors', [])}")
         
         if result['success']:
             # Prepare response
@@ -368,6 +376,7 @@ def process_inv_vzd_paths():
                 "info": result.get('info', [])
             })
         else:
+            logger.error(f"Processing failed. Errors: {result.get('errors', [])}")
             # Enhanced error message for path issues
             errors = result.get('errors', [])
             enhanced_errors = []
@@ -377,6 +386,7 @@ def process_inv_vzd_paths():
                 else:
                     enhanced_errors.append(error)
             
+            logger.error(f"Returning error response with errors: {enhanced_errors}")
             return jsonify({
                 "status": "error", 
                 "message": "Zpracování selhalo",

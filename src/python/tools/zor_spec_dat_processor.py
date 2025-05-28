@@ -113,8 +113,8 @@ class ZorSpecDatProcessor(BaseTool):
                 "output_files": [html_file, txt_file]
             }
             
-            self.add_info(f"Report uložen: {os.path.basename(html_file)}")
-            self.add_info(f"Seznam žáků uložen: {os.path.basename(txt_file)}")
+            self.add_info(f"Report uložen: {html_file}||{os.path.basename(html_file)}")
+            self.add_info(f"Seznam žáků uložen: {txt_file}||{os.path.basename(txt_file)}")
             
             return self.get_result(True, processed_data)
             

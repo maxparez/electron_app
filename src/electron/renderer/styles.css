@@ -653,6 +653,18 @@ h3.error {
     border-bottom: none;
 }
 
+.info-section .file-link {
+    color: #1565c0;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.info-section .file-link:hover {
+    color: #0d47a1;
+    text-decoration: underline;
+}
+
 /* Success banner styling */
 .success-banner {
     background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);

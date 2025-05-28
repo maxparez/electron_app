@@ -86,7 +86,9 @@ class BaseTool(ABC):
     
     def file_exists(self, filepath: str) -> bool:
         """Check if file exists"""
-        return os.path.isfile(filepath)
+        exists = os.path.isfile(filepath)
+        self.logger.info(f"Checking file exists: {filepath} -> {exists}")
+        return exists
     
     def create_output_path(self, base_path: str, suffix: str = "") -> str:
         """Create output file path"""
