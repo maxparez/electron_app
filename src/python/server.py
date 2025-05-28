@@ -151,6 +151,22 @@ def process_inv_vzd_paths():
         template_path = data.get('templatePath')
         options = data.get('options', {})
         
+        # Convert Windows paths to WSL paths if needed
+        def convert_path_if_needed(path):
+            if path and isinstance(path, str):
+                # Check if it's a Windows path (e.g., D:\path or C:\path)
+                if len(path) >= 3 and path[1:3] == ':\\':
+                    drive_letter = path[0].lower()
+                    remaining_path = path[3:].replace('\\', '/')
+                    wsl_path = f'/mnt/{drive_letter}/{remaining_path}'
+                    logger.info(f"Converting Windows path to WSL: {path} -> {wsl_path}")
+                    return wsl_path
+            return path
+        
+        # Convert paths
+        template_path = convert_path_if_needed(template_path)
+        file_paths = [convert_path_if_needed(fp) for fp in file_paths]
+        
         if not file_paths:
             return jsonify({
                 "status": "error",
@@ -195,10 +211,19 @@ def process_inv_vzd_paths():
                 "info": result.get('info', [])
             })
         else:
+            # Enhanced error message for path issues
+            errors = result.get('errors', [])
+            enhanced_errors = []
+            for error in errors:
+                if 'neexistuje' in error and ('D:\\' in error or 'C:\\' in error):
+                    enhanced_errors.append(f"{error} - PROBLÉM: Používáte Windows cestu na Linux systému. Zkopírujte soubory do Linux souborového systému nebo použijte WSL mount cestu (např. /mnt/d/...)")
+                else:
+                    enhanced_errors.append(error)
+            
             return jsonify({
-                "status": "error",
+                "status": "error", 
                 "message": "Zpracování selhalo",
-                "errors": result.get('errors', []),
+                "errors": enhanced_errors,
                 "warnings": result.get('warnings', [])
             }), 400
             
