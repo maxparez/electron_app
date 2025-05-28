@@ -724,16 +724,12 @@ class InvVzdProcessor(BaseTool):
             # Following original approach: open template directly, fill data, save as new file
             wb = xw.Book(template_path)
             
-            # Get the main sheet (first sheet - "Seznam účastníků") 
-            sheet = wb.sheets[0]
+            # Write to "Seznam aktivit" sheet like in original
+            sheet = wb.sheets['Seznam aktivit']
             
-            # Write data starting from appropriate row
-            start_row = self.config["skiprows"] + 2  # +2 for header row and 0-based index
-            start_col = 2  # Column B
-            
-            # Write data if we have any
+            # Write data starting from C3 like in original
             if len(data) > 0:
-                sheet.range((start_row, start_col)).value = data.values
+                sheet.range("C3").options(ndim="expand").value = data.values
                 
             # Update total hours cell
             hours_cell = self.config["hours_total_cell"]
