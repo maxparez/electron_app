@@ -515,3 +515,32 @@ h3.error {
     color: #856404;
     border-left: 3px solid #ffc107;
 }
+
+/* Clickable features on home screen */
+.clickable-feature {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.clickable-feature:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background-color: #f8f9fa;
+}
+
+.clickable-feature:active {
+    transform: translateY(0);
+}
+
+/* Enhanced navigation styling */
+.nav-item[data-tool="welcome"] {
+    border-bottom: 1px solid #495057;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+}
+
+.nav-item.active {
+    background-color: #495057;
+    color: white;
+    border-radius: 6px;
+}

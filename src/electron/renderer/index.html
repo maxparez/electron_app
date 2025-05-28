@@ -12,13 +12,17 @@
         <!-- Sidebar Navigation -->
         <nav class="sidebar">
             <h2 class="sidebar-title" data-i18n="navigation.tools">Nástroje</h2>
+            <div class="nav-item" data-tool="welcome">
+                <i class="icon">🏠</i>
+                <span data-i18n="navigation.home">Domů</span>
+            </div>
             <div class="nav-item" data-tool="inv-vzd">
                 <i class="icon">📝</i>
                 <span data-i18n="navigation.invVzd">Inovativní vzdělávání</span>
             </div>
             <div class="nav-item" data-tool="zor-spec">
                 <i class="icon">📊</i>
-                <span data-i18n="navigation.zorSpec">Speciální data</span>
+                <span data-i18n="navigation.zorSpec">Specifické datové položky</span>
             </div>
             <div class="nav-item" data-tool="plakat">
                 <i class="icon">🖼️</i>
@@ -33,17 +37,17 @@
                 <h1>Vítejte v aplikaci pro zpracování projektové dokumentace</h1>
                 <p>Vyberte nástroj z levého menu pro začátek práce.</p>
                 <div class="features">
-                    <div class="feature">
+                    <div class="feature clickable-feature" data-tool="inv-vzd">
                         <h3>📝 Inovativní vzdělávání</h3>
-                        <p>Zpracování docházky pro 16 a 32 hodinové kurzy inovativního vzdělávání.</p>
+                        <p>Zpracování docházky pro 16 a 32 hodinové inovativního vzdělávání.</p>
                     </div>
-                    <div class="feature">
-                        <h3>📊 Speciální data</h3>
-                        <p>Zpracování docházky z více tříd a generování HTML reportů.</p>
+                    <div class="feature clickable-feature" data-tool="zor-spec">
+                        <h3>📊 Specifické datové položky</h3>
+                        <p>Zpracování specifických datových položek do ZoR.</p>
                     </div>
-                    <div class="feature">
+                    <div class="feature clickable-feature" data-tool="plakat">
                         <h3>🖼️ Generátor plakátů</h3>
-                        <p>Vytvoření PDF plakátů pro projekty.</p>
+                        <p>Vytvoření PDF plakátů povinné publicity.</p>
                     </div>
                 </div>
             </div>
@@ -80,9 +84,9 @@
             
             <!-- Zor Spec Tool -->
             <div id="zor-spec-tool" class="tool-content">
-                <h2>Speciální data - Zpracování docházky</h2>
+                <h2>Specifické datové položky - Zpracování do ZoR</h2>
                 <div class="tool-description">
-                    <p>Zpracování docházky z více tříd a generování HTML reportů s unikátními seznamy studentů.</p>
+                    <p>Zpracování specifických datových položek do ZoR.</p>
                 </div>
                 
                 <div class="form-group">

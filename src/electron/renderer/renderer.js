@@ -51,6 +51,15 @@ function init() {
         });
     });
     
+    // Setup clickable features on home screen
+    const clickableFeatures = document.querySelectorAll('.clickable-feature');
+    clickableFeatures.forEach(feature => {
+        feature.addEventListener('click', () => {
+            const tool = feature.dataset.tool;
+            switchTool(tool);
+        });
+    });
+    
     // Setup file selection buttons
     elements.invSelectBtn.addEventListener('click', () => selectFiles('inv-vzd'));
     elements.invFolderBtn.addEventListener('click', selectInvFolder);
