@@ -211,10 +211,17 @@ def process_inv_vzd_paths():
             # Prepare response
             output_files = []
             for processed in result['data']['processed_files']:
+                # Convert numpy/pandas types to native Python types for JSON serialization
+                hours_value = processed['hours']
+                if hasattr(hours_value, 'item'):
+                    hours_value = hours_value.item()  # Convert numpy/pandas scalar to Python type
+                elif hasattr(hours_value, 'tolist'):
+                    hours_value = hours_value.tolist()  # Convert numpy array to list
+                
                 output_files.append({
                     'filename': os.path.basename(processed['output']),
                     'source': os.path.basename(processed['source']),
-                    'hours': processed['hours'],
+                    'hours': int(hours_value) if hours_value is not None else 0,
                     'path': processed['output']
                 })
             
