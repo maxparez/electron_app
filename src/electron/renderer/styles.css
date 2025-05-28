@@ -54,6 +54,9 @@ body {
 .nav-item .icon {
     font-size: 20px;
     margin-right: 12px;
+    font-style: normal;
+    font-weight: normal;
+    text-decoration: none;
 }
 
 /* Main Content */
