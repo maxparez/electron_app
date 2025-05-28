@@ -721,29 +721,24 @@ class InvVzdProcessor(BaseTool):
                                 data: pd.DataFrame, source_file: str):
         """Copy template file and fill with data using xlwings - following original approach"""
         try:
-            # Following original approach: open template directly, fill data, save as new file
+            # Following original approach exactly: visible=True, no unprotect
+            app = xw.App(visible=True)
             wb = xw.Book(template_path)
             
             # STEP 1: Write student names to "Seznam účastníků" sheet at B4
             sheet = wb.sheets['Seznam účastníků']
             
-            # Unprotect sheet if protected
-            try:
-                sheet.api.Unprotect()
-            except:
-                pass  # Sheet might not be protected
-            
             # Extract student names from source file (column B, from row 11 until two empty rows)
             student_names = self._extract_student_names_from_data(source_file)
             
-            # Write student names starting at B4 (one by one)
+            # Write student names exactly like original
             if len(student_names) > 0:
-                for i, name in enumerate(student_names):
-                    sheet.range(f"B{4+i}").value = name
+                sheet.range("B4").options(ndim="expand", transpose=True).value = student_names
             
             # Save as new file and close
             wb.save(output_path)
             wb.close()
+            app.quit()
             
         except Exception as e:
             self.add_error(f"Chyba při kopírování šablony: {str(e)}")
