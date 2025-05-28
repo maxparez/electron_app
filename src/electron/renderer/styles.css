@@ -467,3 +467,51 @@ h3.error {
     background-color: #fdf2f2;
     border-left-color: #e74c3c;
 }
+
+/* File processing blocks */
+.file-processing-block {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.file-header {
+    font-size: 16px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.processing-steps {
+    margin-left: 20px;
+}
+
+.processing-step {
+    margin: 8px 0;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.processing-step.success {
+    background-color: #d4edda;
+    color: #155724;
+    border-left: 3px solid #28a745;
+}
+
+.processing-step.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left: 3px solid #dc3545;
+}
+
+.processing-step.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border-left: 3px solid #ffc107;
+}

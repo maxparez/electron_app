@@ -354,27 +354,16 @@ async function processInvVzd() {
         showLoading(false);
         
         if (result.status === 'success') {
-            // Display results
-            let resultHtml = `
-                <h3>Zpracování dokončeno</h3>
-                <p>${result.message}</p>
-            `;
+            // Display results with improved formatting
+            let resultHtml = `<h3>Zpracování dokončeno ✅</h3>`;
             
             if (result.data && result.data.files) {
-                resultHtml += '<h4>Zpracované soubory:</h4><ul>';
-                result.data.files.forEach(file => {
-                    resultHtml += `<li>${file.source} → ${file.filename} (${file.hours} hodin)</li>`;
+                // Group messages by source file
+                const fileBlocks = result.data.files.map(file => {
+                    return formatFileProcessingBlock(file, result.info, result.warnings, result.errors);
                 });
-                resultHtml += '</ul>';
-            }
-            
-            // Show info messages
-            if (result.info && result.info.length > 0) {
-                resultHtml += '<h4>Informace:</h4><ul class="info-messages">';
-                result.info.forEach(msg => {
-                    resultHtml += `<li>${msg}</li>`;
-                });
-                resultHtml += '</ul>';
+                
+                resultHtml += fileBlocks.join('');
             }
             
             elements.invResults.innerHTML = resultHtml;
@@ -767,6 +756,82 @@ async function saveFilesAutomatically(files, targetFolder) {
     }
     
     return results;
+}
+
+// Format file processing block with steps
+function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMessages) {
+    const sourceBasename = file.source.split(/[/\\]/).pop();
+    
+    let blockHtml = `
+        <div class="file-processing-block">
+            <div class="file-header">
+                📄 <strong>${sourceBasename} → ${file.filename} (${file.hours} hodin)</strong>
+            </div>
+            <div class="processing-steps">
+    `;
+    
+    // Filter messages for this file
+    const fileMessages = (infoMessages || []).filter(msg => 
+        msg.includes(sourceBasename) || msg.includes(file.filename.replace('.xlsx', ''))
+    );
+    
+    // Add processing steps
+    const steps = [
+        { pattern: /Načteno (\d+) jmen žáků/, icon: '👥', label: 'Načítání žáků' },
+        { pattern: /Zapisuji (\d+) aktivit do Seznam aktivit/, icon: '📋', label: 'Zapisování aktivit' },
+        { pattern: /Zapisuji (\d+) záznamů do Přehled/, icon: '📊', label: 'Vytváření přehledu' },
+        { pattern: /Všechny součty souhlasí/, icon: '✅', label: 'Kontrola SDP', success: true },
+        { pattern: /NESOUHLASÍ součty/, icon: '❌', label: 'Kontrola SDP', error: true }
+    ];
+    
+    steps.forEach((step, index) => {
+        const matchingMsg = fileMessages.find(msg => step.pattern.test(msg));
+        if (matchingMsg) {
+            const isSuccess = step.success || (!step.error);
+            const icon = step.error ? '❌' : (step.success ? '✅' : '✅');
+            blockHtml += `
+                <div class="processing-step ${isSuccess ? 'success' : 'error'}">
+                    ${icon} <strong>Krok ${index + 1}:</strong> ${matchingMsg}
+                </div>
+            `;
+        }
+    });
+    
+    // Add any warnings or errors for this file
+    const fileWarnings = (warningMessages || []).filter(msg => 
+        msg.includes(sourceBasename) || msg.includes(file.filename.replace('.xlsx', ''))
+    );
+    
+    const fileErrors = (errorMessages || []).filter(msg => 
+        msg.includes(sourceBasename) || msg.includes(file.filename.replace('.xlsx', ''))
+    );
+    
+    if (fileWarnings.length > 0) {
+        fileWarnings.forEach(warning => {
+            blockHtml += `
+                <div class="processing-step warning">
+                    ⚠️ <strong>Upozornění:</strong> ${warning}
+                </div>
+            `;
+        });
+    }
+    
+    if (fileErrors.length > 0) {
+        fileErrors.forEach(error => {
+            blockHtml += `
+                <div class="processing-step error">
+                    ❌ <strong>Chyba:</strong> ${error}
+                </div>
+            `;
+        });
+    }
+    
+    blockHtml += `
+            </div>
+        </div>
+    `;
+    
+    return blockHtml;
 }
 
 // Initialize when DOM is ready
