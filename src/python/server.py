@@ -155,19 +155,20 @@ def process_inv_vzd_paths():
         logger.info(f"Original template_path: {template_path}")
         logger.info(f"Original file_paths: {file_paths}")
         
-        # Convert Windows paths to WSL paths if needed
+        # Convert Windows paths to WSL paths if needed (only on Linux/WSL)
         def convert_path_if_needed(path):
             if path and isinstance(path, str):
                 logger.info(f"Checking path for conversion: {path}")
-                # Check if it's a Windows path (e.g., D:\path or C:\path)
-                if len(path) >= 3 and path[1:3] == ':\\':
+                # Only convert if we're on Linux/WSL and path is Windows format
+                import platform
+                if platform.system() == 'Linux' and len(path) >= 3 and path[1:3] == ':\\':
                     drive_letter = path[0].lower()
                     remaining_path = path[3:].replace('\\', '/')
                     wsl_path = f'/mnt/{drive_letter}/{remaining_path}'
                     logger.info(f"Converting Windows path to WSL: {path} -> {wsl_path}")
                     return wsl_path
                 else:
-                    logger.info(f"Path does not match Windows pattern, keeping as-is: {path}")
+                    logger.info(f"Path does not match Windows pattern or not on Linux, keeping as-is: {path}")
             return path
         
         # Convert paths
@@ -355,11 +356,12 @@ def process_zor_spec_paths():
         file_paths = data.get('filePaths', [])
         options = data.get('options', {})
         
-        # Convert Windows paths to WSL paths if needed
+        # Convert Windows paths to WSL paths if needed (only on Linux/WSL)
         def convert_path_if_needed(path):
             if path and isinstance(path, str):
-                # Check if it's a Windows path (e.g., D:\path or C:\path)
-                if len(path) >= 3 and path[1:3] == ':\\':
+                # Only convert if we're on Linux/WSL and path is Windows format
+                import platform
+                if platform.system() == 'Linux' and len(path) >= 3 and path[1:3] == ':\\':
                     drive_letter = path[0].lower()
                     remaining_path = path[3:].replace('\\', '/')
                     wsl_path = f'/mnt/{drive_letter}/{remaining_path}'
