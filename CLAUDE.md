@@ -70,6 +70,10 @@ source venv/bin/activate         # Activate Python virtual environment
 npm run dev                      # Start Electron dev
 python src/python/server.py      # Start Python backend (in venv)
 
+# Debug mode (default ON for development)
+FLASK_DEBUG=true python src/python/server.py   # Debug ON
+FLASK_DEBUG=false python src/python/server.py  # Debug OFF (production)
+
 # Testing
 source venv/bin/activate && pytest  # Python tests (in venv)
 npm test                            # JavaScript tests
@@ -122,6 +126,7 @@ Ready to start development following PROJECT_PLAN.md timeline:
 - **Push to GitHub**: Minimum 2x per day, always before breaks
 - **Branch strategy**: main → develop → feature/fix branches
 - **See docs/GIT_WORKFLOW.md** for detailed Git workflow and conventions
+- **Always do commit & push**
 
 ### Quick Git Commands
 ```bash

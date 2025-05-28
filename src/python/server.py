@@ -5,6 +5,14 @@ import sys
 import logging
 import tempfile
 
+# DEBUG mode - set to False for production
+DEBUG_MODE = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+
+def debug_print(*args, **kwargs):
+    """Print debug messages only in DEBUG_MODE"""
+    if DEBUG_MODE:
+        print(*args, **kwargs)
+
 # Add tools directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
 
@@ -282,14 +290,14 @@ def process_inv_vzd():
 def process_inv_vzd_paths():
     """Process innovative education attendance files using file paths"""
     try:
-        print("=== InvVzd Processing Started ===")
+        debug_print("=== InvVzd Processing Started ===")
         logger.info("=== InvVzd Processing Started ===")
         data = request.get_json()
-        print(f"Received data: {data}")
+        debug_print(f"Received data: {data}")
         logger.info(f"Received data: {data}")
         
         if not data:
-            print("ERROR: No data provided in request")
+            debug_print("ERROR: No data provided in request")
             logger.error("No data provided in request")
             return jsonify({
                 "status": "error",
@@ -403,10 +411,10 @@ def process_inv_vzd_paths():
             }), 400
             
     except Exception as e:
-        print(f"EXCEPTION in inv-vzd-paths: {str(e)}")
+        debug_print(f"EXCEPTION in inv-vzd-paths: {str(e)}")
         logger.error(f"Error processing inv-vzd-paths: {str(e)}")
         import traceback
-        print(traceback.format_exc())
+        debug_print(traceback.format_exc())
         return jsonify({
             "status": "error",
             "message": str(e)
