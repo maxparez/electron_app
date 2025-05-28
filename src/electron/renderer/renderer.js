@@ -403,30 +403,11 @@ async function processZorSpec() {
     try {
         showLoading(true);
         
-        // Create file objects from paths
-        const files = await Promise.all(
-            state.selectedFiles['zor-spec'].map(async (filePath) => {
-                const response = await fetch(`file://${filePath}`);
-                const blob = await response.blob();
-                const fileName = filePath.split(/[\\/]/).pop();
-                return new File([blob], fileName);
-            })
-        );
-        
-        // Prepare form data
-        const formData = new FormData();
-        
-        // Add files
-        files.forEach(file => {
-            formData.append('files', file);
+        // Use path-based processing like InvVzd
+        const result = await window.electronAPI.apiCall('process/zor-spec-paths', 'POST', {
+            filePaths: state.selectedFiles['zor-spec'],
+            options: {}
         });
-        
-        // Add options
-        const options = {};
-        formData.append('options', JSON.stringify(options));
-        
-        // Upload and process files
-        const result = await window.electronAPI.uploadFormData('process/zor-spec', formData);
         
         showLoading(false);
         

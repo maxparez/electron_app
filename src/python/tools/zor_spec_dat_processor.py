@@ -488,3 +488,50 @@ class ZorSpecDatProcessor(BaseTool):
             return output_file
         except Exception as e:
             raise Exception(f"Chyba při ukládání seznamu žáků: {str(e)}")
+            
+    def process_paths(self, file_paths: List[str], output_dir: str, options: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Process files using file paths (for compatibility with API)
+        
+        Args:
+            file_paths: List of file paths to process
+            output_dir: Output directory for results
+            options: Additional processing options
+            
+        Returns:
+            Processing result dictionary
+        """
+        if options is None:
+            options = {}
+            
+        # Add output_dir to options
+        options['output_dir'] = output_dir
+        
+        # Use the existing process method
+        result = self.process(file_paths, options)
+        
+        # Return in the expected format for API
+        if result['success']:
+            return {
+                'success': True,
+                'files_processed': result['data']['files_processed'],
+                'unique_students': result['data']['unique_students'],
+                'output_files': [
+                    {
+                        'filename': os.path.basename(path),
+                        'path': path,
+                        'type': 'html' if path.endswith('.html') else 'text'
+                    }
+                    for path in result['data']['output_files']
+                ],
+                'errors': result.get('errors', []),
+                'warnings': result.get('warnings', []),
+                'info': result.get('info', [])
+            }
+        else:
+            return {
+                'success': False,
+                'errors': result.get('errors', []),
+                'warnings': result.get('warnings', []),
+                'info': result.get('info', [])
+            }

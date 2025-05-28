@@ -329,6 +329,107 @@ def process_zor_spec():
             "message": str(e)
         }), 500
 
+@app.route('/api/process/zor-spec-paths', methods=['POST'])
+def process_zor_spec_paths():
+    """Process ZorSpec attendance files using file paths"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+            
+        file_paths = data.get('filePaths', [])
+        options = data.get('options', {})
+        
+        # Convert Windows paths to WSL paths if needed
+        def convert_path_if_needed(path):
+            if path and isinstance(path, str):
+                # Check if it's a Windows path (e.g., D:\path or C:\path)
+                if len(path) >= 3 and path[1:3] == ':\\':
+                    drive_letter = path[0].lower()
+                    remaining_path = path[3:].replace('\\', '/')
+                    wsl_path = f'/mnt/{drive_letter}/{remaining_path}'
+                    logger.info(f"Converting Windows path to WSL: {path} -> {wsl_path}")
+                    return wsl_path
+            return path
+        
+        # Convert paths
+        file_paths = [convert_path_if_needed(fp) for fp in file_paths]
+        
+        if not file_paths:
+            return jsonify({
+                "status": "error",
+                "message": "No file paths provided"
+            }), 400
+        
+        # Create temporary directory for processing
+        temp_dir = tempfile.mkdtemp()
+        
+        try:
+            # Process with ZorSpecDatProcessor
+            processor = ZorSpecDatProcessor(logger)
+            
+            # Process files using paths directly
+            result = processor.process_paths(file_paths, temp_dir, options)
+            
+            if result['success']:
+                # Prepare response with output files
+                output_files = []
+                for output_file in result['output_files']:
+                    # Read file content for download
+                    with open(output_file['path'], 'rb') as f:
+                        file_content = f.read()
+                        output_files.append({
+                            'filename': output_file['filename'],
+                            'content': file_content.hex(),  # Convert to hex for JSON
+                            'size': len(file_content),
+                            'type': output_file.get('type', 'file')
+                        })
+                
+                return jsonify({
+                    "status": "success",
+                    "message": f"Úspěšně zpracováno {result['files_processed']} souborů",
+                    "data": {
+                        "files_processed": result['files_processed'],
+                        "unique_students": result['unique_students'],
+                        "output_files": output_files
+                    },
+                    "errors": result.get('errors', []),
+                    "warnings": result.get('warnings', []),
+                    "info": result.get('info', [])
+                })
+            else:
+                # Enhanced error message for path issues
+                errors = result.get('errors', [])
+                enhanced_errors = []
+                for error in errors:
+                    if 'neexistuje' in error and ('D:\\' in error or 'C:\\' in error):
+                        enhanced_errors.append(f"{error} - PROBLÉM: Používáte Windows cestu na Linux systému. Zkopírujte soubory do Linux souborového systému nebo použijte WSL mount cestu (např. /mnt/d/...)")
+                    else:
+                        enhanced_errors.append(error)
+                
+                return jsonify({
+                    "status": "error",
+                    "message": "Zpracování selhalo",
+                    "errors": enhanced_errors,
+                    "warnings": result.get('warnings', [])
+                }), 400
+                
+        finally:
+            # Cleanup temp files
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            
+    except Exception as e:
+        logger.error(f"Error processing zor-spec-paths: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
 @app.route('/api/process/zor-spec-directory', methods=['POST'])
 def process_zor_spec_directory():
     """Process special attendance data from directory"""
