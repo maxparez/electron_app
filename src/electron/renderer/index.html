@@ -117,12 +117,21 @@
                 
                 <form id="plakat-form">
                     <div class="form-group">
-                        <label for="projects-input">Projekty (ID - Název, jeden na řádek):</label>
+                        <label>Složka pro uložení plakátů:</label>
+                        <div class="folder-selector">
+                            <input type="text" id="plakat-folder" readonly class="folder-path">
+                            <button type="button" class="btn btn-secondary" id="select-plakat-folder">Vybrat složku</button>
+                        </div>
+                        <small class="form-hint">Plakáty budou automaticky uloženy do této složky</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="projects-input">Projekty (jeden na řádek):</label>
                         <textarea id="projects-input" rows="6" required 
-                                  placeholder="CZ.02.2.67/0.0/0.0/23_10001 - Název prvního projektu&#10;CZ.02.2.67/0.0/0.0/23_10002 - Název druhého projektu"></textarea>
+                                  placeholder="CZ.02.2.67/0.0/0.0/23_10001;Název prvního projektu&#10;CZ.02.2.67/0.0/0.0/23_10002;Název druhého projektu"></textarea>
                         <small class="form-hint">
-                            Formát: ID - Název projektu (jeden projekt na řádek)<br>
-                            Podporované oddělovače: " - ", "," nebo tabulátor
+                            Formát: ID;Název projektu nebo ID[TAB]Název projektu<br>
+                            Podporované oddělovače: středník (;) nebo tabulátor
                         </small>
                     </div>
                     

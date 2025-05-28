@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const axios = require('axios');
+const config = require('./config');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -150,6 +151,43 @@ ipcMain.handle('file:write', async (event, filePath, data) => {
         console.error('File write error:', error);
         throw error;
     }
+});
+
+ipcMain.handle('dialog:selectFolder', async (event, options = {}) => {
+    const defaultOptions = {
+        properties: ['openDirectory'],
+        title: 'Vyberte složku pro uložení',
+        buttonLabel: 'Vybrat složku'
+    };
+    
+    // Use last selected folder as default
+    const lastFolder = config.get(options.configKey || 'lastFolder');
+    if (lastFolder) {
+        defaultOptions.defaultPath = lastFolder;
+    }
+    
+    const dialogOptions = { ...defaultOptions, ...options };
+    
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, dialogOptions);
+    
+    if (!canceled && filePaths.length > 0) {
+        const selectedPath = filePaths[0];
+        // Save to config if configKey provided
+        if (options.configKey) {
+            config.set(options.configKey, selectedPath);
+        }
+        return selectedPath;
+    }
+    return null;
+});
+
+ipcMain.handle('config:get', (event, key) => {
+    return config.get(key);
+});
+
+ipcMain.handle('config:set', (event, key, value) => {
+    config.set(key, value);
+    return true;
 });
 
 // App event handlers

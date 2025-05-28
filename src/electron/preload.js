@@ -6,7 +6,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // File dialogs
     openFile: (options) => ipcRenderer.invoke('dialog:openFile', options),
     saveFile: (defaultName) => ipcRenderer.invoke('dialog:saveFile', defaultName),
+    selectFolder: (options) => ipcRenderer.invoke('dialog:selectFolder', options),
     writeFile: (path, data) => ipcRenderer.invoke('file:write', path, data),
+    
+    // Config
+    getConfig: (key) => ipcRenderer.invoke('config:get', key),
+    setConfig: (key, value) => ipcRenderer.invoke('config:set', key, value),
     
     // API calls to Python backend
     apiCall: async (endpoint, method = 'GET', data = null) => {

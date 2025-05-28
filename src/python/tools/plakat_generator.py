@@ -150,7 +150,8 @@ class PlakatGenerator(BaseTool):
         """Send project data to the service"""
         self.logger.info(f"Step 3: Sending project data for {project['id']}")
         
-        project_text = f"{project['id']} - {project['name']}"
+        # Use only project name on the poster, not the ID
+        project_text = project['name']
         target_html = f"<p>{common_text}</p>"
         
         form_data = {
@@ -294,15 +295,18 @@ class PlakatGenerator(BaseTool):
             return False, None, str(e)
     
     def _generate_filename(self, project_id: str) -> str:
-        """Generate filename from project ID"""
-        # Extract last digits from project ID for filename
-        digits = ''.join(filter(str.isdigit, project_id))
-        if len(digits) >= 3:
-            suffix = digits[-3:]
+        """Generate filename from project ID - extract last part after final slash"""
+        # Split by / and get the last part
+        parts = project_id.split('/')
+        if parts:
+            last_part = parts[-1]
+            # Remove leading zeros and use the whole number
+            # Example: 0021933 -> 21933
+            suffix = last_part.lstrip('0') or last_part[-1]  # Keep at least one digit
         else:
-            suffix = digits or "000"
+            suffix = "1"
         
-        return f"plakat_{suffix}.pdf"
+        return f"{suffix}_plakat.pdf"
     
     def process(self, files: List[str], options: Dict[str, Any]) -> Dict[str, Any]:
         """Process poster generation request"""

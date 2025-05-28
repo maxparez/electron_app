@@ -59,6 +59,25 @@ function init() {
     // Setup plakat form
     elements.plakatForm.addEventListener('submit', generatePlakat);
     
+    // Setup folder selection
+    const plakatFolderBtn = document.getElementById('select-plakat-folder');
+    const plakatFolderInput = document.getElementById('plakat-folder');
+    
+    if (plakatFolderBtn) {
+        plakatFolderBtn.addEventListener('click', async () => {
+            const folder = await window.electronAPI.selectFolder({
+                configKey: 'lastPlakatFolder',
+                title: 'Vyberte složku pro ukládání plakátů'
+            });
+            if (folder) {
+                plakatFolderInput.value = folder;
+            }
+        });
+    }
+    
+    // Load last selected folder
+    loadLastFolder();
+    
     // Check backend connection
     checkBackendConnection();
 }
@@ -354,34 +373,47 @@ async function generatePlakat(event) {
         showLoading(false);
         
         if (result.status === 'success') {
-            // Display results
-            let resultHtml = `
-                <h3>Plakáty vygenerovány ✅</h3>
-                <div class="result-summary">
-                    <p><strong>Úspěšně:</strong> ${result.data.successful_projects}/${result.data.total_projects}</p>
-                    ${result.data.failed_projects > 0 ? `<p><strong>Selhalo:</strong> ${result.data.failed_projects}</p>` : ''}
-                </div>
-            `;
+            // Get target folder
+            const targetFolder = document.getElementById('plakat-folder').value;
             
-            // Show output files
-            if (result.data.output_files && result.data.output_files.length > 0) {
-                resultHtml += '<h4>Vygenerované plakáty:</h4><div class="output-files">';
-                result.data.output_files.forEach(file => {
+            // Save files automatically
+            if (result.data.output_files && result.data.output_files.length > 0 && targetFolder) {
+                const saveResults = await saveFilesAutomatically(result.data.output_files, targetFolder);
+                
+                // Display results with save status
+                let resultHtml = `
+                    <h3>Plakáty vygenerovány ✅</h3>
+                    <div class="result-summary">
+                        <p><strong>Úspěšně:</strong> ${result.data.successful_projects}/${result.data.total_projects}</p>
+                        ${result.data.failed_projects > 0 ? `<p><strong>Selhalo:</strong> ${result.data.failed_projects}</p>` : ''}
+                        <p><strong>Složka:</strong> ${targetFolder}</p>
+                    </div>
+                `;
+                
+                resultHtml += '<h4>Uložené soubory:</h4><div class="output-files">';
+                saveResults.forEach((saveResult, index) => {
+                    const file = result.data.output_files[index];
                     resultHtml += `
                         <div class="file-item">
-                            <span class="file-name">${file.filename}</span>
+                            <span class="file-name">${saveResult.filename}</span>
                             <span class="file-size">(${Math.round(file.size / 1024)} KB)</span>
-                            <button class="btn btn-small" onclick="downloadFile('${file.filename}', '${file.content}')">
-                                💾 Stáhnout
-                            </button>
+                            <span class="file-status ${saveResult.success ? 'success' : 'error'}">
+                                ${saveResult.success ? '✅ Uloženo' : '❌ Chyba'}
+                            </span>
                         </div>
                     `;
                 });
                 resultHtml += '</div>';
+                
+                elements.plakatResults.innerHTML = resultHtml;
+                elements.plakatResults.classList.add('show');
+                
+                // Show success message
+                const successCount = saveResults.filter(r => r.success).length;
+                showMessage(`Uloženo ${successCount} plakátů do složky ${targetFolder}`, 'success');
+            } else {
+                showMessage('Nebyla vybrána složka pro uložení', 'error');
             }
-            
-            elements.plakatResults.innerHTML = resultHtml;
-            elements.plakatResults.classList.add('show');
         } else {
             showMessage(result.message || 'Generování selhalo', 'error');
         }
@@ -417,13 +449,13 @@ function parseProjectsInput(input) {
         if (!trimmedLine) continue;
         
         let parts;
-        // Try different separators
-        if (trimmedLine.includes(' - ')) {
-            parts = trimmedLine.split(' - ', 2);
-        } else if (trimmedLine.includes(',')) {
-            parts = trimmedLine.split(',', 2);
+        // Try different separators - semicolon and tab are primary
+        if (trimmedLine.includes(';')) {
+            parts = trimmedLine.split(';', 2);
         } else if (trimmedLine.includes('\t')) {
             parts = trimmedLine.split('\t', 2);
+        } else if (trimmedLine.includes(' - ')) {
+            parts = trimmedLine.split(' - ', 2);
         } else {
             continue; // Skip invalid lines
         }
@@ -519,6 +551,48 @@ function hexToBytes(hex) {
         bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
     }
     return bytes;
+}
+
+// Load last selected folder
+async function loadLastFolder() {
+    const plakatFolderInput = document.getElementById('plakat-folder');
+    if (plakatFolderInput && window.electronAPI) {
+        const lastFolder = await window.electronAPI.getConfig('lastPlakatFolder');
+        if (lastFolder) {
+            plakatFolderInput.value = lastFolder;
+        } else {
+            // Set default to Documents folder
+            plakatFolderInput.value = await window.electronAPI.getConfig('documentsPath') || 'Dokumenty';
+        }
+    }
+}
+
+// Save files automatically to selected folder
+async function saveFilesAutomatically(files, targetFolder) {
+    const results = [];
+    
+    for (const file of files) {
+        try {
+            const filePath = `${targetFolder}${targetFolder.endsWith('\\') ? '' : '\\'}${file.filename}`;
+            const binaryData = hexToBytes(file.content);
+            
+            await window.electronAPI.writeFile(filePath, binaryData);
+            results.push({
+                filename: file.filename,
+                path: filePath,
+                success: true
+            });
+        } catch (error) {
+            console.error(`Error saving ${file.filename}:`, error);
+            results.push({
+                filename: file.filename,
+                success: false,
+                error: error.message
+            });
+        }
+    }
+    
+    return results;
 }
 
 // Initialize when DOM is ready
