@@ -269,7 +269,7 @@ class InvVzdProcessor(BaseTool):
             
             # Copy template and fill with data
             self._copy_template_with_data(
-                template_path, output_file, source_data
+                template_path, output_file, source_data, source_file
             )
             
             self.add_info(f"Vytvořen výstupní soubor: {os.path.basename(output_file)}")
@@ -718,22 +718,21 @@ class InvVzdProcessor(BaseTool):
             return os.path.join(output_dir, f"{version_prefix}MSMT_{timestamp}.xlsx")
             
     def _copy_template_with_data(self, template_path: str, output_path: str, 
-                                data: pd.DataFrame):
+                                data: pd.DataFrame, source_file: str):
         """Copy template file and fill with data using xlwings - following original approach"""
         try:
             # Following original approach: open template directly, fill data, save as new file
             wb = xw.Book(template_path)
             
-            # Write to "Seznam aktivit" sheet like in original
-            sheet = wb.sheets['Seznam aktivit']
+            # STEP 1: Write student names to "Seznam účastníků" sheet at B4
+            sheet = wb.sheets['Seznam účastníků']
             
-            # Write data starting from C3 like in original
-            if len(data) > 0:
-                sheet.range("C3").options(ndim="expand").value = data.values
-                
-            # Update total hours cell
-            hours_cell = self.config["hours_total_cell"]
-            sheet.range(hours_cell).value = f"Celkem {self.hours_total} hodin"
+            # Extract student names from source file (column B, from row 11 until two empty rows)
+            student_names = self._extract_student_names_from_data(source_file)
+            
+            # Write student names starting at B4
+            if len(student_names) > 0:
+                sheet.range("B4").options(ndim="expand", transpose=True).value = student_names
             
             # Save as new file and close
             wb.save(output_path)
@@ -742,6 +741,36 @@ class InvVzdProcessor(BaseTool):
         except Exception as e:
             self.add_error(f"Chyba při kopírování šablony: {str(e)}")
             raise
+    
+    def _extract_student_names_from_data(self, source_file: str) -> List[str]:
+        """Extract student names from source file column B starting from row 11"""
+        try:
+            wb = load_workbook(source_file, read_only=True)
+            sheet_name = "zdroj-dochazka" if "zdroj-dochazka" in wb.sheetnames else wb.sheetnames[0]
+            sheet = wb[sheet_name]
+            
+            student_names = []
+            empty_count = 0
+            
+            # Start from row 11 (0-indexed = 10)
+            for row in range(10, sheet.max_row):
+                cell_value = sheet.cell(row=row+1, column=2).value  # Column B
+                
+                if cell_value is None or str(cell_value).strip() == "":
+                    empty_count += 1
+                    if empty_count >= 2:  # Two consecutive empty rows
+                        break
+                else:
+                    empty_count = 0
+                    student_names.append(str(cell_value).strip())
+            
+            wb.close()
+            self.add_info(f"Načteno {len(student_names)} jmen žáků")
+            return student_names
+            
+        except Exception as e:
+            self.add_error(f"Chyba při načítání jmen žáků: {str(e)}")
+            return []
             
     def process_paths(self, source_files: List[str], template_path: str, 
                      output_dir: str, keep_filename: bool = True,
