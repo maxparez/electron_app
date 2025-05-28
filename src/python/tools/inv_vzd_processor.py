@@ -179,26 +179,42 @@ class InvVzdProcessor(BaseTool):
         """Detect version from source content"""
         try:
             wb = load_workbook(source_file, read_only=True)
-            
-            # Try to detect version by checking sheets and content
             sheet_names = wb.sheetnames
             
-            # Check for 32 hour version (simple List1 sheet with attendance matrix)
-            if "List1" in sheet_names:
-                sheet = wb["List1"]
-                # Check for characteristic cells
+            # Priority 1: Check for "zdroj-dochazka" sheet (preferred format)
+            if "zdroj-dochazka" in sheet_names:
+                sheet = wb["zdroj-dochazka"]
+                b7_value = sheet["B7"].value
+                
+                # If B7 contains "čas zahájení" then it's 16h version
+                if b7_value and "čas zahájení" in str(b7_value).lower():
+                    wb.close()
+                    return "16"
+                else:
+                    # If zdroj-dochazka exists but no "čas zahájení" in B7, it's 32h
+                    wb.close() 
+                    return "32"
+            
+            # Priority 2: If no "zdroj-dochazka", use first sheet and check B6/B7
+            if sheet_names:
+                sheet = wb[sheet_names[0]]  # Take first sheet regardless of name
                 b6_value = sheet["B6"].value
                 b7_value = sheet["B7"].value
                 
-                if (b6_value and "datum aktivity" in str(b6_value).lower() and
-                    b7_value and "forma" in str(b7_value).lower()):
-                    wb.close()
-                    return "32"
+                # Check if B6 contains "datum aktivity"
+                if b6_value and "datum aktivity" in str(b6_value).lower():
+                    # If B7 contains "čas zahájení" then 16h, otherwise 32h
+                    if b7_value and "čas zahájení" in str(b7_value).lower():
+                        wb.close()
+                        return "16"
+                    else:
+                        wb.close()
+                        return "32"
             
+            # Fallback: Check legacy formats
             # Check for 16 hour version (complex sheet structure)
             if "Seznam aktivit" in sheet_names:
                 sheet = wb["Seznam aktivit"]
-                # Check for characteristic header
                 b2_value = sheet["B2"].value
                 
                 if b2_value and "pořadové číslo aktivity" in str(b2_value).lower():
@@ -339,41 +355,106 @@ class InvVzdProcessor(BaseTool):
             return None
             
     def _read_32_hour_data(self, source_file: str) -> Optional[pd.DataFrame]:
-        """Read data from 32 hour source file (List1 sheet with attendance matrix)"""
+        """Read data from 32 hour source file (List1 or zdroj-dochazka sheet)"""
         try:
-            # Read from List1 sheet
             wb = load_workbook(source_file)
-            sheet = wb["List1"]
             
-            # Read hours from row 10 (starting from column C)
-            hours_data = []
-            activities = []
+            # Try to find the correct sheet - prefer zdroj-dochazka, fallback to List1
+            sheet_name = None
+            if "zdroj-dochazka" in wb.sheetnames:
+                sheet_name = "zdroj-dochazka"
+            elif "List1" in wb.sheetnames:
+                sheet_name = "List1"
+            else:
+                # Use first sheet as fallback
+                sheet_name = wb.sheetnames[0]
+                
+            sheet = wb[sheet_name]
+            self.add_info(f"Čtu 32h data z listu: {sheet_name}")
             
-            # Get hours for each activity (row 10, starting from column C)
-            col = 3  # Column C
-            while True:
-                cell_value = sheet.cell(row=10, column=col).value
-                if cell_value is None or cell_value == 0:
-                    break
-                hours_data.append(int(cell_value))
-                activities.append(f"Aktivita {col-2}")  # Activity 1, 2, 3...
-                col += 1
-            
-            # Create DataFrame with activity data  
-            # For 32-hour files, we need to extract actual dates from the attendance matrix
-            # For now, use current date as placeholder - this should be enhanced to read real dates
-            current_date = datetime.now()
-            data = []
-            for i, (activity, hours) in enumerate(zip(activities, hours_data)):
-                # Use sequential dates starting from today
-                activity_date = current_date.replace(day=1) + pd.Timedelta(days=i*7)  # Weekly intervals
-                data.append({
-                    'datum': activity_date.strftime('%d.%m.%Y'),
-                    'hodin': hours,
-                    'forma': 'Neurčeno',
-                    'tema': activity,
-                    'ucitel': 'Neurčeno'
-                })
+            if sheet_name == "zdroj-dochazka":
+                # New format with zdroj-dochazka sheet
+                data = []
+                
+                # Read data from specific rows
+                # Row 6: dates, Row 7: forms, Row 8: topics, Row 9: teachers, Row 10: hours
+                col = 3  # Start from column C (first activity)
+                
+                while True:
+                    # Check if there's data in this column
+                    hours_cell = sheet.cell(row=10, column=col).value
+                    if hours_cell is None or str(hours_cell).strip() == '':
+                        break
+                        
+                    try:
+                        hours = int(float(str(hours_cell)))
+                        if hours <= 0:
+                            break
+                    except (ValueError, TypeError):
+                        break
+                    
+                    # Get date (row 6)
+                    date_cell = sheet.cell(row=6, column=col).value
+                    if date_cell:
+                        if hasattr(date_cell, 'strftime'):
+                            # It's already a datetime object
+                            datum = date_cell.strftime('%d.%m.%Y')
+                        else:
+                            # Try to parse as string
+                            datum = str(date_cell)
+                    else:
+                        datum = datetime.now().strftime('%d.%m.%Y')
+                    
+                    # Get form (row 7)
+                    forma_cell = sheet.cell(row=7, column=col).value
+                    forma = str(forma_cell) if forma_cell else 'Neurčeno'
+                    
+                    # Get topic (row 8)
+                    tema_cell = sheet.cell(row=8, column=col).value
+                    tema = str(tema_cell) if tema_cell else 'Neurčeno'
+                    
+                    # Get teacher (row 9)
+                    ucitel_cell = sheet.cell(row=9, column=col).value
+                    ucitel = str(ucitel_cell) if ucitel_cell else 'Neurčeno'
+                    
+                    data.append({
+                        'datum': datum,
+                        'hodin': hours,
+                        'forma': forma,
+                        'tema': tema,
+                        'ucitel': ucitel
+                    })
+                    
+                    col += 1
+                    
+            else:
+                # Legacy format with List1 sheet
+                hours_data = []
+                activities = []
+                
+                # Get hours for each activity (row 10, starting from column C)
+                col = 3  # Column C
+                while True:
+                    cell_value = sheet.cell(row=10, column=col).value
+                    if cell_value is None or cell_value == 0:
+                        break
+                    hours_data.append(int(cell_value))
+                    activities.append(f"Aktivita {col-2}")  # Activity 1, 2, 3...
+                    col += 1
+                
+                # Create DataFrame with activity data  
+                current_date = datetime.now()
+                data = []
+                for i, (activity, hours) in enumerate(zip(activities, hours_data)):
+                    # Use sequential dates starting from today
+                    activity_date = current_date.replace(day=1) + pd.Timedelta(days=i*7)  # Weekly intervals
+                    data.append({
+                        'datum': activity_date.strftime('%d.%m.%Y'),
+                        'hodin': hours,
+                        'forma': 'Neurčeno',
+                        'tema': activity,
+                        'ucitel': 'Neurčeno'
+                    })
             
             df = pd.DataFrame(data)
             
