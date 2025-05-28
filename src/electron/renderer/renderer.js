@@ -327,7 +327,8 @@ async function scanFolderForZorSpecFiles(folderPath) {
 function checkInvVzdReady() {
     const hasTemplate = state.selectedTemplate['inv-vzd'] !== null;
     const hasFiles = state.selectedFiles['inv-vzd'].length > 0;
-    elements.invProcessBtn.disabled = !(hasTemplate && hasFiles);
+    const hasValidVersion = state.detectedTemplateVersion !== null;
+    elements.invProcessBtn.disabled = !(hasTemplate && hasFiles && hasValidVersion);
 }
 
 // Process Inv Vzd
@@ -335,8 +336,8 @@ async function processInvVzd() {
     try {
         showLoading(true);
         
-        // Get course type
-        const courseType = document.querySelector('input[name="course-type"]:checked').value;
+        // Get course type from detected template version
+        const courseType = state.detectedTemplateVersion || '32'; // Default to 32 if not detected
         
         // For now, we'll send file paths and let the backend handle file reading
         // This is because we can't use file:// protocol in renderer
