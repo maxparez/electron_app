@@ -32,7 +32,9 @@ VERSIONS = {
         "data_start_col": 2,  # Column B
         "hours_row": 10,
         "name_col": 2,  # Column B
-        "attendance_start_col": 3  # Column C
+        "attendance_start_col": 3,  # Column C
+        "skiprows": 9,  # Skip first 9 rows in template
+        "hours_total_cell": "B10"  # Cell for total hours
     },
     "16": {
         "hours": 16,

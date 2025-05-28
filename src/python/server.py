@@ -13,12 +13,19 @@ from tools.inv_vzd_processor import InvVzdProcessor
 from tools.zor_spec_dat_processor import ZorSpecDatProcessor
 from tools.plakat_generator import PlakatGenerator
 
-# Configure logging
+# Configure logging with UTF-8 encoding for Windows
+import sys
+if sys.platform == 'win32':
+    # Force UTF-8 encoding for Windows console
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('app.log'),
+        logging.FileHandler('app.log', encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
