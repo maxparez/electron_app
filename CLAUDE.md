@@ -114,3 +114,21 @@ Ready to start development following PROJECT_PLAN.md timeline:
 - Weeks 2-3: Python backend
 - Weeks 4-5: Electron frontend
 - Week 6: Testing and deployment
+
+## Git Workflow
+
+- **Commit frequently**: Every 2 hours or after completing a feature
+- **Use tags**: [feat-XXX], [fix-XXX], [refactor-XXX], [test-XXX], [docs-XXX]
+- **Push to GitHub**: Minimum 2x per day, always before breaks
+- **Branch strategy**: main → develop → feature/fix branches
+- **See docs/GIT_WORKFLOW.md** for detailed Git workflow and conventions
+
+### Quick Git Commands
+```bash
+# Quick save work in progress
+git add -A && git commit -m "[chore-$(date +%Y%m%d)] WIP: Save progress" && git push
+
+# Create tagged commit
+git commit -m "[feat-005] Add new feature description"
+git push origin $(git branch --show-current)
+```
