@@ -375,3 +375,77 @@ body {
 .file-status.error {
     color: #dc3545;
 }
+
+/* Enhanced error and path display */
+.file-path {
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-left: 3px solid #007bff;
+    margin: 2px 0;
+    font-family: monospace;
+    font-size: 12px;
+    word-break: break-all;
+}
+
+.template-path {
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-left: 3px solid #28a745;
+    margin: 2px 0;
+    font-family: monospace;
+    font-size: 12px;
+    word-break: break-all;
+}
+
+.error-messages {
+    list-style-type: none;
+    padding: 0;
+}
+
+.error-item {
+    padding: 8px 12px;
+    margin: 4px 0;
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.warning-messages {
+    list-style-type: none;
+    padding: 0;
+}
+
+.warning-item {
+    padding: 8px 12px;
+    margin: 4px 0;
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+    color: #856404;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+h3.error {
+    color: #dc3545;
+    margin-bottom: 16px;
+}
+
+/* Button group styling */
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    border: 1px solid #6c757d;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+    border-color: #4e555b;
+}

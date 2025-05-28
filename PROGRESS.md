@@ -90,6 +90,9 @@
 - [x] Folder selection with memory persistence
 - [x] Enhanced UI with save status indicators
 - [x] Git workflow documentation with commit conventions
+- [x] **Tool 1 Enhancements:** Visible error/progress logging
+- [x] **Tool 1 Enhancements:** Full path display for templates and files
+- [x] **Tool 1 Enhancements:** Folder scanning for automatic file selection
 
 ## 📋 Next Phase - Testing & Polish
 
@@ -109,7 +112,7 @@
 ## 🐛 Known Issues
 
 1. **xlwings** - Requires Windows environment (expected, for InvVzd tool)
-2. **Pending user testing** - Need to verify new plakat features work correctly
+2. **User testing in progress** - Tool 1 enhancements ready for testing
 
 ## 📊 Overall Progress: 90%
 

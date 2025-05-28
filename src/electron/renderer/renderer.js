@@ -20,6 +20,7 @@ const elements = {
     
     // Inv Vzd elements
     invSelectBtn: document.getElementById('select-inv-files'),
+    invFolderBtn: document.getElementById('select-inv-folder'),
     invFilesList: document.getElementById('inv-files-list'),
     invProcessBtn: document.getElementById('process-inv-vzd'),
     invResults: document.getElementById('inv-vzd-results'),
@@ -49,6 +50,7 @@ function init() {
     
     // Setup file selection buttons
     elements.invSelectBtn.addEventListener('click', () => selectFiles('inv-vzd'));
+    elements.invFolderBtn.addEventListener('click', selectInvFolder);
     elements.zorSelectBtn.addEventListener('click', () => selectFiles('zor-spec'));
     elements.invTemplateBtn.addEventListener('click', selectInvTemplate);
     
@@ -144,10 +146,13 @@ function updateFilesList(tool) {
         filesList.innerHTML = '<p class="file-item">Žádné soubory nebyly vybrány</p>';
     } else {
         files.forEach(file => {
-            const fileName = file.split(/[\\/]/).pop();
             const fileDiv = document.createElement('div');
             fileDiv.className = 'file-item';
-            fileDiv.textContent = fileName;
+            fileDiv.innerHTML = `
+                <div class="file-path">
+                    <strong>Celá cesta:</strong> ${file}
+                </div>
+            `;
             filesList.appendChild(fileDiv);
         });
     }
@@ -159,8 +164,11 @@ async function selectInvTemplate() {
         const filePaths = await window.electronAPI.openFile();
         if (filePaths.length > 0) {
             state.selectedTemplate['inv-vzd'] = filePaths[0];
-            const fileName = filePaths[0].split(/[\\/]/).pop();
-            elements.invTemplateName.textContent = fileName;
+            elements.invTemplateName.innerHTML = `
+                <div class="template-path">
+                    <strong>Celá cesta:</strong> ${filePaths[0]}
+                </div>
+            `;
             
             // Enable process button if both template and files are selected
             checkInvVzdReady();
@@ -168,6 +176,69 @@ async function selectInvTemplate() {
     } catch (error) {
         console.error('Template selection error:', error);
         showMessage('Chyba při výběru šablony', 'error');
+    }
+}
+
+// Select folder and scan for attendance files
+async function selectInvFolder() {
+    try {
+        const folderPath = await window.electronAPI.selectFolder({
+            configKey: 'lastInvVzdFolder',
+            title: 'Vyberte složku s docházkami'
+        });
+        
+        if (folderPath) {
+            // Scan folder for Excel files
+            const suitableFiles = await scanFolderForAttendanceFiles(folderPath);
+            
+            if (suitableFiles.length > 0) {
+                state.selectedFiles['inv-vzd'] = suitableFiles;
+                updateFilesList('inv-vzd');
+                checkInvVzdReady();
+                showMessage(`Nalezeno ${suitableFiles.length} vhodných souborů docházky`, 'success');
+            } else {
+                showMessage('Ve vybrané složce nebyly nalezeny žádné vhodné soubory docházky', 'warning');
+            }
+        }
+    } catch (error) {
+        console.error('Folder selection error:', error);
+        showMessage('Chyba při výběru složky', 'error');
+    }
+}
+
+// Scan folder for suitable attendance files
+async function scanFolderForAttendanceFiles(folderPath) {
+    try {
+        // Use Node.js fs to read directory
+        const result = await window.electronAPI.scanFolder(folderPath);
+        
+        // Filter for Excel files that look like attendance files
+        const excelFiles = result.files.filter(file => {
+            const extension = file.toLowerCase().split('.').pop();
+            return ['xlsx', 'xls'].includes(extension);
+        });
+        
+        // Filter for files that contain keywords suggesting they are attendance files
+        const attendanceKeywords = [
+            'dochazka', 'attendance', 'evidence', 'seznam', 'aktivit', 
+            'vzdelavani', 'education', 'inv', 'kurz', 'course'
+        ];
+        
+        const suitableFiles = excelFiles.filter(file => {
+            const fileName = file.toLowerCase();
+            return attendanceKeywords.some(keyword => fileName.includes(keyword));
+        });
+        
+        // Return full paths (use cross-platform path separator)
+        return suitableFiles.map(file => {
+            // Normalize path separators for cross-platform compatibility
+            const separator = folderPath.includes('\\') ? '\\' : '/';
+            return `${folderPath}${separator}${file}`;
+        });
+        
+    } catch (error) {
+        console.error('Error scanning folder:', error);
+        return [];
     }
 }
 
@@ -227,12 +298,32 @@ async function processInvVzd() {
             elements.invResults.innerHTML = resultHtml;
             elements.invResults.classList.add('show');
         } else {
-            // Show errors
-            let errorMsg = result.message || 'Zpracování selhalo';
+            // Show detailed error information in results area
+            let errorHtml = `
+                <h3 class="error">Zpracování selhalo ❌</h3>
+                <p><strong>Hlavní zpráva:</strong> ${result.message || 'Neznámá chyba'}</p>
+            `;
+            
+            // Show detailed errors
             if (result.errors && result.errors.length > 0) {
-                errorMsg += '\n\nChyby:\n' + result.errors.join('\n');
+                errorHtml += '<h4>Detailní chyby:</h4><ul class="error-messages">';
+                result.errors.forEach(error => {
+                    errorHtml += `<li class="error-item">${error}</li>`;
+                });
+                errorHtml += '</ul>';
             }
-            showMessage(errorMsg, 'error');
+            
+            // Show warnings if any
+            if (result.warnings && result.warnings.length > 0) {
+                errorHtml += '<h4>Varování:</h4><ul class="warning-messages">';
+                result.warnings.forEach(warning => {
+                    errorHtml += `<li class="warning-item">${warning}</li>`;
+                });
+                errorHtml += '</ul>';
+            }
+            
+            elements.invResults.innerHTML = errorHtml;
+            elements.invResults.classList.add('show');
         }
         
     } catch (error) {

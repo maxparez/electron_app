@@ -190,6 +190,37 @@ ipcMain.handle('config:set', (event, key, value) => {
     return true;
 });
 
+ipcMain.handle('fs:scanFolder', async (event, folderPath) => {
+    const fs = require('fs').promises;
+    const path = require('path');
+    
+    try {
+        const files = await fs.readdir(folderPath);
+        const fileStats = await Promise.all(
+            files.map(async (file) => {
+                const filePath = path.join(folderPath, file);
+                const stat = await fs.stat(filePath);
+                return {
+                    name: file,
+                    path: filePath,
+                    isFile: stat.isFile(),
+                    isDirectory: stat.isDirectory(),
+                    size: stat.size,
+                    mtime: stat.mtime
+                };
+            })
+        );
+        
+        return {
+            files: fileStats.filter(f => f.isFile).map(f => f.name),
+            directories: fileStats.filter(f => f.isDirectory).map(f => f.name)
+        };
+    } catch (error) {
+        console.error('Error scanning folder:', error);
+        throw error;
+    }
+});
+
 // App event handlers
 app.whenReady().then(async () => {
     try {

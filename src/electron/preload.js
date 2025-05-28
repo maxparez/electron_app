@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getConfig: (key) => ipcRenderer.invoke('config:get', key),
     setConfig: (key, value) => ipcRenderer.invoke('config:set', key, value),
     
+    // File system operations
+    scanFolder: (folderPath) => ipcRenderer.invoke('fs:scanFolder', folderPath),
+    
     // API calls to Python backend
     apiCall: async (endpoint, method = 'GET', data = null) => {
         const baseURL = 'http://localhost:5000/api';
