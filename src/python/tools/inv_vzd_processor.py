@@ -727,6 +727,12 @@ class InvVzdProcessor(BaseTool):
             # STEP 1: Write student names to "Seznam účastníků" sheet at B4
             sheet = wb.sheets['Seznam účastníků']
             
+            # Unprotect sheet if protected
+            try:
+                sheet.api.Unprotect()
+            except:
+                pass  # Sheet might not be protected
+            
             # Extract student names from source file (column B, from row 11 until two empty rows)
             student_names = self._extract_student_names_from_data(source_file)
             
