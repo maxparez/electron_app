@@ -88,6 +88,49 @@ def detect_template_version():
             "message": f"Chyba při detekci verze: {str(e)}"
         }), 500
 
+@app.route('/api/detect/source-version', methods=['POST'])
+def detect_source_version():
+    """Detect source file version"""
+    try:
+        data = request.get_json()
+        source_path = data.get('sourcePath')
+        
+        if not source_path:
+            return jsonify({
+                "success": False,
+                "message": "No source path provided"
+            }), 400
+        
+        # Convert path if needed
+        import platform
+        if platform.system() == 'Linux' and len(source_path) >= 3 and source_path[1:3] == ':\\':
+            drive_letter = source_path[0].lower()
+            remaining_path = source_path[3:].replace('\\', '/')
+            source_path = f'/mnt/{drive_letter}/{remaining_path}'
+        
+        # Use InvVzdProcessor to detect source version
+        processor = InvVzdProcessor(logger)
+        version = processor._detect_source_version(source_path)
+        
+        if version:
+            return jsonify({
+                "success": True,
+                "version": version,
+                "message": f"Detekována verze: {version} hodin"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Nepodařilo se detekovat verzi zdrojového souboru"
+            })
+            
+    except Exception as e:
+        logger.error(f"Error detecting source version: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Chyba při detekci verze: {str(e)}"
+        }), 500
+
 @app.route('/api/process/inv-vzd', methods=['POST'])
 def process_inv_vzd():
     """Process innovative education attendance files"""

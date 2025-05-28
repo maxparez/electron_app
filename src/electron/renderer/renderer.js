@@ -225,16 +225,27 @@ async function scanFolderForAttendanceFiles(folderPath) {
             return ['xlsx', 'xls'].includes(extension);
         });
         
-        // Filter for files that contain keywords suggesting they are attendance files
-        const attendanceKeywords = [
-            'dochazka', 'attendance', 'evidence', 'seznam', 'aktivit', 
-            'vzdelavani', 'education', 'inv', 'kurz', 'course'
+        // Filter out result files (files that look like processed outputs)
+        const resultKeywords = [
+            'inv_', '_inv', 'hodin_inovativniho', 'vzdelavani_', 'msmt', 'result', 'output'
         ];
         
-        const suitableFiles = excelFiles.filter(file => {
+        const potentialFiles = excelFiles.filter(file => {
             const fileName = file.toLowerCase();
-            return attendanceKeywords.some(keyword => fileName.includes(keyword));
+            // Exclude files that look like processed results
+            return !resultKeywords.some(keyword => fileName.includes(keyword));
         });
+        
+        // If we have a detected template version, verify files match that version
+        const suitableFiles = [];
+        for (const file of potentialFiles) {
+            const filePath = `${folderPath}${folderPath.includes('\\') ? '\\' : '/'}${file}`;
+            
+            // Check if file is compatible with template version
+            if (await isFileCompatibleWithTemplate(filePath)) {
+                suitableFiles.push(file);
+            }
+        }
         
         // Return full paths (use cross-platform path separator)
         return suitableFiles.map(file => {
@@ -758,6 +769,31 @@ async function saveFilesAutomatically(files, targetFolder) {
 }
 
 // Initialize when DOM is ready
+// Check if file is compatible with detected template version
+async function isFileCompatibleWithTemplate(filePath) {
+    try {
+        // If no template is selected, accept all files
+        if (!state.detectedTemplateVersion) {
+            return true;
+        }
+        
+        // Use backend to detect source file version
+        const result = await window.electronAPI.apiCall('detect/source-version', 'POST', {
+            sourcePath: filePath
+        });
+        
+        if (result.success && result.version) {
+            // Check if source version matches template version
+            return result.version === state.detectedTemplateVersion;
+        }
+        
+        return false; // If we can't detect, exclude file
+    } catch (error) {
+        console.error('File compatibility check error:', error);
+        return false; // If error, exclude file
+    }
+}
+
 // Detect template version
 async function detectTemplateVersion(templatePath) {
     try {
