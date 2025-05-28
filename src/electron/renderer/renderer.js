@@ -29,6 +29,7 @@ const elements = {
     
     // Zor Spec elements
     zorSelectBtn: document.getElementById('select-zor-files'),
+    zorFolderBtn: document.getElementById('select-zor-folder'),
     zorFilesList: document.getElementById('zor-files-list'),
     zorProcessBtn: document.getElementById('process-zor-spec'),
     zorResults: document.getElementById('zor-spec-results'),
@@ -52,6 +53,7 @@ function init() {
     elements.invSelectBtn.addEventListener('click', () => selectFiles('inv-vzd'));
     elements.invFolderBtn.addEventListener('click', selectInvFolder);
     elements.zorSelectBtn.addEventListener('click', () => selectFiles('zor-spec'));
+    elements.zorFolderBtn.addEventListener('click', selectZorFolder);
     elements.invTemplateBtn.addEventListener('click', selectInvTemplate);
     
     // Setup process buttons
@@ -222,6 +224,69 @@ async function scanFolderForAttendanceFiles(folderPath) {
         const attendanceKeywords = [
             'dochazka', 'attendance', 'evidence', 'seznam', 'aktivit', 
             'vzdelavani', 'education', 'inv', 'kurz', 'course'
+        ];
+        
+        const suitableFiles = excelFiles.filter(file => {
+            const fileName = file.toLowerCase();
+            return attendanceKeywords.some(keyword => fileName.includes(keyword));
+        });
+        
+        // Return full paths (use cross-platform path separator)
+        return suitableFiles.map(file => {
+            // Normalize path separators for cross-platform compatibility
+            const separator = folderPath.includes('\\') ? '\\' : '/';
+            return `${folderPath}${separator}${file}`;
+        });
+        
+    } catch (error) {
+        console.error('Error scanning folder:', error);
+        return [];
+    }
+}
+
+// Select folder and scan for ZorSpec attendance files
+async function selectZorFolder() {
+    try {
+        const folderPath = await window.electronAPI.selectFolder({
+            configKey: 'lastZorSpecFolder',
+            title: 'Vyberte složku s docházkami pro ZoR'
+        });
+        
+        if (folderPath) {
+            // Scan folder for Excel files
+            const suitableFiles = await scanFolderForZorSpecFiles(folderPath);
+            
+            if (suitableFiles.length > 0) {
+                state.selectedFiles['zor-spec'] = suitableFiles;
+                updateFilesList('zor-spec');
+                elements.zorProcessBtn.disabled = false;
+                showMessage(`Nalezeno ${suitableFiles.length} vhodných souborů docházky`, 'success');
+            } else {
+                showMessage('Ve vybrané složce nebyly nalezeny žádné vhodné soubory docházky', 'warning');
+            }
+        }
+    } catch (error) {
+        console.error('Folder selection error:', error);
+        showMessage('Chyba při výběru složky', 'error');
+    }
+}
+
+// Scan folder for suitable ZorSpec attendance files
+async function scanFolderForZorSpecFiles(folderPath) {
+    try {
+        // Use Node.js fs to read directory
+        const result = await window.electronAPI.scanFolder(folderPath);
+        
+        // Filter for Excel files that look like attendance files
+        const excelFiles = result.files.filter(file => {
+            const extension = file.toLowerCase().split('.').pop();
+            return ['xlsx', 'xls'].includes(extension);
+        });
+        
+        // Filter for files that contain keywords suggesting they are ZorSpec attendance files
+        const attendanceKeywords = [
+            'dochazka', 'attendance', 'evidence', 'seznam', 'zor', 'spec',
+            'trida', 'class', 'student', 'zak', 'vzdelavani', 'education'
         ];
         
         const suitableFiles = excelFiles.filter(file => {
@@ -413,12 +478,32 @@ async function processZorSpec() {
             elements.zorResults.innerHTML = resultHtml;
             elements.zorResults.classList.add('show');
         } else {
-            // Show errors
-            let errorMsg = result.message || 'Zpracování selhalo';
+            // Show detailed error information in results area
+            let errorHtml = `
+                <h3 class="error">Zpracování selhalo ❌</h3>
+                <p><strong>Hlavní zpráva:</strong> ${result.message || 'Neznámá chyba'}</p>
+            `;
+            
+            // Show detailed errors
             if (result.errors && result.errors.length > 0) {
-                errorMsg += '\n\nChyby:\n' + result.errors.join('\n');
+                errorHtml += '<h4>Detailní chyby:</h4><ul class="error-messages">';
+                result.errors.forEach(error => {
+                    errorHtml += `<li class="error-item">${error}</li>`;
+                });
+                errorHtml += '</ul>';
             }
-            showMessage(errorMsg, 'error');
+            
+            // Show warnings if any
+            if (result.warnings && result.warnings.length > 0) {
+                errorHtml += '<h4>Varování:</h4><ul class="warning-messages">';
+                result.warnings.forEach(warning => {
+                    errorHtml += `<li class="warning-item">${warning}</li>`;
+                });
+                errorHtml += '</ul>';
+            }
+            
+            elements.zorResults.innerHTML = errorHtml;
+            elements.zorResults.classList.add('show');
         }
         
     } catch (error) {

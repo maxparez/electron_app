@@ -91,5 +91,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
             console.error('Upload error:', error);
             throw error;
         }
+    },
+    
+    // Upload form data directly
+    uploadFormData: async (endpoint, formData) => {
+        const baseURL = 'http://localhost:5000/api';
+        const url = `${baseURL}/${endpoint}`;
+        
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.message || 'Upload failed');
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('Upload error:', error);
+            throw error;
+        }
     }
 });
