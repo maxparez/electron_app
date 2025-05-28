@@ -737,8 +737,15 @@ class InvVzdProcessor(BaseTool):
             
             # STEP 2: Write activities to "Seznam aktivit" sheet at C3
             sheet = wb.sheets['Seznam aktivit']
+            
+            # Prepare activities data for export (following original export_columns)
             if len(data) > 0:
-                sheet.range("C3").options(ndim="expand").value = data.values
+                # For 32h version, export_columns should be ["datum","hodin","forma","tema","ucitel"]
+                export_columns = ["datum", "hodin", "forma", "tema", "ucitel"]
+                activities_data = data[export_columns] if all(col in data.columns for col in export_columns) else data
+                
+                self.add_info(f"Zapisuji {len(activities_data)} aktivit do Seznam aktivit")
+                sheet.range("C3").options(ndim="expand").value = activities_data.values
             
             # Save as new file and close
             wb.save(output_path)
