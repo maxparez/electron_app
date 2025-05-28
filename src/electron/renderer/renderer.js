@@ -238,18 +238,78 @@ async function processZorSpec() {
             })
         );
         
+        // Prepare form data
+        const formData = new FormData();
+        
+        // Add files
+        files.forEach(file => {
+            formData.append('files', file);
+        });
+        
+        // Add options
+        const options = {};
+        formData.append('options', JSON.stringify(options));
+        
         // Upload and process files
-        const result = await window.electronAPI.uploadFiles('process/zor-spec', files);
+        const result = await window.electronAPI.uploadFormData('process/zor-spec', formData);
         
         showLoading(false);
         
-        // Display results
-        elements.zorResults.innerHTML = `
-            <h3>Zpracování dokončeno</h3>
-            <p>${result.message}</p>
-            <p>Zpracováno souborů: ${result.data.processed}</p>
-        `;
-        elements.zorResults.classList.add('show');
+        if (result.status === 'success') {
+            // Display results with detailed information
+            let resultHtml = `
+                <h3>Zpracování dokončeno ✅</h3>
+                <div class="result-summary">
+                    <p><strong>Zpracováno souborů:</strong> ${result.data.files_processed}</p>
+                    <p><strong>Unikátní žáci:</strong> ${result.data.unique_students}</p>
+                </div>
+            `;
+            
+            // Show output files
+            if (result.data.output_files && result.data.output_files.length > 0) {
+                resultHtml += '<h4>Výstupní soubory:</h4><div class="output-files">';
+                result.data.output_files.forEach(file => {
+                    resultHtml += `
+                        <div class="file-item">
+                            <span class="file-name">${file.filename}</span>
+                            <span class="file-size">(${Math.round(file.size / 1024)} KB)</span>
+                            <button class="btn btn-small" onclick="downloadFile('${file.filename}', '${file.content}')">
+                                💾 Stáhnout
+                            </button>
+                        </div>
+                    `;
+                });
+                resultHtml += '</div>';
+            }
+            
+            // Show info messages
+            if (result.info && result.info.length > 0) {
+                resultHtml += '<h4>Informace:</h4><ul class="info-messages">';
+                result.info.forEach(msg => {
+                    resultHtml += `<li>ℹ️ ${msg}</li>`;
+                });
+                resultHtml += '</ul>';
+            }
+            
+            // Show warnings
+            if (result.warnings && result.warnings.length > 0) {
+                resultHtml += '<h4>Varování:</h4><ul class="warning-messages">';
+                result.warnings.forEach(msg => {
+                    resultHtml += `<li>⚠️ ${msg}</li>`;
+                });
+                resultHtml += '</ul>';
+            }
+            
+            elements.zorResults.innerHTML = resultHtml;
+            elements.zorResults.classList.add('show');
+        } else {
+            // Show errors
+            let errorMsg = result.message || 'Zpracování selhalo';
+            if (result.errors && result.errors.length > 0) {
+                errorMsg += '\n\nChyby:\n' + result.errors.join('\n');
+            }
+            showMessage(errorMsg, 'error');
+        }
         
     } catch (error) {
         showLoading(false);
@@ -263,31 +323,68 @@ async function generatePlakat(event) {
     event.preventDefault();
     
     try {
-        showLoading(true);
-        
         // Get form data
-        const formData = {
-            projectName: document.getElementById('project-name').value,
-            projectDescription: document.getElementById('project-description').value,
-            projectDate: document.getElementById('project-date').value,
-            projectLocation: document.getElementById('project-location').value
-        };
+        const projectsInput = document.getElementById('projects-input').value;
+        const orientation = document.querySelector('input[name="orientation"]:checked').value;
+        const commonText = document.getElementById('common-text').value;
+        
+        // Parse projects input
+        const projects = parseProjectsInput(projectsInput);
+        if (projects.length === 0) {
+            showMessage('Nebyli nalezeny žádné platné projekty', 'error');
+            return;
+        }
+        
+        // Show loading with progress
+        showLoading(true, {
+            text: `Generuji plakáty...`,
+            showProgress: true,
+            total: projects.length
+        });
         
         // Send to backend
-        const result = await window.electronAPI.apiCall('generate/plakat', 'POST', formData);
+        const requestData = {
+            projects: projects,
+            orientation: orientation,
+            common_text: commonText
+        };
+        
+        const result = await window.electronAPI.apiCall('process/plakat', 'POST', requestData);
         
         showLoading(false);
         
-        // Display results
-        elements.plakatResults.innerHTML = `
-            <h3>Plakát vygenerován</h3>
-            <p>${result.message}</p>
-            <p>Soubor: ${result.data.file_path}</p>
-            <button class="btn btn-primary" onclick="savePlakat('${result.data.file_path}')">
-                Uložit plakát
-            </button>
-        `;
-        elements.plakatResults.classList.add('show');
+        if (result.status === 'success') {
+            // Display results
+            let resultHtml = `
+                <h3>Plakáty vygenerovány ✅</h3>
+                <div class="result-summary">
+                    <p><strong>Úspěšně:</strong> ${result.data.successful_projects}/${result.data.total_projects}</p>
+                    ${result.data.failed_projects > 0 ? `<p><strong>Selhalo:</strong> ${result.data.failed_projects}</p>` : ''}
+                </div>
+            `;
+            
+            // Show output files
+            if (result.data.output_files && result.data.output_files.length > 0) {
+                resultHtml += '<h4>Vygenerované plakáty:</h4><div class="output-files">';
+                result.data.output_files.forEach(file => {
+                    resultHtml += `
+                        <div class="file-item">
+                            <span class="file-name">${file.filename}</span>
+                            <span class="file-size">(${Math.round(file.size / 1024)} KB)</span>
+                            <button class="btn btn-small" onclick="downloadFile('${file.filename}', '${file.content}')">
+                                💾 Stáhnout
+                            </button>
+                        </div>
+                    `;
+                });
+                resultHtml += '</div>';
+            }
+            
+            elements.plakatResults.innerHTML = resultHtml;
+            elements.plakatResults.classList.add('show');
+        } else {
+            showMessage(result.message || 'Generování selhalo', 'error');
+        }
         
     } catch (error) {
         showLoading(false);
@@ -310,9 +407,73 @@ async function savePlakat(filePath) {
     }
 }
 
-// Show/hide loading overlay
-function showLoading(show) {
-    elements.loadingOverlay.classList.toggle('show', show);
+// Parse projects input
+function parseProjectsInput(input) {
+    const projects = [];
+    const lines = input.trim().split('\n');
+    
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+        
+        let parts;
+        // Try different separators
+        if (trimmedLine.includes(' - ')) {
+            parts = trimmedLine.split(' - ', 2);
+        } else if (trimmedLine.includes(',')) {
+            parts = trimmedLine.split(',', 2);
+        } else if (trimmedLine.includes('\t')) {
+            parts = trimmedLine.split('\t', 2);
+        } else {
+            continue; // Skip invalid lines
+        }
+        
+        if (parts.length === 2) {
+            const id = parts[0].trim();
+            const name = parts[1].trim();
+            
+            if (id && name) {
+                projects.push({ id, name });
+            }
+        }
+    }
+    
+    return projects;
+}
+
+// Show/hide loading overlay with optional progress
+function showLoading(show, options = {}) {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingText = document.getElementById('loading-text');
+    const progressContainer = document.getElementById('progress-container');
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    
+    if (show) {
+        loadingOverlay.classList.add('show');
+        loadingText.textContent = options.text || 'Zpracovávám...';
+        
+        if (options.showProgress) {
+            progressContainer.style.display = 'block';
+            updateProgress(0, options.total || 0);
+        } else {
+            progressContainer.style.display = 'none';
+        }
+    } else {
+        loadingOverlay.classList.remove('show');
+        progressContainer.style.display = 'none';
+        progressFill.style.width = '0%';
+    }
+}
+
+// Update progress bar
+function updateProgress(current, total) {
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    
+    const percentage = total > 0 ? (current / total) * 100 : 0;
+    progressFill.style.width = percentage + '%';
+    progressText.textContent = `${current} / ${total}`;
 }
 
 // Show message
@@ -330,5 +491,44 @@ function showMessage(text, type = 'info') {
     }, 5000);
 }
 
+// Download file with save dialog
+async function downloadFile(filename, content) {
+    try {
+        // Get save path from user
+        const savePath = await window.electronAPI.saveFile(filename);
+        
+        if (savePath) {
+            // Decode hex content to binary
+            const binaryData = hexToBytes(content);
+            
+            // Write file using Node.js fs module through Electron API
+            await window.electronAPI.writeFile(savePath, binaryData);
+            
+            showMessage(window.i18n ? window.i18n.t('invVzd.results.saved', {filename}) : `Soubor ${filename} byl úspěšně uložen`, 'success');
+        }
+    } catch (error) {
+        console.error('Download error:', error);
+        showMessage('Chyba při ukládání souboru: ' + error.message, 'error');
+    }
+}
+
+// Convert hex string to byte array
+function hexToBytes(hex) {
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+        bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+    }
+    return bytes;
+}
+
 // Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load translations first
+    if (window.i18n) {
+        await window.i18n.load('cs');
+        window.i18n.translatePage();
+    }
+    
+    // Then initialize the app
+    init();
+});

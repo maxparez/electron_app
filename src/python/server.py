@@ -3,14 +3,15 @@ from flask_cors import CORS
 import os
 import sys
 import logging
+import tempfile
 
 # Add tools directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
 
 # Import tools
 from tools.inv_vzd_processor import InvVzdProcessor
-# from tools.zor_spec_processor import ZorSpecProcessor
-# from tools.plakat_generator import PlakatGenerator
+from tools.zor_spec_dat_processor import ZorSpecDatProcessor
+from tools.plakat_generator import PlakatGenerator
 
 # Configure logging
 logging.basicConfig(
@@ -210,7 +211,7 @@ def process_inv_vzd_paths():
 
 @app.route('/api/process/zor-spec', methods=['POST'])
 def process_zor_spec():
-    """Process special attendance data"""
+    """Process special attendance data for ZoR"""
     try:
         # Get files from request
         if 'files' not in request.files:
@@ -220,18 +221,81 @@ def process_zor_spec():
             }), 400
         
         files = request.files.getlist('files')
-        options = request.form.get('options', {})
         
-        # TODO: Implement processing logic
-        logger.info(f"Processing {len(files)} files for zor-spec")
+        # Parse options
+        import json
+        options = json.loads(request.form.get('options', '{}'))
         
-        return jsonify({
-            "status": "success",
-            "message": f"Processing {len(files)} files",
-            "data": {
-                "processed": len(files)
-            }
-        })
+        # Get exclude list file if provided
+        exclude_file = None
+        if 'exclude_list' in request.files:
+            exclude_file = request.files['exclude_list']
+        
+        # Save files temporarily
+        import tempfile
+        temp_dir = tempfile.mkdtemp()
+        file_paths = []
+        
+        try:
+            # Save source files
+            for file in files:
+                file_path = os.path.join(temp_dir, file.filename)
+                file.save(file_path)
+                file_paths.append(file_path)
+                
+            # Save exclude list if provided
+            if exclude_file:
+                exclude_path = os.path.join(temp_dir, exclude_file.filename)
+                exclude_file.save(exclude_path)
+                options['exclude_list'] = exclude_path
+            
+            # Process with ZorSpecDatProcessor
+            processor = ZorSpecDatProcessor(logger)
+            
+            # Add output directory to options
+            options['output_dir'] = temp_dir
+            
+            # Process files
+            result = processor.process(file_paths, options)
+            
+            if result['success']:
+                # Read output files and prepare response
+                data = result['data']
+                output_files = []
+                
+                for output_path in data['output_files']:
+                    with open(output_path, 'rb') as f:
+                        output_content = f.read()
+                        output_files.append({
+                            'filename': os.path.basename(output_path),
+                            'content': output_content.hex(),  # Convert to hex for JSON
+                            'size': len(output_content)
+                        })
+                
+                return jsonify({
+                    "status": "success",
+                    "message": f"Úspěšně zpracováno {data['files_processed']} souborů",
+                    "data": {
+                        "files_processed": data['files_processed'],
+                        "unique_students": data['unique_students'],
+                        "output_files": output_files
+                    },
+                    "errors": result.get('errors', []),
+                    "warnings": result.get('warnings', []),
+                    "info": result.get('info', [])
+                })
+            else:
+                return jsonify({
+                    "status": "error",
+                    "message": "Zpracování selhalo",
+                    "errors": result.get('errors', []),
+                    "warnings": result.get('warnings', [])
+                }), 400
+                
+        finally:
+            # Cleanup temp files
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
         
     except Exception as e:
         logger.error(f"Error processing zor-spec: {str(e)}")
@@ -240,35 +304,156 @@ def process_zor_spec():
             "message": str(e)
         }), 500
 
-@app.route('/api/generate/plakat', methods=['POST'])
-def generate_plakat():
-    """Generate poster PDF"""
+@app.route('/api/process/zor-spec-directory', methods=['POST'])
+def process_zor_spec_directory():
+    """Process special attendance data from directory"""
     try:
-        # Get data from request
         data = request.get_json()
+        
         if not data:
             return jsonify({
                 "status": "error",
                 "message": "No data provided"
             }), 400
+            
+        source_dir = data.get('sourceDir')
+        output_dir = data.get('outputDir')
+        exclude_list = data.get('excludeList')
+        options = data.get('options', {})
         
-        # TODO: Implement generation logic
-        logger.info("Generating plakat")
+        if not source_dir:
+            return jsonify({
+                "status": "error",
+                "message": "No source directory provided"
+            }), 400
+            
+        # Process with ZorSpecDatProcessor
+        processor = ZorSpecDatProcessor(logger)
         
-        return jsonify({
-            "status": "success",
-            "message": "Plakat generated",
-            "data": {
-                "file_path": "/path/to/generated.pdf"
-            }
-        })
+        # Set up options
+        options['source_dir'] = source_dir
+        options['output_dir'] = output_dir or source_dir
+        if exclude_list:
+            options['exclude_list'] = exclude_list
         
+        # Process files (empty list since we're using directory)
+        result = processor.process([], options)
+        
+        if result['success']:
+            data = result['data']
+            return jsonify({
+                "status": "success",
+                "message": f"Úspěšně zpracováno {data['files_processed']} souborů",
+                "data": {
+                    "files_processed": data['files_processed'],
+                    "unique_students": data['unique_students'],
+                    "html_report": data['html_report'],
+                    "names_list": data['names_list']
+                },
+                "errors": result.get('errors', []),
+                "warnings": result.get('warnings', []),
+                "info": result.get('info', [])
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "Zpracování selhalo",
+                "errors": result.get('errors', []),
+                "warnings": result.get('warnings', [])
+            }), 400
+            
     except Exception as e:
-        logger.error(f"Error generating plakat: {str(e)}")
+        logger.error(f"Error processing zor-spec-directory: {str(e)}")
         return jsonify({
             "status": "error",
             "message": str(e)
         }), 500
+
+@app.route('/api/process/plakat', methods=['POST'])
+def process_plakat():
+    """Generate PDF posters for projects"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "Požadavek musí obsahovat JSON data"}), 400
+        
+        # Validate required fields
+        required_fields = ['projects', 'orientation', 'common_text']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Chybí povinné pole: {field}"}), 400
+        
+        projects = data['projects']
+        orientation = data['orientation']
+        common_text = data['common_text']
+        
+        # Validate projects format
+        if not isinstance(projects, list) or not projects:
+            return jsonify({"error": "Projekty musí být neprázdný seznam"}), 400
+        
+        for i, project in enumerate(projects):
+            if not isinstance(project, dict) or 'id' not in project or 'name' not in project:
+                return jsonify({"error": f"Projekt {i+1} musí obsahovat 'id' a 'name'"}), 400
+        
+        # Validate orientation
+        if orientation not in ['portrait', 'landscape']:
+            return jsonify({"error": "Orientace musí být 'portrait' nebo 'landscape'"}), 400
+        
+        # Validate common text
+        if not isinstance(common_text, str) or len(common_text) > 255:
+            return jsonify({"error": "Společný text musí být string s max. 255 znaky"}), 400
+        
+        # Process with PlakatGenerator
+        processor = PlakatGenerator(logger)
+        
+        # Create temporary output directory
+        temp_dir = tempfile.mkdtemp()
+        options = {
+            'projects': projects,
+            'orientation': orientation,
+            'common_text': common_text,
+            'output_dir': temp_dir
+        }
+        
+        result = processor.process([], options)
+        
+        if result['success']:
+            # Read output files and prepare response
+            output_files = []
+            for file_path in result['data'].get('output_files', []):
+                with open(file_path, 'rb') as f:
+                    output_content = f.read()
+                    output_files.append({
+                        'filename': os.path.basename(file_path),
+                        'content': output_content.hex(),  # Convert to hex for JSON
+                        'size': len(output_content)
+                    })
+            
+            return jsonify({
+                "status": "success", 
+                "message": result.get('message', 'Generování dokončeno'),
+                "data": {
+                    "successful_projects": result['data'].get('successful_projects', 0),
+                    "failed_projects": result['data'].get('failed_projects', 0),
+                    "total_projects": result['data'].get('total_projects', 0),
+                    "output_files": output_files
+                },
+                "errors": result.get('errors', []),
+                "warnings": result.get('warnings', []),
+                "info": result.get('info', [])
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "message": result.get('message', 'Generování selhalo'),
+                "errors": result.get('errors', []),
+                "warnings": result.get('warnings', [])
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Error in plakat processing: {str(e)}")
+        return jsonify({"error": f"Vnitřní chyba serveru: {str(e)}"}), 500
 
 @app.route('/api/config', methods=['GET'])
 def get_config():

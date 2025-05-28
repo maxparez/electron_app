@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // File dialogs
     openFile: (options) => ipcRenderer.invoke('dialog:openFile', options),
     saveFile: (defaultName) => ipcRenderer.invoke('dialog:saveFile', defaultName),
+    writeFile: (path, data) => ipcRenderer.invoke('file:write', path, data),
     
     // API calls to Python backend
     apiCall: async (endpoint, method = 'GET', data = null) => {

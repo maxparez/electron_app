@@ -139,6 +139,19 @@ ipcMain.handle('dialog:saveFile', async (event, defaultName) => {
     return null;
 });
 
+ipcMain.handle('file:write', async (event, filePath, data) => {
+    const fs = require('fs').promises;
+    try {
+        // Convert Uint8Array to Buffer
+        const buffer = Buffer.from(data);
+        await fs.writeFile(filePath, buffer);
+        return { success: true };
+    } catch (error) {
+        console.error('File write error:', error);
+        throw error;
+    }
+});
+
 // App event handlers
 app.whenReady().then(async () => {
     try {

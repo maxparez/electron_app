@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "electron-forge start",
-    "dev": "electron . --dev",
+    "dev": "electron . --dev --no-sandbox",
     "test": "jest",
     "build": "electron-forge package",
     "make": "electron-forge make",

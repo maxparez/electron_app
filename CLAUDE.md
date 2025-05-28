@@ -64,16 +64,18 @@
 ## Commands & Scripts
 
 ```bash
-# Development
-npm run dev              # Start Electron dev
-python src/python/server.py  # Start Python backend
+# Development - ALWAYS USE VENV!
+cd /root/vyvoj_sw/electron_app
+source venv/bin/activate         # Activate Python virtual environment
+npm run dev                      # Start Electron dev
+python src/python/server.py      # Start Python backend (in venv)
 
 # Testing
-pytest                   # Python tests
-npm test                 # JavaScript tests
+source venv/bin/activate && pytest  # Python tests (in venv)
+npm test                            # JavaScript tests
 
 # Build
-npm run make            # Create installer
+npm run make                     # Create installer
 ```
 
 ## Critical Files to Preserve

@@ -5,23 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zpracování projektové dokumentace</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="i18n.js"></script>
 </head>
 <body>
     <div class="app-container">
         <!-- Sidebar Navigation -->
         <nav class="sidebar">
-            <h2 class="sidebar-title">Nástroje</h2>
+            <h2 class="sidebar-title" data-i18n="navigation.tools">Nástroje</h2>
             <div class="nav-item" data-tool="inv-vzd">
                 <i class="icon">📝</i>
-                <span>Inovativní vzdělávání</span>
+                <span data-i18n="navigation.invVzd">Inovativní vzdělávání</span>
             </div>
             <div class="nav-item" data-tool="zor-spec">
                 <i class="icon">📊</i>
-                <span>Speciální data</span>
+                <span data-i18n="navigation.zorSpec">Speciální data</span>
             </div>
             <div class="nav-item" data-tool="plakat">
                 <i class="icon">🖼️</i>
-                <span>Generátor plakátů</span>
+                <span data-i18n="navigation.plakat">Generátor plakátů</span>
             </div>
         </nav>
         
@@ -116,27 +117,38 @@
                 
                 <form id="plakat-form">
                     <div class="form-group">
-                        <label for="project-name">Název projektu:</label>
-                        <input type="text" id="project-name" required>
+                        <label for="projects-input">Projekty (ID - Název, jeden na řádek):</label>
+                        <textarea id="projects-input" rows="6" required 
+                                  placeholder="CZ.02.2.67/0.0/0.0/23_10001 - Název prvního projektu&#10;CZ.02.2.67/0.0/0.0/23_10002 - Název druhého projektu"></textarea>
+                        <small class="form-hint">
+                            Formát: ID - Název projektu (jeden projekt na řádek)<br>
+                            Podporované oddělovače: " - ", "," nebo tabulátor
+                        </small>
                     </div>
                     
                     <div class="form-group">
-                        <label for="project-description">Popis projektu:</label>
-                        <textarea id="project-description" rows="4" required></textarea>
+                        <label>Orientace plakátu:</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="orientation" value="portrait" checked>
+                                Na výšku (A4)
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="orientation" value="landscape">
+                                Na šířku (A4)
+                            </label>
+                        </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="project-date">Datum:</label>
-                        <input type="date" id="project-date" required>
+                        <label for="common-text">Společný text (max. 255 znaků):</label>
+                        <textarea id="common-text" rows="3" maxlength="255" 
+                                  placeholder="Dodatečný text, který se objeví na všech plakátech..."></textarea>
+                        <small class="form-hint">Volitelný text pro všechny generované plakáty</small>
                     </div>
                     
                     <div class="form-group">
-                        <label for="project-location">Místo konání:</label>
-                        <input type="text" id="project-location" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-success">Generovat plakát</button>
+                        <button type="submit" class="btn btn-success">Generovat plakáty</button>
                     </div>
                 </form>
                 
@@ -148,7 +160,13 @@
     <!-- Loading overlay -->
     <div id="loading-overlay" class="loading-overlay">
         <div class="spinner"></div>
-        <p>Zpracovávám...</p>
+        <p id="loading-text">Zpracovávám...</p>
+        <div class="progress-bar-container" id="progress-container" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-bar-fill" id="progress-fill"></div>
+            </div>
+            <p id="progress-text">0 / 0</p>
+        </div>
     </div>
     
     <script src="renderer.js"></script>

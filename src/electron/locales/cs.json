@@ -1,0 +1,96 @@
+{
+  "app": {
+    "title": "Zpracování projektové dokumentace",
+    "welcome": "Vítejte v aplikaci pro zpracování projektové dokumentace",
+    "selectTool": "Vyberte nástroj z levého menu pro začátek práce."
+  },
+  "navigation": {
+    "tools": "Nástroje",
+    "invVzd": "Inovativní vzdělávání",
+    "zorSpec": "Speciální data",
+    "plakat": "Generátor plakátů"
+  },
+  "invVzd": {
+    "title": "Inovativní vzdělávání - Kopírování docházky",
+    "description": "Tento nástroj zpracovává docházku pro kurzy inovativního vzdělávání (16 nebo 32 hodin).",
+    "courseType": "Typ kurzu:",
+    "hours16": "16 hodin",
+    "hours32": "32 hodin",
+    "selectTemplate": "Vyberte šablonu:",
+    "selectFiles": "Vyberte soubory docházky:",
+    "process": "Zpracovat",
+    "processing": "Zpracovávám soubory docházky...",
+    "results": {
+      "success": "Soubory úspěšně zpracovány",
+      "processed": "Zpracováno souborů",
+      "saved": "Soubor {{filename}} byl úspěšně uložen"
+    }
+  },
+  "zorSpec": {
+    "title": "Speciální data - Zpracování docházky",
+    "description": "Zpracování docházky z více tříd a generování HTML reportů s unikátními seznamy studentů.",
+    "selectFiles": "Vyberte soubory docházky:",
+    "process": "Zpracovat",
+    "processing": "Zpracovávám docházku...",
+    "results": {
+      "success": "Docházka úspěšně zpracována",
+      "totalStudents": "Celkem studentů",
+      "uniqueStudents": "Unikátních studentů",
+      "outputFiles": "Výstupní soubory"
+    }
+  },
+  "plakat": {
+    "title": "Generátor plakátů",
+    "description": "Vytvoření PDF plakátů pro projekty.",
+    "projectsLabel": "Projekty (ID - Název, jeden na řádek):",
+    "projectsPlaceholder": "CZ.02.2.67/0.0/0.0/23_10001 - Název prvního projektu\nCZ.02.2.67/0.0/0.0/23_10002 - Název druhého projektu",
+    "projectsHint": "Formát: ID - Název projektu (jeden projekt na řádek)\nPodporované oddělovače: \" - \", \",\" nebo tabulátor",
+    "orientation": "Orientace plakátu:",
+    "portrait": "Na výšku (A4)",
+    "landscape": "Na šířku (A4)",
+    "commonText": "Společný text (max. 255 znaků):",
+    "commonTextPlaceholder": "Dodatečný text, který se objeví na všech plakátech...",
+    "commonTextHint": "Volitelný text pro všechny generované plakáty",
+    "generate": "Generovat plakáty",
+    "generating": "Generuji plakáty...",
+    "results": {
+      "success": "Plakáty vygenerovány",
+      "successful": "Úspěšně",
+      "failed": "Selhalo",
+      "generatedPosters": "Vygenerované plakáty",
+      "download": "Stáhnout"
+    }
+  },
+  "common": {
+    "selectButton": "Vybrat {{item}}",
+    "filesSelected": "Vybráno souborů: {{count}}",
+    "noFilesSelected": "Žádné soubory nebyly vybrány",
+    "processing": "Zpracovávám...",
+    "loading": "Načítám...",
+    "error": "Chyba",
+    "success": "Úspěch",
+    "warning": "Upozornění",
+    "info": "Informace",
+    "save": "Uložit",
+    "cancel": "Zrušit",
+    "download": "Stáhnout",
+    "close": "Zavřít"
+  },
+  "errors": {
+    "noFiles": "Vyberte soubory a šablonu",
+    "noTemplate": "Vyberte šablonu",
+    "noProjects": "Zadejte alespoň jeden projekt",
+    "invalidFormat": "Neplatný formát",
+    "processingFailed": "Zpracování selhalo",
+    "downloadFailed": "Chyba při ukládání souboru",
+    "serverError": "Chyba serveru",
+    "startupError": "Nepodařilo se spustit Python server"
+  },
+  "messages": {
+    "selectFiles": "Vyberte soubory",
+    "selectTemplate": "Vyberte šablonu",
+    "processingComplete": "Zpracování dokončeno",
+    "fileSaved": "Soubor byl uložen",
+    "noValidProjects": "Nebyli nalezeny žádné platné projekty"
+  }
+}
