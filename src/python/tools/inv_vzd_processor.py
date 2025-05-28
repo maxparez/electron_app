@@ -736,9 +736,10 @@ class InvVzdProcessor(BaseTool):
             # Extract student names from source file (column B, from row 11 until two empty rows)
             student_names = self._extract_student_names_from_data(source_file)
             
-            # Write student names starting at B4
+            # Write student names starting at B4 (one by one)
             if len(student_names) > 0:
-                sheet.range("B4").options(ndim="expand", transpose=True).value = student_names
+                for i, name in enumerate(student_names):
+                    sheet.range(f"B{4+i}").value = name
             
             # Save as new file and close
             wb.save(output_path)
