@@ -756,6 +756,9 @@ class InvVzdProcessor(BaseTool):
                 self.add_info(f"Zapisuji {len(overview_data)} záznamů do Přehled")
                 sheet.range("C3").options(ndim="expand").value = overview_data
             
+            # STEP 4: Control check - verify SDP sums match activities total
+            self._verify_sdp_sums(wb)
+            
             # Save as new file and close
             wb.save(output_path)
             wb.close()
@@ -813,6 +816,64 @@ class InvVzdProcessor(BaseTool):
         except Exception as e:
             self.add_error(f"Chyba při vytváření přehledu: {str(e)}")
             return []
+    
+    def _verify_sdp_sums(self, wb):
+        """Verify SDP sums match total hours - following original control logic"""
+        try:
+            # Calculate activities total (Seznam aktivit D3 to end)
+            aktivit_sheet = wb.sheets['Seznam aktivit']
+            activities_total = 0
+            row = 3
+            while True:
+                cell_value = aktivit_sheet.range(f"D{row}").value
+                if cell_value is None or str(cell_value).strip() == '':
+                    break
+                try:
+                    activities_total += int(float(str(cell_value)))
+                except:
+                    pass
+                row += 1
+            
+            # Check SDP sheet sums
+            sdp_sheet = wb.sheets['SDP']
+            
+            # Sum C4:C10 (forma range)
+            sdp_forma_total = 0
+            for row in range(4, 11):  # C4 to C10
+                cell_value = sdp_sheet.range(f"C{row}").value
+                if cell_value is not None:
+                    try:
+                        sdp_forma_total += int(float(str(cell_value)))
+                    except:
+                        pass
+            
+            # Sum C12:C28 (tema range) 
+            sdp_tema_total = 0
+            for row in range(12, 29):  # C12 to C28
+                cell_value = sdp_sheet.range(f"C{row}").value
+                if cell_value is not None:
+                    try:
+                        sdp_tema_total += int(float(str(cell_value)))
+                    except:
+                        pass
+            
+            # Compare and report
+            self.add_info(f"Kontrola součtů:")
+            self.add_info(f"  Seznam aktivit (celkem): {activities_total} hodin")
+            self.add_info(f"  SDP forma (C4-C10): {sdp_forma_total} hodin")
+            self.add_info(f"  SDP téma (C12-C28): {sdp_tema_total} hodin")
+            
+            if activities_total == sdp_forma_total == sdp_tema_total:
+                self.add_info("✅ Všechny součty souhlasí - výsledek je na 100% OK!")
+            else:
+                self.add_error(f"❌ NESOUHLASÍ součty v SDP!")
+                self.add_error(f"  Počet inv. hodin: {activities_total}")
+                self.add_error(f"  SDP forma: {sdp_forma_total}")
+                self.add_error(f"  SDP téma: {sdp_tema_total}")
+                self.add_error("⚠️  ZKONTROLUJTE výsledný soubor - aktivity na listu 'Seznam aktivit'")
+                
+        except Exception as e:
+            self.add_error(f"Chyba při kontrole SDP součtů: {str(e)}")
             
     def process_paths(self, source_files: List[str], template_path: str, 
                      output_dir: str, keep_filename: bool = True,
