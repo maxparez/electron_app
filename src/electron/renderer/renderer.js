@@ -139,14 +139,45 @@ async function selectFiles(tool) {
     try {
         const filePaths = await window.electronAPI.openFile({ multiple: true });
         if (filePaths.length > 0) {
-            state.selectedFiles[tool] = filePaths;
-            updateFilesList(tool);
-            
-            // Enable process button
-            if (tool === 'inv-vzd') {
-                checkInvVzdReady();
-            } else if (tool === 'zor-spec') {
-                elements.zorProcessBtn.disabled = false;
+            // For ZorSpec, check if files have the required sheet
+            if (tool === 'zor-spec') {
+                const validFiles = [];
+                const fileVersions = {};
+                
+                for (const filePath of filePaths) {
+                    try {
+                        const versionResult = await window.electronAPI.apiCall('detect/zor-spec-version', 'POST', {
+                            filePath: filePath
+                        });
+                        
+                        if (versionResult.success && versionResult.has_intro_sheet) {
+                            validFiles.push(filePath);
+                            fileVersions[filePath] = versionResult.version;
+                        } else {
+                            showMessage(`Soubor ${filePath.split(/[\\\/]/).pop()} neobsahuje list "Úvod a postup vyplňování"`, 'warning');
+                        }
+                    } catch (error) {
+                        console.error(`Error checking file ${filePath}:`, error);
+                    }
+                }
+                
+                if (validFiles.length > 0) {
+                    state.selectedFiles[tool] = validFiles;
+                    state.zorFileVersions = fileVersions;
+                    updateFilesList(tool);
+                    elements.zorProcessBtn.disabled = false;
+                    showMessage(`Vybráno ${validFiles.length} vhodných souborů`, 'success');
+                } else {
+                    showMessage('Žádný z vybraných souborů neobsahuje požadovaný list', 'error');
+                }
+            } else {
+                state.selectedFiles[tool] = filePaths;
+                updateFilesList(tool);
+                
+                // Enable process button
+                if (tool === 'inv-vzd') {
+                    checkInvVzdReady();
+                }
             }
         }
     } catch (error) {
@@ -168,11 +199,23 @@ function updateFilesList(tool) {
         files.forEach(file => {
             const fileDiv = document.createElement('div');
             fileDiv.className = 'file-item';
-            fileDiv.innerHTML = `
-                <div class="file-path">
-                    <strong>Celá cesta:</strong> ${file}
-                </div>
-            `;
+            
+            // For ZorSpec files, show version info if available
+            if (tool === 'zor-spec' && state.zorFileVersions && state.zorFileVersions[file]) {
+                fileDiv.innerHTML = `
+                    <div class="file-path">
+                        <strong>Celá cesta:</strong> ${file}
+                        <br><strong>Verze:</strong> ${state.zorFileVersions[file]}
+                    </div>
+                `;
+            } else {
+                fileDiv.innerHTML = `
+                    <div class="file-path">
+                        <strong>Celá cesta:</strong> ${file}
+                    </div>
+                `;
+            }
+            
             filesList.appendChild(fileDiv);
         });
     }
@@ -285,16 +328,28 @@ async function selectZorFolder() {
         });
         
         if (folderPath) {
-            // Scan folder for Excel files
-            const suitableFiles = await scanFolderForZorSpecFiles(folderPath);
+            // Scan folder for Excel files with version detection
+            const scanResult = await scanFolderForZorSpecFiles(folderPath);
             
-            if (suitableFiles.length > 0) {
-                state.selectedFiles['zor-spec'] = suitableFiles;
+            if (scanResult.files.length > 0) {
+                state.selectedFiles['zor-spec'] = scanResult.files;
+                // Store version info for display
+                state.zorFileVersions = scanResult.versions;
+                
+                // Check for mixed versions and warn user
+                const versions = Object.values(scanResult.versions);
+                const uniqueVersions = [...new Set(versions)];
+                
+                if (uniqueVersions.length > 1) {
+                    const versionCounts = uniqueVersions.map(v => `${v}: ${versions.filter(version => version === v).length} souborů`).join(', ');
+                    showMessage(`⚠️ POZOR: Nalezeny soubory s různými verzemi (${versionCounts}). Zkontrolujte, zda chcete zpracovat všechny soubory současně.`, 'warning');
+                }
+                
                 updateFilesList('zor-spec');
                 elements.zorProcessBtn.disabled = false;
-                showMessage(`Nalezeno ${suitableFiles.length} vhodných souborů docházky`, 'success');
+                showMessage(`Nalezeno ${scanResult.files.length} vhodných souborů docházky`, 'success');
             } else {
-                showMessage('Ve vybrané složce nebyly nalezeny žádné vhodné soubory docházky', 'warning');
+                showMessage('Ve vybrané složce nebyly nalezeny žádné soubory s listem "Úvod a postup vyplňování"', 'warning');
             }
         }
     } catch (error) {
@@ -309,33 +364,42 @@ async function scanFolderForZorSpecFiles(folderPath) {
         // Use Node.js fs to read directory
         const result = await window.electronAPI.scanFolder(folderPath);
         
-        // Filter for Excel files that look like attendance files
+        // Filter for Excel files
         const excelFiles = result.files.filter(file => {
             const extension = file.toLowerCase().split('.').pop();
             return ['xlsx', 'xls'].includes(extension);
         });
         
-        // Filter for files that contain keywords suggesting they are ZorSpec attendance files
-        const attendanceKeywords = [
-            'dochazka', 'attendance', 'evidence', 'seznam', 'zor', 'spec',
-            'trida', 'class', 'student', 'zak', 'vzdelavani', 'education'
-        ];
+        // Check each file for the 'Úvod a postup vyplňování' sheet
+        const suitableFiles = [];
+        const fileVersions = {};
         
-        const suitableFiles = excelFiles.filter(file => {
-            const fileName = file.toLowerCase();
-            return attendanceKeywords.some(keyword => fileName.includes(keyword));
-        });
+        for (const file of excelFiles) {
+            const filePath = `${folderPath}${folderPath.includes('\\') ? '\\' : '/'}${file}`;
+            
+            try {
+                // Check if file has the required sheet and get version
+                const versionResult = await window.electronAPI.apiCall('detect/zor-spec-version', 'POST', {
+                    filePath: filePath
+                });
+                
+                if (versionResult.success && versionResult.has_intro_sheet) {
+                    suitableFiles.push(filePath);
+                    fileVersions[filePath] = versionResult.version;
+                }
+            } catch (error) {
+                console.error(`Error checking file ${file}:`, error);
+            }
+        }
         
-        // Return full paths (use cross-platform path separator)
-        return suitableFiles.map(file => {
-            // Normalize path separators for cross-platform compatibility
-            const separator = folderPath.includes('\\') ? '\\' : '/';
-            return `${folderPath}${separator}${file}`;
-        });
+        return {
+            files: suitableFiles,
+            versions: fileVersions
+        };
         
     } catch (error) {
         console.error('Error scanning folder:', error);
-        return [];
+        return { files: [], versions: {} };
     }
 }
 
@@ -425,10 +489,11 @@ async function processZorSpec() {
     try {
         showLoading(true);
         
-        // Use path-based processing like InvVzd
+        // Use path-based processing with auto-save
         const result = await window.electronAPI.apiCall('process/zor-spec-paths', 'POST', {
             filePaths: state.selectedFiles['zor-spec'],
-            options: {}
+            options: {},
+            autoSave: true  // Auto-save to source folder
         });
         
         showLoading(false);
@@ -443,20 +508,36 @@ async function processZorSpec() {
                 </div>
             `;
             
-            // Show output files
+            // Show output files with appropriate actions
             if (result.data.output_files && result.data.output_files.length > 0) {
-                resultHtml += '<h4>Výstupní soubory:</h4><div class="output-files">';
-                result.data.output_files.forEach(file => {
-                    resultHtml += `
-                        <div class="file-item">
-                            <span class="file-name">${file.filename}</span>
-                            <span class="file-size">(${Math.round(file.size / 1024)} KB)</span>
-                            <button class="btn btn-small" onclick="downloadFile('${file.filename}', '${file.content}')">
-                                💾 Stáhnout
-                            </button>
-                        </div>
-                    `;
-                });
+                if (result.data.auto_saved) {
+                    resultHtml += `<h4>Výstupní soubory (uloženy v ${result.data.output_directory}):</h4><div class="output-files">`;
+                    result.data.output_files.forEach(file => {
+                        const fullPath = `${result.data.output_directory}/${file.filename}`.replace(/\\/g, '/');
+                        resultHtml += `
+                            <div class="file-item">
+                                <span class="file-name">${file.filename}</span>
+                                <span class="file-size">(${Math.round(file.size / 1024)} KB)</span>
+                                <button class="btn btn-small" onclick="openFile('${fullPath}')">
+                                    👁️ Zobrazit
+                                </button>
+                            </div>
+                        `;
+                    });
+                } else {
+                    resultHtml += '<h4>Výstupní soubory:</h4><div class="output-files">';
+                    result.data.output_files.forEach(file => {
+                        resultHtml += `
+                            <div class="file-item">
+                                <span class="file-name">${file.filename}</span>
+                                <span class="file-size">(${Math.round(file.size / 1024)} KB)</span>
+                                <button class="btn btn-small" onclick="downloadFile('${file.filename}', '${file.content}')">
+                                    💾 Stáhnout
+                                </button>
+                            </div>
+                        `;
+                    });
+                }
                 resultHtml += '</div>';
             }
             
@@ -730,6 +811,21 @@ function hexToBytes(hex) {
         bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
     }
     return bytes;
+}
+
+// Open file in associated application
+async function openFile(filePath) {
+    try {
+        const result = await window.electronAPI.openFileInApp(filePath);
+        if (result.success) {
+            showMessage(`Soubor ${result.filename || 'soubor'} byl otevřen`, 'success');
+        } else {
+            showMessage(`Chyba při otevírání souboru: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Open file error:', error);
+        showMessage('Chyba při otevírání souboru', 'error');
+    }
 }
 
 // Load last selected folder

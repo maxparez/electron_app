@@ -131,6 +131,51 @@ def detect_source_version():
             "message": f"Chyba při detekci verze: {str(e)}"
         }), 500
 
+@app.route('/api/detect/zor-spec-version', methods=['POST'])
+def detect_zor_spec_version():
+    """Detect ZorSpec file version from 'Úvod a postup vyplňování' sheet"""
+    try:
+        data = request.get_json()
+        file_path = data.get('filePath')
+        
+        if not file_path:
+            return jsonify({
+                "success": False,
+                "message": "No file path provided"
+            }), 400
+        
+        # Convert path if needed
+        import platform
+        if platform.system() == 'Linux' and len(file_path) >= 3 and file_path[1:3] == ':\\':
+            drive_letter = file_path[0].lower()
+            remaining_path = file_path[3:].replace('\\', '/')
+            file_path = f'/mnt/{drive_letter}/{remaining_path}'
+        
+        # Check if file has the required sheet and detect version
+        processor = ZorSpecDatProcessor(logger)
+        sheet_info = processor.detect_file_info(file_path)
+        
+        if sheet_info['has_intro_sheet']:
+            return jsonify({
+                "success": True,
+                "has_intro_sheet": True,
+                "version": sheet_info['version'],
+                "message": f"Detekována verze: {sheet_info['version']}"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "has_intro_sheet": False,
+                "message": "Soubor neobsahuje list 'Úvod a postup vyplňování'"
+            })
+            
+    except Exception as e:
+        logger.error(f"Error detecting ZorSpec version: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Chyba při detekci verze: {str(e)}"
+        }), 500
+
 @app.route('/api/process/inv-vzd', methods=['POST'])
 def process_inv_vzd():
     """Process innovative education attendance files"""
@@ -455,6 +500,7 @@ def process_zor_spec_paths():
             
         file_paths = data.get('filePaths', [])
         options = data.get('options', {})
+        auto_save = data.get('autoSave', False)  # Auto-save to source folder
         
         # Convert Windows paths to WSL paths if needed (only on Linux/WSL)
         def convert_path_if_needed(path):
@@ -478,15 +524,22 @@ def process_zor_spec_paths():
                 "message": "No file paths provided"
             }), 400
         
-        # Create temporary directory for processing
-        temp_dir = tempfile.mkdtemp()
+        # Determine output directory
+        if auto_save and file_paths:
+            # Use the directory of the first file as output directory
+            first_file_dir = os.path.dirname(file_paths[0])
+            output_dir = first_file_dir
+            logger.info(f"Auto-save enabled, using source directory: {output_dir}")
+        else:
+            # Create temporary directory for processing
+            output_dir = tempfile.mkdtemp()
         
         try:
             # Process with ZorSpecDatProcessor
             processor = ZorSpecDatProcessor(logger)
             
             # Process files using paths directly
-            result = processor.process_paths(file_paths, temp_dir, options)
+            result = processor.process_paths(file_paths, output_dir, options)
             
             if result['success']:
                 # Prepare response with output files
@@ -502,18 +555,25 @@ def process_zor_spec_paths():
                             'type': output_file.get('type', 'file')
                         })
                 
-                return jsonify({
+                response_data = {
                     "status": "success",
                     "message": f"Úspěšně zpracováno {result['files_processed']} souborů",
                     "data": {
                         "files_processed": result['files_processed'],
                         "unique_students": result['unique_students'],
-                        "output_files": output_files
+                        "output_files": output_files,
+                        "auto_saved": auto_save,
+                        "output_directory": output_dir if auto_save else None
                     },
                     "errors": result.get('errors', []),
                     "warnings": result.get('warnings', []),
                     "info": result.get('info', [])
-                })
+                }
+                
+                if auto_save:
+                    response_data["message"] += f" a uloženo do zdrojové složky: {output_dir}"
+                
+                return jsonify(response_data)
             else:
                 # Enhanced error message for path issues
                 errors = result.get('errors', [])
@@ -532,9 +592,10 @@ def process_zor_spec_paths():
                 }), 400
                 
         finally:
-            # Cleanup temp files
-            import shutil
-            shutil.rmtree(temp_dir, ignore_errors=True)
+            # Cleanup temp files only if not auto-save (temp directory was used)
+            if not auto_save:
+                import shutil
+                shutil.rmtree(output_dir, ignore_errors=True)
             
     except Exception as e:
         logger.error(f"Error processing zor-spec-paths: {str(e)}")

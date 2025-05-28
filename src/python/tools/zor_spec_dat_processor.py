@@ -489,6 +489,50 @@ class ZorSpecDatProcessor(BaseTool):
         except Exception as e:
             raise Exception(f"Chyba při ukládání seznamu žáků: {str(e)}")
             
+    def detect_file_info(self, file_path: str) -> Dict[str, Any]:
+        """
+        Detect if file has 'Úvod a postup vyplňování' sheet and extract version from B1 cell
+        
+        Args:
+            file_path: Path to Excel file
+            
+        Returns:
+            Dictionary with detection results
+        """
+        result = {
+            'has_intro_sheet': False,
+            'version': None,
+            'error': None
+        }
+        
+        try:
+            wb = load_workbook(file_path, read_only=True)
+            
+            # Check for the required sheet
+            intro_sheet_name = 'Úvod a postup vyplňování'
+            if intro_sheet_name in wb.sheetnames:
+                result['has_intro_sheet'] = True
+                
+                # Get version from B1 cell
+                ws = wb[intro_sheet_name]
+                version_value = ws.cell(row=1, column=2).value
+                
+                if version_value:
+                    # Extract version number from the value
+                    # Expected format: "Verze X.Y" or similar
+                    version_str = str(version_value).strip()
+                    result['version'] = version_str
+                else:
+                    result['version'] = 'Neznámá'
+                    
+            wb.close()
+            
+        except Exception as e:
+            result['error'] = str(e)
+            self.logger.error(f"Error detecting file info for {os.path.basename(file_path)}: {str(e)}")
+            
+        return result
+            
     def process_paths(self, file_paths: List[str], output_dir: str, options: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Process files using file paths (for compatibility with API)

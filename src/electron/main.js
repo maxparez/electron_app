@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const axios = require('axios');
@@ -219,6 +219,35 @@ ipcMain.handle('fs:scanFolder', async (event, folderPath) => {
     } catch (error) {
         console.error('Error scanning folder:', error);
         throw error;
+    }
+});
+
+// Open file in associated application
+ipcMain.handle('file:openInApp', async (event, filePath) => {
+    const fs = require('fs');
+    
+    try {
+        // Check if file exists
+        if (!fs.existsSync(filePath)) {
+            return {
+                success: false,
+                error: 'Soubor neexistuje'
+            };
+        }
+        
+        // Open file with default application
+        await shell.openPath(filePath);
+        
+        return {
+            success: true,
+            filename: require('path').basename(filePath)
+        };
+    } catch (error) {
+        console.error('Error opening file:', error);
+        return {
+            success: false,
+            error: error.message || 'Neznámá chyba'
+        };
     }
 });
 

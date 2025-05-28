@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveFile: (defaultName) => ipcRenderer.invoke('dialog:saveFile', defaultName),
     selectFolder: (options) => ipcRenderer.invoke('dialog:selectFolder', options),
     writeFile: (path, data) => ipcRenderer.invoke('file:write', path, data),
+    openFileInApp: (filePath) => ipcRenderer.invoke('file:openInApp', filePath),
     
     // Config
     getConfig: (key) => ipcRenderer.invoke('config:get', key),
