@@ -719,27 +719,19 @@ class InvVzdProcessor(BaseTool):
             
     def _copy_template_with_data(self, template_path: str, output_path: str, 
                                 data: pd.DataFrame):
-        """Copy template file and fill with data using xlwings"""
+        """Copy template file and fill with data using xlwings - following original approach"""
         try:
-            # Use xlwings to preserve all Excel features
-            app = xw.App(visible=False)
+            # Following original approach: open template directly, fill data, save as new file
+            wb = xw.Book(template_path)
             
-            # Open template
-            wb_template = app.books.open(template_path)
-            
-            # Save as new file
-            wb_template.save(output_path)
-            wb_template.close()
-            
-            # Open the new file
-            wb = app.books.open(output_path)
+            # Get the main sheet (first sheet - "Seznam účastníků") 
             sheet = wb.sheets[0]
             
             # Write data starting from appropriate row
             start_row = self.config["skiprows"] + 2  # +2 for header row and 0-based index
             start_col = 2  # Column B
             
-            # Write data
+            # Write data if we have any
             if len(data) > 0:
                 sheet.range((start_row, start_col)).value = data.values
                 
@@ -747,10 +739,9 @@ class InvVzdProcessor(BaseTool):
             hours_cell = self.config["hours_total_cell"]
             sheet.range(hours_cell).value = f"Celkem {self.hours_total} hodin"
             
-            # Save and close
-            wb.save()
+            # Save as new file and close
+            wb.save(output_path)
             wb.close()
-            app.quit()
             
         except Exception as e:
             self.add_error(f"Chyba při kopírování šablony: {str(e)}")
