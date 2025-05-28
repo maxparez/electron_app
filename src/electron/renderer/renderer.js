@@ -770,10 +770,20 @@ function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMes
             <div class="processing-steps">
     `;
     
-    // Filter messages for this file
+    // Filter messages for this file (more inclusive filtering)
+    const fileNameWithoutExt = sourceBasename.replace(/\.[^.]+$/, ''); // Remove extension
     const fileMessages = (infoMessages || []).filter(msg => 
-        msg.includes(sourceBasename) || msg.includes(file.filename.replace('.xlsx', ''))
+        msg.includes(sourceBasename) || 
+        msg.includes(fileNameWithoutExt) ||
+        msg.includes(file.filename.replace('.xlsx', '')) ||
+        // Also check for general processing messages if no specific file match
+        (!msg.includes('.xlsx') && !msg.includes('soubor'))
     );
+    
+    // Debug logging
+    console.log(`File: ${sourceBasename}`);
+    console.log('All info messages:', infoMessages);
+    console.log('Filtered messages for this file:', fileMessages);
     
     // Add processing steps
     const steps = [
