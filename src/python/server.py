@@ -36,13 +36,29 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
+# Add request logging
+@app.before_request
+def log_request_info():
+    logger.info(f"=== REQUEST START ===")
+    logger.info(f"Method: {request.method}")
+    logger.info(f"URL: {request.url}")
+    logger.info(f"Headers: {dict(request.headers)}")
+    if request.method in ['POST', 'PUT']:
+        try:
+            logger.info(f"Body: {request.get_data(as_text=True)}")
+        except:
+            logger.info("Body: Unable to log body")
+    logger.info(f"=== REQUEST END ===")
+
 # API Routes
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    logger.info("Health check called")
     return jsonify({
         "status": "healthy",
-        "message": "Python backend is running"
+        "message": "Python backend is running",
+        "timestamp": datetime.now().isoformat()
     })
 
 @app.route('/api/detect/template-version', methods=['POST'])
@@ -792,8 +808,30 @@ def get_config():
         }
     })
 
+# Error handlers
+@app.errorhandler(400)
+def bad_request(error):
+    logger.error(f"400 Bad Request: {error}")
+    return jsonify({
+        "status": "error",
+        "message": "Bad Request",
+        "details": str(error)
+    }), 400
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    logger.error(f"Unhandled exception: {type(error).__name__}: {str(error)}")
+    import traceback
+    logger.error(traceback.format_exc())
+    return jsonify({
+        "status": "error",
+        "message": "Internal server error",
+        "details": str(error)
+    }), 500
+
 if __name__ == '__main__':
     # Run the Flask server
     port = int(os.environ.get('PORT', 5000))
     logger.info(f"Starting Flask server on port {port}")
+    logger.info(f"Python version: {sys.version}")
     app.run(host='127.0.0.1', port=port, debug=True)

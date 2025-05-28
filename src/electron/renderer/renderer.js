@@ -421,7 +421,7 @@ async function processInvVzd() {
         
         // For now, we'll send file paths and let the backend handle file reading
         // This is because we can't use file:// protocol in renderer
-        const result = await window.electronAPI.apiCall('process/inv-vzd-paths', 'POST', {
+        const requestData = {
             filePaths: state.selectedFiles['inv-vzd'],
             templatePath: state.selectedTemplate['inv-vzd'],
             options: {
@@ -429,7 +429,11 @@ async function processInvVzd() {
                 keep_filename: true,
                 optimize: false
             }
-        });
+        };
+        
+        console.log('Sending InvVzd request:', requestData);
+        const result = await window.electronAPI.apiCall('process/inv-vzd-paths', 'POST', requestData);
+        console.log('InvVzd response:', result);
         
         showLoading(false);
         
