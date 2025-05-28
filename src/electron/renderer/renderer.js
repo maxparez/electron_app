@@ -109,7 +109,14 @@ function switchTool(toolId) {
         content.classList.remove('active');
     });
     
-    const targetContent = document.getElementById(`${toolId}-tool`);
+    // Handle special case for welcome screen
+    let targetContent;
+    if (toolId === 'welcome') {
+        targetContent = document.getElementById('welcome-screen');
+    } else {
+        targetContent = document.getElementById(`${toolId}-tool`);
+    }
+    
     if (targetContent) {
         targetContent.classList.add('active');
         state.currentTool = toolId;
