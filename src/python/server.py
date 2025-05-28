@@ -151,9 +151,14 @@ def process_inv_vzd_paths():
         template_path = data.get('templatePath')
         options = data.get('options', {})
         
+        # Debug: Log original paths
+        logger.info(f"Original template_path: {template_path}")
+        logger.info(f"Original file_paths: {file_paths}")
+        
         # Convert Windows paths to WSL paths if needed
         def convert_path_if_needed(path):
             if path and isinstance(path, str):
+                logger.info(f"Checking path for conversion: {path}")
                 # Check if it's a Windows path (e.g., D:\path or C:\path)
                 if len(path) >= 3 and path[1:3] == ':\\':
                     drive_letter = path[0].lower()
@@ -161,11 +166,17 @@ def process_inv_vzd_paths():
                     wsl_path = f'/mnt/{drive_letter}/{remaining_path}'
                     logger.info(f"Converting Windows path to WSL: {path} -> {wsl_path}")
                     return wsl_path
+                else:
+                    logger.info(f"Path does not match Windows pattern, keeping as-is: {path}")
             return path
         
         # Convert paths
         template_path = convert_path_if_needed(template_path)
         file_paths = [convert_path_if_needed(fp) for fp in file_paths]
+        
+        # Debug: Log converted paths
+        logger.info(f"Converted template_path: {template_path}")
+        logger.info(f"Converted file_paths: {file_paths}")
         
         if not file_paths:
             return jsonify({
