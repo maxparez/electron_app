@@ -735,6 +735,11 @@ class InvVzdProcessor(BaseTool):
             if len(student_names) > 0:
                 sheet.range("B4").options(ndim="expand", transpose=True).value = student_names
             
+            # STEP 2: Write activities to "Seznam aktivit" sheet at C3
+            sheet = wb.sheets['Seznam aktivit']
+            if len(data) > 0:
+                sheet.range("C3").options(ndim="expand").value = data.values
+            
             # Save as new file and close
             wb.save(output_path)
             wb.close()
