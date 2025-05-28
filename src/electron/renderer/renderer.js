@@ -9,7 +9,8 @@ const state = {
     },
     selectedTemplate: {
         'inv-vzd': null
-    }
+    },
+    detectedTemplateVersion: null
 };
 
 // DOM elements
@@ -24,6 +25,7 @@ const elements = {
     invFilesList: document.getElementById('inv-files-list'),
     invProcessBtn: document.getElementById('process-inv-vzd'),
     invResults: document.getElementById('inv-vzd-results'),
+    invTemplateVersion: document.getElementById('inv-template-version'),
     invTemplateBtn: document.getElementById('select-inv-template'),
     invTemplateName: document.getElementById('inv-template-name'),
     
@@ -171,6 +173,9 @@ async function selectInvTemplate() {
                     <strong>Celá cesta:</strong> ${filePaths[0]}
                 </div>
             `;
+            
+            // Detect template version
+            await detectTemplateVersion(filePaths[0]);
             
             // Enable process button if both template and files are selected
             checkInvVzdReady();
@@ -753,6 +758,35 @@ async function saveFilesAutomatically(files, targetFolder) {
 }
 
 // Initialize when DOM is ready
+// Detect template version
+async function detectTemplateVersion(templatePath) {
+    try {
+        const result = await window.electronAPI.apiCall('detect/template-version', 'POST', {
+            templatePath: templatePath
+        });
+        
+        if (result.success) {
+            const version = result.version;
+            const versionText = version === '16' ? '16 hodin' : version === '32' ? '32 hodin' : 'Neznámá verze';
+            
+            elements.invTemplateVersion.innerHTML = `<strong>Verze šablony:</strong> ${versionText}`;
+            elements.invTemplateVersion.className = 'template-version';
+            
+            // Store detected version
+            state.detectedTemplateVersion = version;
+        } else {
+            elements.invTemplateVersion.innerHTML = `<strong>Neplatná šablona:</strong> ${result.message || 'Nepodařilo se detekovat verzi'}`;
+            elements.invTemplateVersion.className = 'template-version invalid';
+            state.detectedTemplateVersion = null;
+        }
+    } catch (error) {
+        console.error('Template version detection error:', error);
+        elements.invTemplateVersion.innerHTML = '<strong>Chyba:</strong> Nepodařilo se detekovat verzi šablony';
+        elements.invTemplateVersion.className = 'template-version invalid';
+        state.detectedTemplateVersion = null;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     // Load translations first
     if (window.i18n) {

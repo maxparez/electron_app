@@ -449,3 +449,21 @@ h3.error {
     background-color: #545b62;
     border-color: #4e555b;
 }
+
+/* Template version display */
+.template-version {
+    margin-top: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #2c3e50;
+    padding: 8px 12px;
+    background-color: #ecf0f1;
+    border-radius: 4px;
+    border-left: 4px solid #3498db;
+}
+
+.template-version.invalid {
+    color: #e74c3c;
+    background-color: #fdf2f2;
+    border-left-color: #e74c3c;
+}

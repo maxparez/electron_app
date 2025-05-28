@@ -45,6 +45,49 @@ def health_check():
         "message": "Python backend is running"
     })
 
+@app.route('/api/detect/template-version', methods=['POST'])
+def detect_template_version():
+    """Detect template version from file"""
+    try:
+        data = request.get_json()
+        template_path = data.get('templatePath')
+        
+        if not template_path:
+            return jsonify({
+                "success": False,
+                "message": "No template path provided"
+            }), 400
+        
+        # Convert path if needed
+        import platform
+        if platform.system() == 'Linux' and len(template_path) >= 3 and template_path[1:3] == ':\\':
+            drive_letter = template_path[0].lower()
+            remaining_path = template_path[3:].replace('\\', '/')
+            template_path = f'/mnt/{drive_letter}/{remaining_path}'
+        
+        # Use InvVzdProcessor to detect version
+        processor = InvVzdProcessor(logger)
+        version = processor._detect_template_version(template_path)
+        
+        if version:
+            return jsonify({
+                "success": True,
+                "version": version,
+                "message": f"Detekována verze: {version} hodin"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Nepodařilo se detekovat verzi šablony - neplatný formát"
+            })
+            
+    except Exception as e:
+        logger.error(f"Error detecting template version: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Chyba při detekci verze: {str(e)}"
+        }), 500
+
 @app.route('/api/process/inv-vzd', methods=['POST'])
 def process_inv_vzd():
     """Process innovative education attendance files"""
