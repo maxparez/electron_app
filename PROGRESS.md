@@ -93,14 +93,21 @@
 - [x] **Tool 1 Enhancements:** Visible error/progress logging
 - [x] **Tool 1 Enhancements:** Full path display for templates and files
 - [x] **Tool 1 Enhancements:** Folder scanning for automatic file selection
+- [x] **Tool 2 Enhancements:** Fixed uploadFormData error, added folder scanning
+- [x] **Path Conversion:** Windows to WSL automatic path conversion
+- [x] **32h Data Reading:** Complete support for zdroj-dochazka sheet format
+- [x] **Version Detection:** Smart detection based on sheet content rules
 
 ## 📋 Next Phase - Testing & Polish
 
 ### Manual Testing Phase (Current)
-- [ ] User testing of new plakat generator features
-- [ ] Verify folder selection and auto-save functionality
-- [ ] Test semicolon/tab input parsing
-- [ ] Validate filename generation (e.g., 21933_plakat.pdf)
+- [x] Linux/WSL testing - logic validation complete
+- [x] Path conversion and error handling verified
+- [x] 32h data reading from zdroj-dochazka format working
+- [x] Version detection rules implemented and tested
+- [ ] **Windows testing with xlwings** (IN PROGRESS)
+- [ ] Complete InvVzd workflow on Windows
+- [ ] Final ZorSpec and Plakat validation
 
 ### Week 6: Testing & Deployment
 - [ ] Windows testing with xlwings
@@ -111,10 +118,10 @@
 
 ## 🐛 Known Issues
 
-1. **xlwings** - Requires Windows environment (expected, for InvVzd tool)
-2. **User testing in progress** - Tool 1 enhancements ready for testing
+1. **xlwings on Linux** - Successfully resolved with path-based processing (Linux logic complete)
+2. **Windows testing pending** - InvVzd ready for final Windows validation with xlwings
 
-## 📊 Overall Progress: 90%
+## 📊 Overall Progress: 95%
 
 ### By Component:
 - Environment Setup: 100% ✅
