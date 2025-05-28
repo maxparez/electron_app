@@ -36,6 +36,11 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
+# Add werkzeug request logging
+import logging as werkzeug_logging
+werkzeug_logger = werkzeug_logging.getLogger('werkzeug')
+werkzeug_logger.setLevel(werkzeug_logging.INFO)
+
 # API Routes
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -277,11 +282,14 @@ def process_inv_vzd():
 def process_inv_vzd_paths():
     """Process innovative education attendance files using file paths"""
     try:
+        print("=== InvVzd Processing Started ===")
         logger.info("=== InvVzd Processing Started ===")
         data = request.get_json()
+        print(f"Received data: {data}")
         logger.info(f"Received data: {data}")
         
         if not data:
+            print("ERROR: No data provided in request")
             logger.error("No data provided in request")
             return jsonify({
                 "status": "error",
@@ -395,7 +403,10 @@ def process_inv_vzd_paths():
             }), 400
             
     except Exception as e:
+        print(f"EXCEPTION in inv-vzd-paths: {str(e)}")
         logger.error(f"Error processing inv-vzd-paths: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
         return jsonify({
             "status": "error",
             "message": str(e)
