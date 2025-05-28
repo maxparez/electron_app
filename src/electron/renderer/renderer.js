@@ -780,10 +780,6 @@ function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMes
         (!msg.includes('.xlsx') && !msg.includes('soubor'))
     );
     
-    // Debug logging
-    console.log(`File: ${sourceBasename}`);
-    console.log('All info messages:', infoMessages);
-    console.log('Filtered messages for this file:', fileMessages);
     
     // Add processing steps
     const steps = [
