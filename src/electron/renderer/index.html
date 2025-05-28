@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zpracování projektové dokumentace</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <h2 class="sidebar-title">Nástroje</h2>
+            <div class="nav-item" data-tool="inv-vzd">
+                <i class="icon">📝</i>
+                <span>Inovativní vzdělávání</span>
+            </div>
+            <div class="nav-item" data-tool="zor-spec">
+                <i class="icon">📊</i>
+                <span>Speciální data</span>
+            </div>
+            <div class="nav-item" data-tool="plakat">
+                <i class="icon">🖼️</i>
+                <span>Generátor plakátů</span>
+            </div>
+        </nav>
+        
+        <!-- Main Content Area -->
+        <main class="content">
+            <!-- Welcome Screen -->
+            <div id="welcome-screen" class="tool-content active">
+                <h1>Vítejte v aplikaci pro zpracování projektové dokumentace</h1>
+                <p>Vyberte nástroj z levého menu pro začátek práce.</p>
+                <div class="features">
+                    <div class="feature">
+                        <h3>📝 Inovativní vzdělávání</h3>
+                        <p>Zpracování docházky pro 16 a 32 hodinové kurzy inovativního vzdělávání.</p>
+                    </div>
+                    <div class="feature">
+                        <h3>📊 Speciální data</h3>
+                        <p>Zpracování docházky z více tříd a generování HTML reportů.</p>
+                    </div>
+                    <div class="feature">
+                        <h3>🖼️ Generátor plakátů</h3>
+                        <p>Vytvoření PDF plakátů pro projekty.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Inv Vzd Tool -->
+            <div id="inv-vzd-tool" class="tool-content">
+                <h2>Inovativní vzdělávání - Kopírování docházky</h2>
+                <div class="tool-description">
+                    <p>Tento nástroj zpracovává docházku pro kurzy inovativního vzdělávání (16 nebo 32 hodin).</p>
+                </div>
+                
+                <div class="form-group">
+                    <label>Typ kurzu:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="course-type" value="16" checked>
+                            16 hodin
+                        </label>
+                        <label>
+                            <input type="radio" name="course-type" value="32">
+                            32 hodin
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Vyberte soubory docházky:</label>
+                    <button class="btn btn-primary" id="select-inv-files">Vybrat soubory</button>
+                    <div id="inv-files-list" class="files-list"></div>
+                </div>
+                
+                <div class="form-group">
+                    <button class="btn btn-success" id="process-inv-vzd" disabled>Zpracovat</button>
+                </div>
+                
+                <div id="inv-vzd-results" class="results-container"></div>
+            </div>
+            
+            <!-- Zor Spec Tool -->
+            <div id="zor-spec-tool" class="tool-content">
+                <h2>Speciální data - Zpracování docházky</h2>
+                <div class="tool-description">
+                    <p>Zpracování docházky z více tříd a generování HTML reportů s unikátními seznamy studentů.</p>
+                </div>
+                
+                <div class="form-group">
+                    <label>Vyberte soubory docházky:</label>
+                    <button class="btn btn-primary" id="select-zor-files">Vybrat soubory</button>
+                    <div id="zor-files-list" class="files-list"></div>
+                </div>
+                
+                <div class="form-group">
+                    <button class="btn btn-success" id="process-zor-spec" disabled>Zpracovat</button>
+                </div>
+                
+                <div id="zor-spec-results" class="results-container"></div>
+            </div>
+            
+            <!-- Plakat Generator Tool -->
+            <div id="plakat-tool" class="tool-content">
+                <h2>Generátor plakátů</h2>
+                <div class="tool-description">
+                    <p>Vytvoření PDF plakátů pro projekty.</p>
+                </div>
+                
+                <form id="plakat-form">
+                    <div class="form-group">
+                        <label for="project-name">Název projektu:</label>
+                        <input type="text" id="project-name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="project-description">Popis projektu:</label>
+                        <textarea id="project-description" rows="4" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="project-date">Datum:</label>
+                        <input type="date" id="project-date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="project-location">Místo konání:</label>
+                        <input type="text" id="project-location" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-success">Generovat plakát</button>
+                    </div>
+                </form>
+                
+                <div id="plakat-results" class="results-container"></div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Zpracovávám...</p>
+    </div>
+    
+    <script src="renderer.js"></script>
+</body>
+</html>

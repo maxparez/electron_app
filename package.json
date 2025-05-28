@@ -1,0 +1,42 @@
+{
+  "name": "projektova-dokumentace",
+  "version": "1.0.0",
+  "description": "Desktop application for processing school project documentation (OP JAK)",
+  "main": "src/electron/main.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "start": "electron-forge start",
+    "dev": "electron . --dev",
+    "test": "jest",
+    "build": "electron-forge package",
+    "make": "electron-forge make",
+    "package": "electron-forge package"
+  },
+  "keywords": [
+    "electron",
+    "opjak",
+    "documentation"
+  ],
+  "author": "Max Parez <max.parez@seznam.cz>",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron-forge/cli": "^7.8.1",
+    "@electron-forge/maker-deb": "^7.8.1",
+    "@electron-forge/maker-rpm": "^7.8.1",
+    "@electron-forge/maker-squirrel": "^7.8.1",
+    "@electron-forge/maker-zip": "^7.8.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.8.1",
+    "@electron-forge/plugin-fuses": "^7.8.1",
+    "@electron/fuses": "^1.8.0",
+    "electron": "^36.3.1",
+    "electron-squirrel-startup": "^1.0.1"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  }
+}
