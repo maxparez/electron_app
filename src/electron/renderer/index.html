@@ -150,9 +150,11 @@
                     
                     <div class="form-group">
                         <label for="common-text">Společný text (max. 255 znaků):</label>
-                        <textarea id="common-text" rows="3" maxlength="255" 
-                                  placeholder="Dodatečný text, který se objeví na všech plakátech..."></textarea>
-                        <small class="form-hint">Volitelný text pro všechny generované plakáty</small>
+                        <div class="textarea-wrapper">
+                            <textarea id="common-text" rows="4" maxlength="255">Cílem projektu je přispět k zajištění rovného přístupu ke kvalitnímu a inkluzivnímu vzdělávání pro všechny žáky prostřednictvím podpůrných personálních pozic, vzdělávání pracovníků škol a podpory zavádění inovativních metod výuky.</textarea>
+                            <div class="character-counter" id="char-counter">220/255</div>
+                        </div>
+                        <small class="form-hint">Tento text se objeví na všech generovaných plakátech</small>
                     </div>
                     
                     <div class="form-group">

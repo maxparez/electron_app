@@ -93,6 +93,20 @@ function init() {
     // Load last selected folder
     loadLastFolder();
     
+    // Setup character counter for plakat common text
+    const commonTextArea = document.getElementById('common-text');
+    const charCounter = document.getElementById('char-counter');
+    
+    if (commonTextArea && charCounter) {
+        // Update counter on page load
+        updateCharacterCounter(commonTextArea, charCounter);
+        
+        // Update counter on input
+        commonTextArea.addEventListener('input', () => {
+            updateCharacterCounter(commonTextArea, charCounter);
+        });
+    }
+    
     // Check backend connection
     checkBackendConnection();
 }
@@ -803,6 +817,22 @@ async function savePlakat(filePath) {
     } catch (error) {
         console.error('Save error:', error);
         showMessage('Chyba při ukládání plakátu', 'error');
+    }
+}
+
+// Update character counter for textarea
+function updateCharacterCounter(textarea, counter) {
+    const length = textarea.value.length;
+    const maxLength = parseInt(textarea.getAttribute('maxlength')) || 255;
+    
+    counter.textContent = `${length}/${maxLength}`;
+    
+    // Update styling based on remaining characters
+    counter.classList.remove('warning', 'danger');
+    if (length >= maxLength * 0.9) {
+        counter.classList.add('danger');
+    } else if (length >= maxLength * 0.8) {
+        counter.classList.add('warning');
     }
 }
 

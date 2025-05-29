@@ -139,6 +139,33 @@ body {
     resize: vertical;
 }
 
+/* Textarea with character counter */
+.textarea-wrapper {
+    position: relative;
+}
+
+.character-counter {
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    font-size: 12px;
+    color: #6c757d;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.character-counter.warning {
+    color: #ffc107;
+    font-weight: 500;
+}
+
+.character-counter.danger {
+    color: #dc3545;
+    font-weight: 600;
+}
+
 .radio-group {
     display: flex;
     gap: 20px;
