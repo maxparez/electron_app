@@ -3,6 +3,8 @@ const path = require('path');
 const { spawn } = require('child_process');
 const axios = require('axios');
 const config = require('./config');
+const BackendManager = require('./backend-manager');
+const Updater = require('./updater');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -12,6 +14,8 @@ if (require('electron-squirrel-startup')) {
 let mainWindow;
 let pythonProcess;
 const isDev = process.argv.includes('--dev');
+const backendManager = new BackendManager();
+const updater = new Updater();
 
 // Create the main application window
 function createWindow() {
@@ -39,38 +43,14 @@ function createWindow() {
     mainWindow.on('closed', function () {
         mainWindow = null;
     });
+    
+    // Set main window for updater
+    updater.setMainWindow(mainWindow);
 }
 
 // Start the Python backend server
 function startPythonServer() {
-    const script = path.join(__dirname, '..', 'python', 'server.py');
-    
-    // Use the virtual environment Python if it exists
-    const venvPython = path.join(process.cwd(), 'venv', 'bin', 'python');
-    const pythonCommand = require('fs').existsSync(venvPython) ? venvPython : 'python3';
-    
-    console.log('Starting Python server:', pythonCommand, script);
-    
-    pythonProcess = spawn(pythonCommand, [script], {
-        cwd: process.cwd(),
-        env: { ...process.env, PYTHONUNBUFFERED: '1' }
-    });
-
-    pythonProcess.stdout.on('data', (data) => {
-        console.log(`Python stdout: ${data}`);
-    });
-
-    pythonProcess.stderr.on('data', (data) => {
-        console.error(`Python stderr: ${data}`);
-    });
-
-    pythonProcess.on('close', (code) => {
-        console.log(`Python process exited with code ${code}`);
-        pythonProcess = null;
-    });
-
-    // Wait for server to start
-    return waitForServer();
+    return backendManager.start();
 }
 
 // Wait for the Python server to be ready
@@ -92,11 +72,7 @@ async function waitForServer(retries = 30) {
 
 // Stop the Python server
 function stopPythonServer() {
-    if (pythonProcess) {
-        console.log('Stopping Python server...');
-        pythonProcess.kill();
-        pythonProcess = null;
-    }
+    backendManager.stop();
 }
 
 // IPC handlers for communication with renderer
@@ -259,6 +235,13 @@ app.whenReady().then(async () => {
         
         // Then create the window
         createWindow();
+        
+        // Check for updates after startup (with delay)
+        if (!isDev) {
+            setTimeout(() => {
+                updater.checkForUpdates();
+            }, 10000); // 10 seconds delay
+        }
     } catch (error) {
         console.error('Failed to start application:', error);
         dialog.showErrorBox('Chyba spuštění', 'Nepodařilo se spustit Python server');
@@ -283,6 +266,33 @@ app.on('activate', () => {
 app.on('will-quit', () => {
     // Clean up Python process
     stopPythonServer();
+});
+
+// IPC handler for backend status
+ipcMain.handle('backend:getStatus', () => {
+    return {
+        crashLog: backendManager.getCrashLog(),
+        restartAttempts: backendManager.restartAttempts
+    };
+});
+
+ipcMain.handle('backend:restart', async () => {
+    backendManager.resetRestartAttempts();
+    backendManager.stop();
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return await backendManager.start();
+});
+
+// IPC handlers for updater
+ipcMain.handle('updater:check', async () => {
+    await updater.checkManually();
+});
+
+// Listen for update events from renderer
+ipcMain.on('update-status', (event, data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-status', data);
+    }
 });
 
 // Handle uncaught exceptions

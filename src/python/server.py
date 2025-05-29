@@ -2,16 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import sys
-import logging
 import tempfile
-
-# DEBUG mode - set to False for production
-DEBUG_MODE = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
-
-def debug_print(*args, **kwargs):
-    """Print debug messages only in DEBUG_MODE"""
-    if DEBUG_MODE:
-        print(*args, **kwargs)
 
 # Add tools directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
@@ -21,33 +12,40 @@ from tools.inv_vzd_processor import InvVzdProcessor
 from tools.zor_spec_dat_processor import ZorSpecDatProcessor
 from tools.plakat_generator import PlakatGenerator
 
-# Configure logging with UTF-8 encoding for Windows
-import sys
+# Initialize logging
+from logger import init_logging
+server_logger, tool_logger = init_logging()
+
+# DEBUG mode - set to False for production
+DEBUG_MODE = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+
+def debug_print(*args, **kwargs):
+    """Print debug messages only in DEBUG_MODE"""
+    if DEBUG_MODE:
+        server_logger.debug(' '.join(str(arg) for arg in args))
+
+# Configure UTF-8 encoding for Windows
 if sys.platform == 'win32':
     # Force UTF-8 encoding for Windows console
     import codecs
-    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
-    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('app.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
-
-logger = logging.getLogger(__name__)
+    if hasattr(sys.stdout, 'detach'):
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
+    if hasattr(sys.stderr, 'detach'):
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
 
 # Create Flask app
 app = Flask(__name__)
 CORS(app)
 
-# Add werkzeug request logging
-import logging as werkzeug_logging
-werkzeug_logger = werkzeug_logging.getLogger('werkzeug')
-werkzeug_logger.setLevel(werkzeug_logging.INFO)
+# Configure Flask logging
+import logging
+app.logger.handlers = []
+app.logger.propagate = True
+
+# Suppress werkzeug logging in production
+if not DEBUG_MODE:
+    werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.setLevel(logging.WARNING)
 
 # API Routes
 @app.route('/api/health', methods=['GET'])
@@ -79,7 +77,7 @@ def detect_template_version():
             template_path = f'/mnt/{drive_letter}/{remaining_path}'
         
         # Use InvVzdProcessor to detect version
-        processor = InvVzdProcessor(logger)
+        processor = InvVzdProcessor(tool_logger)
         version = processor._detect_template_version(template_path)
         
         if version:
@@ -95,7 +93,7 @@ def detect_template_version():
             })
             
     except Exception as e:
-        logger.error(f"Error detecting template version: {str(e)}")
+        server_logger.error(f"Error detecting template version: {str(e)}")
         return jsonify({
             "success": False,
             "message": f"Chyba při detekci verze: {str(e)}"
@@ -122,7 +120,7 @@ def detect_source_version():
             source_path = f'/mnt/{drive_letter}/{remaining_path}'
         
         # Use InvVzdProcessor to detect source version
-        processor = InvVzdProcessor(logger)
+        processor = InvVzdProcessor(tool_logger)
         version = processor._detect_source_version(source_path)
         
         if version:
@@ -138,7 +136,7 @@ def detect_source_version():
             })
             
     except Exception as e:
-        logger.error(f"Error detecting source version: {str(e)}")
+        server_logger.error(f"Error detecting source version: {str(e)}")
         return jsonify({
             "success": False,
             "message": f"Chyba při detekci verze: {str(e)}"
@@ -165,7 +163,7 @@ def detect_zor_spec_version():
             file_path = f'/mnt/{drive_letter}/{remaining_path}'
         
         # Check if file has the required sheet and detect version
-        processor = ZorSpecDatProcessor(logger)
+        processor = ZorSpecDatProcessor(tool_logger)
         sheet_info = processor.detect_file_info(file_path)
         
         if sheet_info['has_intro_sheet']:
@@ -183,7 +181,7 @@ def detect_zor_spec_version():
             })
             
     except Exception as e:
-        logger.error(f"Error detecting ZorSpec version: {str(e)}")
+        server_logger.error(f"Error detecting ZorSpec version: {str(e)}")
         return jsonify({
             "success": False,
             "message": f"Chyba při detekci verze: {str(e)}"
@@ -232,7 +230,7 @@ def process_inv_vzd():
             template_file.save(template_path)
             
             # Process with InvVzdProcessor
-            processor = InvVzdProcessor(logger)
+            processor = InvVzdProcessor(tool_logger)
             
             # Add template to options
             options['template'] = template_path
@@ -280,7 +278,7 @@ def process_inv_vzd():
             shutil.rmtree(temp_dir, ignore_errors=True)
         
     except Exception as e:
-        logger.error(f"Error processing inv-vzd: {str(e)}")
+        server_logger.error(f"Error processing inv-vzd: {str(e)}")
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -291,14 +289,14 @@ def process_inv_vzd_paths():
     """Process innovative education attendance files using file paths"""
     try:
         debug_print("=== InvVzd Processing Started ===")
-        logger.info("=== InvVzd Processing Started ===")
+        server_logger.info("=== InvVzd Processing Started ===")
         data = request.get_json()
         debug_print(f"Received data: {data}")
-        logger.info(f"Received data: {data}")
+        server_logger.info(f"Received data: {data}")
         
         if not data:
             debug_print("ERROR: No data provided in request")
-            logger.error("No data provided in request")
+            server_logger.error("No data provided in request")
             return jsonify({
                 "status": "error",
                 "message": "No data provided"
@@ -309,23 +307,23 @@ def process_inv_vzd_paths():
         options = data.get('options', {})
         
         # Debug: Log original paths
-        logger.info(f"Original template_path: {template_path}")
-        logger.info(f"Original file_paths: {file_paths}")
+        server_logger.info(f"Original template_path: {template_path}")
+        server_logger.info(f"Original file_paths: {file_paths}")
         
         # Convert Windows paths to WSL paths if needed (only on Linux/WSL)
         def convert_path_if_needed(path):
             if path and isinstance(path, str):
-                logger.info(f"Checking path for conversion: {path}")
+                server_logger.info(f"Checking path for conversion: {path}")
                 # Only convert if we're on Linux/WSL and path is Windows format
                 import platform
                 if platform.system() == 'Linux' and len(path) >= 3 and path[1:3] == ':\\':
                     drive_letter = path[0].lower()
                     remaining_path = path[3:].replace('\\', '/')
                     wsl_path = f'/mnt/{drive_letter}/{remaining_path}'
-                    logger.info(f"Converting Windows path to WSL: {path} -> {wsl_path}")
+                    server_logger.info(f"Converting Windows path to WSL: {path} -> {wsl_path}")
                     return wsl_path
                 else:
-                    logger.info(f"Path does not match Windows pattern or not on Linux, keeping as-is: {path}")
+                    server_logger.info(f"Path does not match Windows pattern or not on Linux, keeping as-is: {path}")
             return path
         
         # Convert paths
@@ -333,8 +331,8 @@ def process_inv_vzd_paths():
         file_paths = [convert_path_if_needed(fp) for fp in file_paths]
         
         # Debug: Log converted paths
-        logger.info(f"Converted template_path: {template_path}")
-        logger.info(f"Converted file_paths: {file_paths}")
+        server_logger.info(f"Converted template_path: {template_path}")
+        server_logger.info(f"Converted file_paths: {file_paths}")
         
         if not file_paths:
             return jsonify({
@@ -343,24 +341,24 @@ def process_inv_vzd_paths():
             }), 400
             
         if not template_path:
-            logger.error("No template path provided")
+            server_logger.error("No template path provided")
             return jsonify({
                 "status": "error",
                 "message": "No template path provided"
             }), 400
         
-        logger.info("Creating InvVzdProcessor...")
+        server_logger.info("Creating InvVzdProcessor...")
         # Process with InvVzdProcessor
-        processor = InvVzdProcessor(logger)
+        processor = InvVzdProcessor(tool_logger)
         
         # Add template to options
         options['template'] = template_path
-        logger.info(f"Processing with options: {options}")
+        server_logger.info(f"Processing with options: {options}")
         
         # Process files
-        logger.info(f"Starting to process {len(file_paths)} files...")
+        server_logger.info(f"Starting to process {len(file_paths)} files...")
         result = processor.process(file_paths, options)
-        logger.info(f"Processing result: success={result.get('success')}, errors={result.get('errors', [])}")
+        server_logger.info(f"Processing result: success={result.get('success')}, errors={result.get('errors', [])}")
         
         if result['success']:
             # Prepare response
@@ -392,7 +390,7 @@ def process_inv_vzd_paths():
                 "info": result.get('info', [])
             })
         else:
-            logger.error(f"Processing failed. Errors: {result.get('errors', [])}")
+            server_logger.error(f"Processing failed. Errors: {result.get('errors', [])}")
             # Enhanced error message for path issues
             errors = result.get('errors', [])
             enhanced_errors = []
@@ -402,7 +400,7 @@ def process_inv_vzd_paths():
                 else:
                     enhanced_errors.append(error)
             
-            logger.error(f"Returning error response with errors: {enhanced_errors}")
+            server_logger.error(f"Returning error response with errors: {enhanced_errors}")
             return jsonify({
                 "status": "error", 
                 "message": "Zpracování selhalo",
@@ -412,7 +410,7 @@ def process_inv_vzd_paths():
             
     except Exception as e:
         debug_print(f"EXCEPTION in inv-vzd-paths: {str(e)}")
-        logger.error(f"Error processing inv-vzd-paths: {str(e)}")
+        server_logger.error(f"Error processing inv-vzd-paths: {str(e)}")
         import traceback
         debug_print(traceback.format_exc())
         return jsonify({
@@ -461,7 +459,7 @@ def process_zor_spec():
                 options['exclude_list'] = exclude_path
             
             # Process with ZorSpecDatProcessor
-            processor = ZorSpecDatProcessor(logger)
+            processor = ZorSpecDatProcessor(tool_logger)
             
             # Add output directory to options
             options['output_dir'] = temp_dir
@@ -509,7 +507,7 @@ def process_zor_spec():
             shutil.rmtree(temp_dir, ignore_errors=True)
         
     except Exception as e:
-        logger.error(f"Error processing zor-spec: {str(e)}")
+        server_logger.error(f"Error processing zor-spec: {str(e)}")
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -540,7 +538,7 @@ def process_zor_spec_paths():
                     drive_letter = path[0].lower()
                     remaining_path = path[3:].replace('\\', '/')
                     wsl_path = f'/mnt/{drive_letter}/{remaining_path}'
-                    logger.info(f"Converting Windows path to WSL: {path} -> {wsl_path}")
+                    server_logger.info(f"Converting Windows path to WSL: {path} -> {wsl_path}")
                     return wsl_path
             return path
         
@@ -558,14 +556,14 @@ def process_zor_spec_paths():
             # Use the directory of the first file as output directory
             first_file_dir = os.path.dirname(file_paths[0])
             output_dir = first_file_dir
-            logger.info(f"Auto-save enabled, using source directory: {output_dir}")
+            server_logger.info(f"Auto-save enabled, using source directory: {output_dir}")
         else:
             # Create temporary directory for processing
             output_dir = tempfile.mkdtemp()
         
         try:
             # Process with ZorSpecDatProcessor
-            processor = ZorSpecDatProcessor(logger)
+            processor = ZorSpecDatProcessor(tool_logger)
             
             # Process files using paths directly
             result = processor.process_paths(file_paths, output_dir, options)
@@ -627,7 +625,7 @@ def process_zor_spec_paths():
                 shutil.rmtree(output_dir, ignore_errors=True)
             
     except Exception as e:
-        logger.error(f"Error processing zor-spec-paths: {str(e)}")
+        server_logger.error(f"Error processing zor-spec-paths: {str(e)}")
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -657,7 +655,7 @@ def process_zor_spec_directory():
             }), 400
             
         # Process with ZorSpecDatProcessor
-        processor = ZorSpecDatProcessor(logger)
+        processor = ZorSpecDatProcessor(tool_logger)
         
         # Set up options
         options['source_dir'] = source_dir
@@ -692,7 +690,7 @@ def process_zor_spec_directory():
             }), 400
             
     except Exception as e:
-        logger.error(f"Error processing zor-spec-directory: {str(e)}")
+        server_logger.error(f"Error processing zor-spec-directory: {str(e)}")
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -734,7 +732,7 @@ def process_plakat():
             return jsonify({"error": "Společný text musí být string s max. 255 znaky"}), 400
         
         # Process with PlakatGenerator
-        processor = PlakatGenerator(logger)
+        processor = PlakatGenerator(tool_logger)
         
         # Create temporary output directory
         temp_dir = tempfile.mkdtemp()
@@ -781,7 +779,7 @@ def process_plakat():
             }), 400
             
     except Exception as e:
-        logger.error(f"Error in plakat processing: {str(e)}")
+        server_logger.error(f"Error in plakat processing: {str(e)}")
         return jsonify({"error": f"Vnitřní chyba serveru: {str(e)}"}), 500
 
 @app.route('/api/config', methods=['GET'])
@@ -814,5 +812,5 @@ def get_config():
 if __name__ == '__main__':
     # Run the Flask server
     port = int(os.environ.get('PORT', 5000))
-    logger.info(f"Starting Flask server on port {port}")
+    server_logger.info(f"Starting Flask server on port {port}")
     app.run(host='127.0.0.1', port=port, debug=True)
