@@ -47,7 +47,9 @@ class BackendManager {
                 }
             }
             
-            const scriptPath = path.join(appPath, 'src', 'python', 'server.py');
+            const scriptPath = isProd 
+                ? path.join(process.resourcesPath, 'app.asar.unpacked', 'src', 'python', 'server.py')
+                : path.join(appPath, 'src', 'python', 'server.py');
             
             console.log('[BackendManager] Python path:', pythonPath);
             console.log('[BackendManager] Script path:', scriptPath);

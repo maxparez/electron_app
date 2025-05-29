@@ -6,7 +6,7 @@ module.exports = {
     name: 'NastrojeOPJAK',
     // icon: './src/electron/assets/icon',
     asar: {
-      unpack: '*.{node,dll,exe,so,dylib}'
+      unpack: '{*.{node,dll,exe,so,dylib},src/python/**/*}'
     },
     ignore: [
       /venv/,
