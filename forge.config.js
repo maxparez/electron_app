@@ -4,7 +4,7 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 module.exports = {
   packagerConfig: {
     name: 'NastrojeOPJAK',
-    icon: './src/electron/assets/icon',
+    // icon: './src/electron/assets/icon',
     asar: {
       unpack: '*.{node,dll,exe,so,dylib}'
     },
@@ -36,17 +36,17 @@ module.exports = {
       name: '@electron-forge/maker-zip',
       platforms: ['win32', 'darwin', 'linux'],
     },
-    {
-      name: '@electron-forge/maker-squirrel',
-      config: {
-        name: 'NastrojeOPJAK',
-        authors: 'Max Parez',
-        description: 'Nástroje pro ŠI a ŠII OP JAK',
-        setupIcon: './src/electron/assets/icon.ico',
-        setupExe: 'NastrojeOPJAK-Setup.exe',
-        noMsi: true
-      },
-    },
+    // {
+    //   name: '@electron-forge/maker-squirrel',
+    //   config: {
+    //     name: 'NastrojeOPJAK',
+    //     authors: 'Max Parez',
+    //     description: 'Nástroje pro ŠI a ŠII OP JAK',
+    //     // setupIcon: './src/electron/assets/icon.ico',
+    //     setupExe: 'NastrojeOPJAK-Setup.exe',
+    //     noMsi: true
+    //   },
+    // },
     {
       name: '@electron-forge/maker-deb',
       config: {
