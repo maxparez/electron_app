@@ -5,7 +5,9 @@ module.exports = {
   packagerConfig: {
     name: 'NastrojeOPJAK',
     icon: './src/electron/assets/icon',
-    asar: false,
+    asar: {
+      unpack: '*.{node,dll,exe,so,dylib}'
+    },
     ignore: [
       /venv/,
       /logs/,
