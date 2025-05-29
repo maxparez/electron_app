@@ -3,29 +3,47 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 module.exports = {
   packagerConfig: {
-    name: 'Nástroje pro ŠI a ŠII OP JAK',
+    name: 'NastrojeOPJAK',
     icon: './src/electron/assets/icon',
-    asar: true,
-    extraResource: [
-      './src/python',
-      './venv'
+    asar: false,
+    ignore: [
+      /venv/,
+      /logs/,
+      /out/,
+      /\.git/,
+      /\.pytest_cache/,
+      /test_/,
+      /legacy_code/,
+      /_context_notes\.md/,
+      /PLAKAT_PROGRESS\.md/,
+      /PROGRESS\.md/,
+      /PROJECT_PLAN\.md/,
+      /TESTING_PLAN\.md/,
+      /debug_/,
+      /inspect_/,
+      /simple_test\.py/,
+      /test_complete/,
+      /ui_preview/,
+      /\.sh$/,
+      /\.bat$/
     ]
   },
   rebuildConfig: {},
   makers: [
     {
-      name: '@electron-forge/maker-squirrel',
-      config: {
-        name: 'ProjektovaDokumentace',
-        authors: 'Max Parez',
-        description: 'Desktop application for processing school project documentation',
-        setupIcon: './src/electron/assets/icon.ico',
-        setupExe: 'ProjektovaDokumentace-Setup.exe'
-      },
+      name: '@electron-forge/maker-zip',
+      platforms: ['win32', 'darwin', 'linux'],
     },
     {
-      name: '@electron-forge/maker-zip',
-      platforms: ['darwin', 'linux'],
+      name: '@electron-forge/maker-squirrel',
+      config: {
+        name: 'NastrojeOPJAK',
+        authors: 'Max Parez',
+        description: 'Nástroje pro ŠI a ŠII OP JAK',
+        setupIcon: './src/electron/assets/icon.ico',
+        setupExe: 'NastrojeOPJAK-Setup.exe',
+        noMsi: true
+      },
     },
     {
       name: '@electron-forge/maker-deb',

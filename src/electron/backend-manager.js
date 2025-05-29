@@ -28,12 +28,23 @@ class BackendManager {
             // Determine Python executable path
             let pythonPath;
             if (isProd) {
-                // In production, use bundled Python
-                pythonPath = path.join(appPath, 'python', 'python.exe');
+                // In production, try system Python first, then bundled
+                const systemPython = 'python';
+                const bundledPython = path.join(appPath, 'python', 'python.exe');
+                
+                if (fs.existsSync(bundledPython)) {
+                    pythonPath = bundledPython;
+                } else {
+                    pythonPath = systemPython;
+                }
             } else {
-                // In development, use venv
+                // In development, use venv if exists, otherwise system Python
                 const venvPython = path.join(app.getAppPath(), 'venv', 'Scripts', 'python.exe');
-                pythonPath = fs.existsSync(venvPython) ? venvPython : 'python';
+                if (fs.existsSync(venvPython)) {
+                    pythonPath = venvPython;
+                } else {
+                    pythonPath = 'python';
+                }
             }
             
             const scriptPath = path.join(appPath, 'src', 'python', 'server.py');
