@@ -203,21 +203,53 @@ function updateFilesList(tool) {
             // For ZorSpec files, show version info if available
             if (tool === 'zor-spec' && state.zorFileVersions && state.zorFileVersions[file]) {
                 fileDiv.innerHTML = `
-                    <div class="file-path">
-                        <strong>Celá cesta:</strong> ${file}
-                        <br><strong>Verze:</strong> ${state.zorFileVersions[file]}
+                    <div class="file-item-content">
+                        <div class="file-path">
+                            <strong>Cesta:</strong> ${file}
+                            <br><strong>Verze:</strong> ${state.zorFileVersions[file]}
+                        </div>
+                        <button class="btn-remove" onclick="removeFile('${tool}', '${file.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')">✕</button>
                     </div>
                 `;
             } else {
                 fileDiv.innerHTML = `
-                    <div class="file-path">
-                        <strong>Celá cesta:</strong> ${file}
+                    <div class="file-item-content">
+                        <div class="file-path">
+                            <strong>Cesta:</strong> ${file}
+                        </div>
+                        <button class="btn-remove" onclick="removeFile('${tool}', '${file.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')">✕</button>
                     </div>
                 `;
             }
             
             filesList.appendChild(fileDiv);
         });
+    }
+}
+
+// Remove file from list
+function removeFile(tool, filePath) {
+    const toolKey = tool === 'inv-vzd' ? 'inv-vzd' : 'zor-spec';
+    
+    // Remove from selectedFiles array
+    const index = state.selectedFiles[toolKey].indexOf(filePath);
+    if (index > -1) {
+        state.selectedFiles[toolKey].splice(index, 1);
+    }
+    
+    // Remove from version info if exists
+    if (state.zorFileVersions && state.zorFileVersions[filePath]) {
+        delete state.zorFileVersions[filePath];
+    }
+    
+    // Update display
+    updateFilesList(tool);
+    
+    // Update process button state
+    if (tool === 'inv-vzd') {
+        checkInvVzdReady();
+    } else if (tool === 'zor-spec') {
+        checkZorSpecReady();
     }
 }
 
@@ -229,7 +261,7 @@ async function selectInvTemplate() {
             state.selectedTemplate['inv-vzd'] = filePaths[0];
             elements.invTemplateName.innerHTML = `
                 <div class="template-path">
-                    <strong>Celá cesta:</strong> ${filePaths[0]}
+                    <strong>Cesta:</strong> ${filePaths[0]}
                 </div>
             `;
             
