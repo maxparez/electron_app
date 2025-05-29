@@ -13,7 +13,9 @@
     "test": "jest",
     "build": "electron-forge package",
     "make": "electron-forge make",
-    "package": "electron-forge package"
+    "package": "electron-forge package",
+    "prepare-python": "node scripts/prepare-python.js",
+    "build-win": "node scripts/build-win.js"
   },
   "keywords": [
     "electron",
@@ -31,8 +33,10 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.8.1",
     "@electron-forge/plugin-fuses": "^7.8.1",
     "@electron/fuses": "^1.8.0",
+    "adm-zip": "^0.5.16",
     "electron": "^36.3.1",
-    "electron-squirrel-startup": "^1.0.1"
+    "electron-squirrel-startup": "^1.0.1",
+    "fs-extra": "^11.3.0"
   },
   "dependencies": {
     "axios": "^1.9.0",

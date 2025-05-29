@@ -28,14 +28,11 @@ class BackendManager {
             // Determine Python executable path
             let pythonPath;
             if (isProd) {
-                // In production, try system Python first, then bundled
-                const systemPython = 'python';
-                const bundledPython = path.join(appPath, 'python', 'python.exe');
+                // In production, use bundled Python from resources
+                pythonPath = path.join(process.resourcesPath, 'python', 'python.exe');
                 
-                if (fs.existsSync(bundledPython)) {
-                    pythonPath = bundledPython;
-                } else {
-                    pythonPath = systemPython;
+                if (!fs.existsSync(pythonPath)) {
+                    throw new Error(`Bundled Python not found at: ${pythonPath}`);
                 }
             } else {
                 // In development, use venv if exists, otherwise system Python
@@ -60,7 +57,9 @@ class BackendManager {
                 ...process.env,
                 PYTHONUNBUFFERED: '1',
                 FLASK_DEBUG: config.get('python.debug', !isProd) ? 'true' : 'false',
-                PYTHONPATH: path.join(appPath, 'src', 'python'),
+                PYTHONPATH: isProd 
+                    ? path.join(process.resourcesPath, 'app.asar.unpacked', 'src', 'python')
+                    : path.join(appPath, 'src', 'python'),
                 FLASK_PORT: config.get('python.port', 5000)
             };
             

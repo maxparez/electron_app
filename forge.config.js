@@ -8,6 +8,9 @@ module.exports = {
     asar: {
       unpack: '{*.{node,dll,exe,so,dylib},src/python/**/*}'
     },
+    extraResource: [
+      './resources/python'
+    ],
     ignore: [
       /venv/,
       /logs/,
