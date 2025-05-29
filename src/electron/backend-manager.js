@@ -29,10 +29,24 @@ class BackendManager {
             let pythonPath;
             if (isProd) {
                 // In production, use bundled Python from resources
-                pythonPath = path.join(process.resourcesPath, 'python', 'python.exe');
+                // Try multiple possible locations
+                const possiblePaths = [
+                    path.join(process.resourcesPath, 'python', 'python.exe'),
+                    path.join(process.resourcesPath, 'python-dist', 'python', 'python.exe'),
+                    path.join(process.resourcesPath, 'app.asar.unpacked', 'python-dist', 'python', 'python.exe'),
+                    path.join(process.resourcesPath, '..', 'python', 'python.exe')
+                ];
                 
-                if (!fs.existsSync(pythonPath)) {
-                    throw new Error(`Bundled Python not found at: ${pythonPath}`);
+                pythonPath = possiblePaths.find(p => fs.existsSync(p));
+                
+                if (!pythonPath) {
+                    // Log all tried paths for debugging
+                    console.error('[BackendManager] Python not found. Tried paths:');
+                    possiblePaths.forEach(p => console.error(`  - ${p}`));
+                    
+                    // Fallback to system Python
+                    console.warn('[BackendManager] Falling back to system Python');
+                    pythonPath = 'python';
                 }
             } else {
                 // In development, use venv if exists, otherwise system Python
