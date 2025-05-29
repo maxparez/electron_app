@@ -4,7 +4,7 @@ const { spawn } = require('child_process');
 const axios = require('axios');
 const config = require('./config');
 const BackendManager = require('./backend-manager');
-const Updater = require('./updater');
+// const Updater = require('./updater');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -15,7 +15,7 @@ let mainWindow;
 let pythonProcess;
 const isDev = process.argv.includes('--dev');
 const backendManager = new BackendManager();
-const updater = new Updater();
+// const updater = new Updater();
 
 // Create the main application window
 function createWindow() {
@@ -45,7 +45,7 @@ function createWindow() {
     });
     
     // Set main window for updater
-    updater.setMainWindow(mainWindow);
+    // updater.setMainWindow(mainWindow);
 }
 
 // Start the Python backend server
@@ -237,11 +237,11 @@ app.whenReady().then(async () => {
         createWindow();
         
         // Check for updates after startup (with delay)
-        if (!isDev) {
-            setTimeout(() => {
-                updater.checkForUpdates();
-            }, 10000); // 10 seconds delay
-        }
+        // if (!isDev) {
+        //     setTimeout(() => {
+        //         updater.checkForUpdates();
+        //     }, 10000); // 10 seconds delay
+        // }
     } catch (error) {
         console.error('Failed to start application:', error);
         dialog.showErrorBox('Chyba spuštění', 'Nepodařilo se spustit Python server');
@@ -284,9 +284,9 @@ ipcMain.handle('backend:restart', async () => {
 });
 
 // IPC handlers for updater
-ipcMain.handle('updater:check', async () => {
-    await updater.checkManually();
-});
+// ipcMain.handle('updater:check', async () => {
+//     await updater.checkManually();
+// });
 
 // Listen for update events from renderer
 ipcMain.on('update-status', (event, data) => {
