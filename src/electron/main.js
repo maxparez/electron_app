@@ -7,8 +7,12 @@ const BackendManager = require('./backend-manager');
 // const Updater = require('./updater');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) {
-    app.quit();
+try {
+    if (require('electron-squirrel-startup')) {
+        app.quit();
+    }
+} catch (e) {
+    // Ignore if not using Squirrel installer
 }
 
 let mainWindow;
