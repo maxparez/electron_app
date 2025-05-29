@@ -3,7 +3,7 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 module.exports = {
   packagerConfig: {
-    name: 'Projektová dokumentace',
+    name: 'Nástroje pro ŠI a ŠII OP JAK',
     icon: './src/electron/assets/icon',
     asar: true,
     extraResource: [

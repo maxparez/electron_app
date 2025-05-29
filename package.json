@@ -1,7 +1,7 @@
 {
-  "name": "projektova-dokumentace",
+  "name": "nastroje-opjak",
   "version": "1.0.0",
-  "description": "Desktop application for processing school project documentation (OP JAK)",
+  "description": "Nástroje pro ŠI a ŠII OP JAK - zpracování projektové dokumentace",
   "main": "src/electron/main.js",
   "directories": {
     "doc": "docs",
