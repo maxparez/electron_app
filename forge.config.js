@@ -9,7 +9,7 @@ module.exports = {
       unpack: '{*.{node,dll,exe,so,dylib},src/python/**/*}'
     },
     extraResource: [
-      './resources/python'
+      './resources/python-dist'
     ],
     ignore: [
       /venv/,

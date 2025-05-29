@@ -34,7 +34,8 @@ python-embed\python.exe -m pip install flask flask-cors openpyxl xlwings pandas 
 
 REM Copy Python to resources
 echo Copying Python to resources...
-xcopy /E /I /Y python-embed resources\python
+if not exist resources\python-dist mkdir resources\python-dist
+xcopy /E /I /Y python-embed resources\python-dist\python
 
 REM Build Electron app
 echo Building Electron app...
