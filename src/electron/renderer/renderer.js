@@ -995,15 +995,32 @@ function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMes
             <div class="processing-steps">
     `;
     
-    // Filter messages for this file (more inclusive filtering)
+    // Filter messages for this specific file only
     const fileNameWithoutExt = sourceBasename.replace(/\.[^.]+$/, ''); // Remove extension
-    const fileMessages = (infoMessages || []).filter(msg => 
-        msg.includes(sourceBasename) || 
-        msg.includes(fileNameWithoutExt) ||
-        msg.includes(file.filename.replace('.xlsx', '')) ||
-        // Also check for general processing messages if no specific file match
-        (!msg.includes('.xlsx') && !msg.includes('soubor'))
-    );
+    
+    // Track which messages belong to which file by looking for file-specific markers
+    let collectingForThisFile = false;
+    const fileMessages = [];
+    
+    (infoMessages || []).forEach(msg => {
+        // Start collecting when we see "Zpracovávám soubor: [this file]"
+        if (msg.includes(`Zpracovávám soubor: ${sourceBasename}`)) {
+            collectingForThisFile = true;
+        }
+        // Stop collecting when we see another file being processed
+        else if (msg.includes('Zpracovávám soubor:') && !msg.includes(sourceBasename)) {
+            collectingForThisFile = false;
+        }
+        // Also stop at "Úspěšně zpracováno"
+        else if (msg.includes('Úspěšně zpracováno')) {
+            collectingForThisFile = false;
+        }
+        
+        // Collect messages for this file
+        if (collectingForThisFile || msg.includes(`Vytvořen výstupní soubor: ${file.filename}`)) {
+            fileMessages.push(msg);
+        }
+    });
     
     
     // Add processing steps - show all messages for this file
@@ -1022,17 +1039,32 @@ function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMes
         });
     }
     
-    // Check if there are SDP errors in the error messages
-    const sdpErrors = (errorMessages || []).filter(msg => 
-        msg.includes('NESOUHLASÍ') || msg.includes('SDP')
+    // Check if there are SDP errors for THIS file in the error messages
+    // Only show errors if this file had validation issues
+    const hasValidationError = fileMessages.some(msg => 
+        msg.includes('SDP forma') && !msg.includes('32 hodin')
     );
     
-    if (sdpErrors.length > 0) {
-        blockHtml += '<div class="sdp-errors">';
-        sdpErrors.forEach(error => {
-            blockHtml += `<div class="processing-step error">${error}</div>`;
-        });
-        blockHtml += '</div>';
+    if (hasValidationError) {
+        const sdpErrors = (errorMessages || []).filter(msg => 
+            msg.includes('NESOUHLASÍ') || 
+            (msg.includes('SDP') && (msg.includes('forma') || msg.includes('téma')))
+        );
+        
+        if (sdpErrors.length > 0) {
+            blockHtml += '<div class="sdp-errors">';
+            // Only show the first set of SDP errors (avoid duplicates)
+            const uniqueErrors = [];
+            sdpErrors.forEach(error => {
+                if (!uniqueErrors.some(e => e.includes(error.split(':')[0]))) {
+                    uniqueErrors.push(error);
+                }
+            });
+            uniqueErrors.slice(0, 5).forEach(error => {
+                blockHtml += `<div class="processing-step error">${error}</div>`;
+            });
+            blockHtml += '</div>';
+        }
     }
     
     // Add any warnings or errors for this file
