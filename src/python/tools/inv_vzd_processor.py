@@ -1001,12 +1001,12 @@ class InvVzdProcessor(BaseTool):
                     
                     # Skip output files (already processed)
                     if file.startswith(('32h_inv_', '16h_inv_', '32_hodin_inovativniho_vzdelavani_', '16_hodin_inovativniho_vzdelavani_')):
-                        self.logger.info(f"[INVVZD] ✗ Skipping output file: {file}")
+                        self.logger.info(f"[INVVZD] Skipping output file: {file}")
                         continue
                     
                     # Skip template files
                     if 'sablona' in file.lower() or 'template' in file.lower():
-                        self.logger.info(f"[INVVZD] ✗ Skipping template file: {file}")
+                        self.logger.info(f"[INVVZD] Skipping template file: {file}")
                         continue
                     
                     # Try to detect version from content
@@ -1015,14 +1015,14 @@ class InvVzdProcessor(BaseTool):
                     self.logger.info(f"[INVVZD] Detected version: {version}")
                     
                     if version:
-                        self.logger.info(f"[INVVZD] ✓ Valid attendance file found: {file} (version {version}h)")
+                        self.logger.info(f"[INVVZD] Valid attendance file found: {file} (version {version}h)")
                         attendance_files.append({
                             "path": full_path,
                             "name": file,
                             "version": f"{version} hodin"
                         })
                     else:
-                        self.logger.info(f"[INVVZD] ✗ Not an attendance file: {file}")
+                        self.logger.info(f"[INVVZD] Not an attendance file: {file}")
                         
             self.logger.info(f"[INVVZD] Total attendance files found: {len(attendance_files)}")
             
@@ -1097,7 +1097,7 @@ class InvVzdProcessor(BaseTool):
             self.add_info(f"  SDP téma: {sdp_tema_total}h")
             
             if activities_total == sdp_forma_total == sdp_tema_total:
-                self.logger.info(f"[INVVZD] ✅ All sums match!")
+                self.logger.info(f"[INVVZD] All sums match!")
                 self.add_info(f"✅ Všechny součty souhlasí")
             else:
                 self.logger.error(f"[INVVZD] ❌ SUMS DO NOT MATCH!")

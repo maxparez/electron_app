@@ -1039,28 +1039,24 @@ function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMes
         });
     }
     
-    // Check if there are SDP errors for THIS file in the error messages
-    // Only show errors if this file had validation issues
-    const hasValidationError = fileMessages.some(msg => 
-        msg.includes('SDP forma') && !msg.includes('32 hodin')
+    // Check if there are SDP errors for THIS file
+    // Look for the specific error pattern in this file's messages
+    const hasError = fileMessages.some(msg => 
+        msg.includes('SDP forma:') && msg.includes('31h')
     );
     
-    if (hasValidationError) {
-        const sdpErrors = (errorMessages || []).filter(msg => 
+    if (hasError) {
+        // Extract error messages for this specific file from the fileMessages
+        const errorMsgs = fileMessages.filter(msg => 
             msg.includes('NESOUHLASÍ') || 
-            (msg.includes('SDP') && (msg.includes('forma') || msg.includes('téma')))
+            msg.includes('Aktivity:') ||
+            msg.includes('SDP forma:') ||
+            msg.includes('SDP téma:')
         );
         
-        if (sdpErrors.length > 0) {
+        if (errorMsgs.length > 0) {
             blockHtml += '<div class="sdp-errors">';
-            // Only show the first set of SDP errors (avoid duplicates)
-            const uniqueErrors = [];
-            sdpErrors.forEach(error => {
-                if (!uniqueErrors.some(e => e.includes(error.split(':')[0]))) {
-                    uniqueErrors.push(error);
-                }
-            });
-            uniqueErrors.slice(0, 5).forEach(error => {
+            errorMsgs.forEach(error => {
                 blockHtml += `<div class="processing-step error">${error}</div>`;
             });
             blockHtml += '</div>';
