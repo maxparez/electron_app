@@ -87,7 +87,27 @@ class BaseTool(ABC):
     def file_exists(self, filepath: str) -> bool:
         """Check if file exists"""
         exists = os.path.isfile(filepath)
-        self.logger.info(f"Checking file exists: {filepath} -> {exists}")
+        self.logger.info(f"[BASE] Checking file exists: {filepath} -> {exists}")
+        if not exists:
+            # Additional debug info
+            self.logger.info(f"[BASE] Current directory: {os.getcwd()}")
+            self.logger.info(f"[BASE] Path is absolute: {os.path.isabs(filepath)}")
+            if os.path.exists(filepath):
+                self.logger.info(f"[BASE] Path exists but is not a file (maybe directory?)")
+                self.logger.info(f"[BASE] Is directory: {os.path.isdir(filepath)}")
+            else:
+                self.logger.info(f"[BASE] Path does not exist at all")
+                # Try to list parent directory
+                parent_dir = os.path.dirname(filepath)
+                if os.path.exists(parent_dir):
+                    self.logger.info(f"[BASE] Parent directory exists: {parent_dir}")
+                    try:
+                        files = os.listdir(parent_dir)
+                        self.logger.info(f"[BASE] Files in parent directory: {files[:5]}...") # First 5 files
+                    except Exception as e:
+                        self.logger.error(f"[BASE] Cannot list parent directory: {e}")
+                else:
+                    self.logger.info(f"[BASE] Parent directory does not exist: {parent_dir}")
         return exists
     
     def create_output_path(self, base_path: str, suffix: str = "") -> str:

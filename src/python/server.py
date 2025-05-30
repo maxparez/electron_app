@@ -19,6 +19,10 @@ server_logger, tool_logger = init_logging()
 # DEBUG mode - set to False for production
 DEBUG_MODE = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
 
+# Force debug mode to be always on for debugging InvVzd issues
+DEBUG_MODE = True
+print(f"[SERVER] DEBUG MODE ENABLED: {DEBUG_MODE}")
+
 def debug_print(*args, **kwargs):
     """Print debug messages only in DEBUG_MODE"""
     if DEBUG_MODE:
@@ -350,6 +354,7 @@ def process_inv_vzd_paths():
         server_logger.info("Creating InvVzdProcessor...")
         # Process with InvVzdProcessor
         processor = InvVzdProcessor(tool_logger)
+        server_logger.info(f"InvVzdProcessor created successfully")
         
         # Add template to options
         options['template'] = template_path
@@ -357,8 +362,13 @@ def process_inv_vzd_paths():
         
         # Process files
         server_logger.info(f"Starting to process {len(file_paths)} files...")
+        server_logger.info(f"Files to process: {file_paths}")
+        server_logger.info(f"Template: {options.get('template')}")
+        
         result = processor.process(file_paths, options)
+        
         server_logger.info(f"Processing result: success={result.get('success')}, errors={result.get('errors', [])}")
+        server_logger.info(f"Full result: {result}")
         
         if result['success']:
             # Prepare response
@@ -813,4 +823,5 @@ if __name__ == '__main__':
     # Run the Flask server
     port = int(os.environ.get('PORT', 5000))
     server_logger.info(f"Starting Flask server on port {port}")
-    app.run(host='127.0.0.1', port=port, debug=True)
+    server_logger.info(f"DEBUG MODE: {DEBUG_MODE}")
+    app.run(host='127.0.0.1', port=port, debug=DEBUG_MODE)

@@ -73,53 +73,74 @@ class InvVzdProcessor(BaseTool):
     def validate_inputs(self, files: List[str], options: Dict[str, Any]) -> bool:
         """Validate input files and options"""
         self.clear_messages()
-        self.logger.info(f"Validating inputs: {len(files)} files")
+        self.logger.info(f"[INVVZD] === VALIDATE INPUTS START ===")
+        self.logger.info(f"[INVVZD] Validating inputs: {len(files)} files")
+        self.logger.info(f"[INVVZD] Files: {files}")
+        self.logger.info(f"[INVVZD] Options: {options}")
         
         # Check if files provided
         if not files:
             self.add_error("Žádné soubory nebyly poskytnuty")
-            self.logger.error("No files provided")
+            self.logger.error("[INVVZD] ERROR: No files provided")
             return False
             
         # Check if template provided
         template = options.get('template')
-        self.logger.info(f"Template path: {template}")
+        self.logger.info(f"[INVVZD] Template path: {template}")
         if not template:
             self.add_error("Šablona nebyla poskytnuta")
-            self.logger.error("No template provided")
+            self.logger.error("[INVVZD] ERROR: No template provided")
             return False
             
         # Check if template exists
-        if not self.file_exists(template):
+        self.logger.info(f"[INVVZD] Checking if template exists: {template}")
+        template_exists = self.file_exists(template)
+        self.logger.info(f"[INVVZD] Template exists: {template_exists}")
+        if not template_exists:
             self.add_error(f"Šablona neexistuje: {template}")
+            self.logger.error(f"[INVVZD] ERROR: Template does not exist: {template}")
             return False
             
         # Validate all source files exist
         for file in files:
-            if not self.file_exists(file):
+            self.logger.info(f"[INVVZD] Checking if source file exists: {file}")
+            file_exists = self.file_exists(file)
+            self.logger.info(f"[INVVZD] File exists: {file_exists}")
+            if not file_exists:
                 self.add_error(f"Soubor neexistuje: {file}")
+                self.logger.error(f"[INVVZD] ERROR: Source file does not exist: {file}")
                 return False
                 
         # Detect template version
+        self.logger.info(f"[INVVZD] Detecting template version...")
         template_version = self._detect_template_version(template)
+        self.logger.info(f"[INVVZD] Detected template version: {template_version}")
         if not template_version:
             self.add_error("Nepodařilo se detekovat verzi šablony")
+            self.logger.error(f"[INVVZD] ERROR: Failed to detect template version")
             return False
             
         self.version = template_version
         self.config = VERSIONS[template_version]
         self.add_info(f"Detekována verze šablony: {template_version} hodin")
+        self.logger.info(f"[INVVZD] === VALIDATE INPUTS SUCCESS ===")
+        self.logger.info(f"[INVVZD] Version set to: {self.version}")
+        self.logger.info(f"[INVVZD] Config: {self.config}")
         
         return True
         
     def process(self, files: List[str], options: Dict[str, Any]) -> Dict[str, Any]:
         """Process attendance files"""
-        self.logger.info(f"InvVzdProcessor.process called with {len(files)} files")
-        self.logger.info(f"Options: {options}")
+        self.logger.info(f"[INVVZD] === PROCESS START ===")
+        self.logger.info(f"[INVVZD] InvVzdProcessor.process called with {len(files)} files")
+        self.logger.info(f"[INVVZD] Files: {files}")
+        self.logger.info(f"[INVVZD] Options: {options}")
         
         if not self.validate_inputs(files, options):
-            self.logger.error("Input validation failed")
-            return self.get_result(False)
+            self.logger.error("[INVVZD] ERROR: Input validation failed")
+            result = self.get_result(False)
+            self.logger.info(f"[INVVZD] Returning validation failure result: {result}")
+            return result
             
         try:
             template = options.get('template')
@@ -130,10 +151,15 @@ class InvVzdProcessor(BaseTool):
             results = []
             
             for source_file in files:
+                self.logger.info(f"[INVVZD] Processing file: {source_file}")
                 self.add_info(f"Zpracovávám soubor: {os.path.basename(source_file)}")
                 
                 # Validate version match
-                if not self._validate_version_match(source_file, template):
+                self.logger.info(f"[INVVZD] Validating version match...")
+                version_match = self._validate_version_match(source_file, template)
+                self.logger.info(f"[INVVZD] Version match: {version_match}")
+                if not version_match:
+                    self.logger.error(f"[INVVZD] Version mismatch, skipping file")
                     continue
                     
                 # Process the file
@@ -146,42 +172,67 @@ class InvVzdProcessor(BaseTool):
                 )
                 
                 if output_file:
+                    self.logger.info(f"[INVVZD] File processed successfully: {output_file}")
+                    self.logger.info(f"[INVVZD] Total hours: {self.hours_total}")
                     results.append({
                         "source": source_file,
                         "output": output_file,
                         "hours": self.hours_total
                     })
+                else:
+                    self.logger.error(f"[INVVZD] Failed to process file: {source_file}")
                     
             if results:
                 self.add_info(f"Úspěšně zpracováno {len(results)} souborů")
-                return self.get_result(True, {"processed_files": results})
+                result = self.get_result(True, {"processed_files": results})
+                self.logger.info(f"[INVVZD] === PROCESS SUCCESS ===")
+                self.logger.info(f"[INVVZD] Returning success result: {result}")
+                return result
             else:
-                return self.get_result(False)
+                result = self.get_result(False)
+                self.logger.error(f"[INVVZD] === PROCESS FAILED - No results ===")
+                self.logger.info(f"[INVVZD] Returning failure result: {result}")
+                return result
                 
         except Exception as e:
+            self.logger.error(f"[INVVZD] === PROCESS EXCEPTION ===")
+            self.logger.error(f"[INVVZD] Exception: {str(e)}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
             self.add_error(f"Chyba při zpracování: {str(e)}")
-            return self.get_result(False)
+            result = self.get_result(False)
+            self.logger.info(f"[INVVZD] Returning exception result: {result}")
+            return result
             
     def _detect_template_version(self, template_path: str) -> Optional[str]:
         """Detect version from template content"""
         try:
+            self.logger.info(f"[INVVZD] Loading template workbook: {template_path}")
             wb = load_workbook(template_path, read_only=True)
             sheet = wb.worksheets[0]
+            self.logger.info(f"[INVVZD] First sheet name: {sheet.title}")
             
             for version, config in VERSIONS.items():
+                self.logger.info(f"[INVVZD] Checking for version {version}...")
                 match = True
                 for cell, expected_value in config["template"].items():
                     actual_value = sheet[cell].value
+                    self.logger.info(f"[INVVZD]   Checking cell {cell}: expected='{expected_value}', actual='{actual_value}'")
                     if expected_value.lower() not in str(actual_value).lower():
                         match = False
                         break
                 if match:
                     wb.close()
+                    self.logger.info(f"[INVVZD] Template version detected: {version}")
                     return version
                     
             wb.close()
+            self.logger.error(f"[INVVZD] No matching template version found")
             return None
         except Exception as e:
+            self.logger.error(f"[INVVZD] Exception in template version detection: {str(e)}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
             self.add_error(f"Chyba při detekci verze šablony: {str(e)}")
             return None
             
@@ -261,10 +312,17 @@ class InvVzdProcessor(BaseTool):
                            optimize: bool) -> Optional[str]:
         """Process a single attendance file"""
         try:
+            self.logger.info(f"[INVVZD] === PROCESS SINGLE FILE START ===")
+            self.logger.info(f"[INVVZD] Source: {source_file}")
+            self.logger.info(f"[INVVZD] Template: {template_path}")
+            self.logger.info(f"[INVVZD] Output dir: {output_dir}")
             # Read source data
+            self.logger.info(f"[INVVZD] Reading source data...")
             source_data = self._read_source_data(source_file)
             if source_data is None:
+                self.logger.error(f"[INVVZD] Failed to read source data")
                 return None
+            self.logger.info(f"[INVVZD] Source data read successfully, shape: {source_data.shape}")
                 
             # Optimize if requested
             if optimize:
@@ -276,26 +334,35 @@ class InvVzdProcessor(BaseTool):
             )
             
             # Copy template and fill with data
+            self.logger.info(f"[INVVZD] Copying template and filling with data...")
             self._copy_template_with_data(
                 template_path, output_file, source_data, source_file
             )
+            self.logger.info(f"[INVVZD] Template copied and filled successfully")
             
             self.add_info(f"Vytvořen výstupní soubor: {os.path.basename(output_file)}")
+            self.logger.info(f"[INVVZD] === PROCESS SINGLE FILE SUCCESS ===")
             return output_file
             
         except Exception as e:
+            self.logger.error(f"[INVVZD] === PROCESS SINGLE FILE EXCEPTION ===")
+            self.logger.error(f"[INVVZD] Exception: {str(e)}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
             self.add_error(f"Chyba při zpracování souboru {os.path.basename(source_file)}: {str(e)}")
             return None
             
     def _read_source_data(self, source_file: str) -> Optional[pd.DataFrame]:
         """Read and process source data"""
         try:
+            self.logger.info(f"[INVVZD] Reading source data for version: {self.version}")
             if self.version == "16":
                 return self._read_16_hour_data(source_file)
             elif self.version == "32":
                 return self._read_32_hour_data(source_file)
             else:
                 self.add_error(f"Nepodporovaná verze: {self.version}")
+                self.logger.error(f"[INVVZD] Unsupported version: {self.version}")
                 return None
                 
         except Exception as e:
@@ -729,21 +796,32 @@ class InvVzdProcessor(BaseTool):
                                 data: pd.DataFrame, source_file: str):
         """Copy template file and fill with data using xlwings - following original approach"""
         try:
+            self.logger.info(f"[INVVZD] === COPY TEMPLATE START ===")
+            self.logger.info(f"[INVVZD] Template: {template_path}")
+            self.logger.info(f"[INVVZD] Output: {output_path}")
+            self.logger.info(f"[INVVZD] Data shape: {data.shape}")
+            self.logger.info(f"[INVVZD] Source file: {source_file}")
+            
             # Following original approach exactly: visible=True, no unprotect
+            self.logger.info(f"[INVVZD] Opening Excel application...")
             app = xw.App(visible=True)
+            self.logger.info(f"[INVVZD] Loading template workbook...")
             wb = xw.Book(template_path)
             
             # STEP 1: Write student names to "Seznam účastníků" sheet at B4
+            self.logger.info(f"[INVVZD] STEP 1: Writing student names...")
             sheet = wb.sheets['Seznam účastníků']
             
             # Extract student names from source file (column B, from row 11 until two empty rows)
             student_names = self._extract_student_names_from_data(source_file)
+            self.logger.info(f"[INVVZD] Extracted {len(student_names)} student names")
             
             # Write student names exactly like original
             if len(student_names) > 0:
                 sheet.range("B4").options(ndim="expand", transpose=True).value = student_names
             
             # STEP 2: Write activities to "Seznam aktivit" sheet at C3
+            self.logger.info(f"[INVVZD] STEP 2: Writing activities...")
             sheet = wb.sheets['Seznam aktivit']
             
             # Prepare activities data for export (following original export_columns)
@@ -756,6 +834,7 @@ class InvVzdProcessor(BaseTool):
                 sheet.range("C3").options(ndim="expand").value = activities_data.values
             
             # STEP 3: Write overview to "Přehled" sheet at C3
+            self.logger.info(f"[INVVZD] STEP 3: Writing overview...")
             sheet = wb.sheets['Přehled']
             
             # Create overview data (student-activity combinations)
@@ -765,15 +844,32 @@ class InvVzdProcessor(BaseTool):
                 sheet.range("C3").options(ndim="expand").value = overview_data
             
             # STEP 4: Control check - verify SDP sums match activities total
+            self.logger.info(f"[INVVZD] STEP 4: Verifying SDP sums...")
             self._verify_sdp_sums(wb)
             
             # Save as new file and close
+            self.logger.info(f"[INVVZD] Saving output file: {output_path}")
             wb.save(output_path)
+            self.logger.info(f"[INVVZD] Closing workbook...")
             wb.close()
+            self.logger.info(f"[INVVZD] Quitting Excel application...")
             app.quit()
+            self.logger.info(f"[INVVZD] === COPY TEMPLATE SUCCESS ===")
             
         except Exception as e:
+            self.logger.error(f"[INVVZD] === COPY TEMPLATE EXCEPTION ===")
+            self.logger.error(f"[INVVZD] Exception: {str(e)}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
             self.add_error(f"Chyba při kopírování šablony: {str(e)}")
+            # Try to close Excel if still open
+            try:
+                if 'wb' in locals():
+                    wb.close()
+                if 'app' in locals():
+                    app.quit()
+            except:
+                pass
             raise
     
     def _extract_student_names_from_data(self, source_file: str) -> List[str]:
@@ -954,4 +1050,14 @@ class InvVzdProcessor(BaseTool):
         
     def file_exists(self, filepath: str) -> bool:
         """Check if file exists"""
-        return os.path.isfile(filepath)
+        exists = os.path.isfile(filepath)
+        self.logger.info(f"[INVVZD] Checking file existence: {filepath} -> {exists}")
+        if not exists:
+            # Additional debug info
+            self.logger.info(f"[INVVZD] Current directory: {os.getcwd()}")
+            self.logger.info(f"[INVVZD] Path is absolute: {os.path.isabs(filepath)}")
+            if os.path.exists(filepath):
+                self.logger.info(f"[INVVZD] Path exists but is not a file (maybe directory?)")
+            else:
+                self.logger.info(f"[INVVZD] Path does not exist at all")
+        return exists
