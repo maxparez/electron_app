@@ -1,3 +1,14 @@
+"""
+InvVzd Processor - Process innovative education attendance files
+
+DEBUG FINDINGS (2025-05-30):
+- Files are loading correctly when paths are valid
+- Processing correctly calculates total hours (e.g., 57 hours, not 100%)
+- The tool requires Windows with MS Excel due to xlwings dependency
+- Enhanced logging with [INVVZD] prefix shows all processing steps
+- Platform check added to provide clear error message on non-Windows systems
+"""
+
 import pandas as pd
 import numpy as np
 from openpyxl import load_workbook
@@ -5,7 +16,12 @@ from openpyxl.utils import get_column_letter
 import os
 import warnings
 from typing import Dict, Any, List, Optional, Tuple
-import xlwings as xw
+import platform
+try:
+    import xlwings as xw
+    XLWINGS_AVAILABLE = True
+except ImportError:
+    XLWINGS_AVAILABLE = False
 from datetime import datetime
 import unicodedata
 import re
@@ -801,6 +817,20 @@ class InvVzdProcessor(BaseTool):
             self.logger.info(f"[INVVZD] Output: {output_path}")
             self.logger.info(f"[INVVZD] Data shape: {data.shape}")
             self.logger.info(f"[INVVZD] Source file: {source_file}")
+            
+            # Check platform compatibility
+            current_platform = platform.system()
+            self.logger.info(f"[INVVZD] Current platform: {current_platform}")
+            
+            if current_platform != 'Windows':
+                self.add_error(f"Nástroj InvVzd vyžaduje Windows s nainstalovaným MS Excel. Aktuální platforma: {current_platform}")
+                self.add_warning("Pro zpracování souborů použijte Windows počítač s MS Excel")
+                self.logger.error(f"[INVVZD] Platform not supported: {current_platform}. xlwings requires Windows with Excel.")
+                raise Exception("Platform not supported for xlwings")
+            
+            if not XLWINGS_AVAILABLE:
+                self.add_error("xlwings není dostupný. Ujistěte se, že je nainstalován.")
+                raise Exception("xlwings not available")
             
             # Following original approach exactly: visible=True, no unprotect
             self.logger.info(f"[INVVZD] Opening Excel application...")
