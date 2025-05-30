@@ -321,43 +321,19 @@ async function selectInvFolder() {
 // Scan folder for suitable attendance files
 async function scanFolderForAttendanceFiles(folderPath) {
     try {
-        // Use Node.js fs to read directory
-        const result = await window.electronAPI.scanFolder(folderPath);
-        
-        // Filter for Excel files that look like attendance files
-        const excelFiles = result.files.filter(file => {
-            const extension = file.toLowerCase().split('.').pop();
-            return ['xlsx', 'xls'].includes(extension);
+        // Call backend API to scan folder
+        const response = await apiCall('/api/select-folder', {
+            folderPath: folderPath,
+            toolType: 'inv-vzd'
         });
         
-        // Filter out result files (files that look like processed outputs)
-        const resultKeywords = [
-            'inv_', '_inv', 'hodin_inovativniho', 'vzdelavani_', 'msmt', 'result', 'output'
-        ];
-        
-        const potentialFiles = excelFiles.filter(file => {
-            const fileName = file.toLowerCase();
-            // Exclude files that look like processed results
-            return !resultKeywords.some(keyword => fileName.includes(keyword));
-        });
-        
-        // If we have a detected template version, verify files match that version
-        const suitableFiles = [];
-        for (const file of potentialFiles) {
-            const filePath = `${folderPath}${folderPath.includes('\\') ? '\\' : '/'}${file}`;
-            
-            // Check if file is compatible with template version
-            if (await isFileCompatibleWithTemplate(filePath)) {
-                suitableFiles.push(file);
-            }
+        if (response.success && response.files) {
+            // Return full paths from the API response
+            return response.files.map(file => file.path);
+        } else {
+            console.warn('No files found:', response.message);
+            return [];
         }
-        
-        // Return full paths (use cross-platform path separator)
-        return suitableFiles.map(file => {
-            // Normalize path separators for cross-platform compatibility
-            const separator = folderPath.includes('\\') ? '\\' : '/';
-            return `${folderPath}${separator}${file}`;
-        });
         
     } catch (error) {
         console.error('Error scanning folder:', error);

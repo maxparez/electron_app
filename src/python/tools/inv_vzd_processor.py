@@ -999,6 +999,16 @@ class InvVzdProcessor(BaseTool):
                     full_path = os.path.join(folder_path, file)
                     self.logger.info(f"[INVVZD] Checking Excel file: {file}")
                     
+                    # Skip output files (already processed)
+                    if file.startswith(('32h_inv_', '16h_inv_', '32_hodin_inovativniho_vzdelavani_', '16_hodin_inovativniho_vzdelavani_')):
+                        self.logger.info(f"[INVVZD] ✗ Skipping output file: {file}")
+                        continue
+                    
+                    # Skip template files
+                    if 'sablona' in file.lower() or 'template' in file.lower():
+                        self.logger.info(f"[INVVZD] ✗ Skipping template file: {file}")
+                        continue
+                    
                     # Try to detect version from content
                     self.logger.info(f"[INVVZD] Detecting version for: {full_path}")
                     version = self._detect_source_version(full_path)
