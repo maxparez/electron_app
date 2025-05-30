@@ -254,53 +254,75 @@ class InvVzdProcessor(BaseTool):
             
     def _detect_source_version(self, source_file: str) -> Optional[str]:
         """Detect version from source content"""
+        self.logger.info(f"[INVVZD] === DETECT SOURCE VERSION START ===")
+        self.logger.info(f"[INVVZD] Source file: {source_file}")
+        
         try:
             wb = load_workbook(source_file, read_only=True)
             sheet_names = wb.sheetnames
+            self.logger.info(f"[INVVZD] Sheet names in file: {sheet_names}")
             
             # Priority 1: Check for "zdroj-dochazka" sheet (preferred format)
             if "zdroj-dochazka" in sheet_names:
+                self.logger.info(f"[INVVZD] Found 'zdroj-dochazka' sheet")
                 sheet = wb["zdroj-dochazka"]
                 b7_value = sheet["B7"].value
+                self.logger.info(f"[INVVZD] B7 value in zdroj-dochazka: '{b7_value}'")
                 
                 # If B7 contains "čas zahájení" then it's 16h version
                 if b7_value and "čas zahájení" in str(b7_value).lower():
                     wb.close()
+                    self.logger.info(f"[INVVZD] Detected version: 16h (found 'čas zahájení' in B7)")
                     return "16"
                 else:
                     # If zdroj-dochazka exists but no "čas zahájení" in B7, it's 32h
-                    wb.close() 
+                    wb.close()
+                    self.logger.info(f"[INVVZD] Detected version: 32h (zdroj-dochazka exists but no 'čas zahájení')") 
                     return "32"
             
             # Priority 2: If no "zdroj-dochazka", use first sheet and check B6/B7
             if sheet_names:
+                self.logger.info(f"[INVVZD] No 'zdroj-dochazka' sheet, checking first sheet: {sheet_names[0]}")
                 sheet = wb[sheet_names[0]]  # Take first sheet regardless of name
                 b6_value = sheet["B6"].value
                 b7_value = sheet["B7"].value
+                self.logger.info(f"[INVVZD] B6 value: '{b6_value}'")
+                self.logger.info(f"[INVVZD] B7 value: '{b7_value}'")
                 
                 # Check if B6 contains "datum aktivity"
                 if b6_value and "datum aktivity" in str(b6_value).lower():
+                    self.logger.info(f"[INVVZD] Found 'datum aktivity' in B6")
                     # If B7 contains "čas zahájení" then 16h, otherwise 32h
                     if b7_value and "čas zahájení" in str(b7_value).lower():
                         wb.close()
+                        self.logger.info(f"[INVVZD] Detected version: 16h (found 'čas zahájení' in B7)")
                         return "16"
                     else:
                         wb.close()
+                        self.logger.info(f"[INVVZD] Detected version: 32h (B6 has 'datum aktivity' but no 'čas zahájení' in B7)")
                         return "32"
             
             # Fallback: Check legacy formats
+            self.logger.info(f"[INVVZD] Checking legacy formats...")
             # Check for 16 hour version (complex sheet structure)
             if "Seznam aktivit" in sheet_names:
+                self.logger.info(f"[INVVZD] Found 'Seznam aktivit' sheet")
                 sheet = wb["Seznam aktivit"]
                 b2_value = sheet["B2"].value
+                self.logger.info(f"[INVVZD] B2 value in Seznam aktivit: '{b2_value}'")
                 
                 if b2_value and "pořadové číslo aktivity" in str(b2_value).lower():
                     wb.close()
+                    self.logger.info(f"[INVVZD] Detected version: 16h (found 'pořadové číslo aktivity' in Seznam aktivit B2)")
                     return "16"
                     
             wb.close()
+            self.logger.warning(f"[INVVZD] Could not detect version - no matching patterns found")
             return None
         except Exception as e:
+            self.logger.error(f"[INVVZD] Exception in _detect_source_version: {str(e)}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
             self.add_error(f"Chyba při detekci verze zdroje: {str(e)}")
             return None
             
@@ -951,6 +973,68 @@ class InvVzdProcessor(BaseTool):
             self.add_error(f"Chyba při vytváření přehledu: {str(e)}")
             return []
     
+    def select_folder(self, folder_path: str) -> Dict[str, Any]:
+        """Scan folder for attendance files and filter them"""
+        self.logger.info(f"[INVVZD] === SELECT FOLDER START ===")
+        self.logger.info(f"[INVVZD] Folder path: {folder_path}")
+        
+        result = {"success": False, "files": [], "message": ""}
+        
+        try:
+            # Check if folder exists
+            if not os.path.exists(folder_path):
+                self.logger.error(f"[INVVZD] Folder does not exist: {folder_path}")
+                result["message"] = f"Složka neexistuje: {folder_path}"
+                return result
+                
+            # List all files in folder
+            all_files = os.listdir(folder_path)
+            self.logger.info(f"[INVVZD] All files in folder: {all_files}")
+            
+            attendance_files = []
+            
+            # Scan for Excel files
+            for file in all_files:
+                if file.endswith(('.xlsx', '.xls')) and not file.startswith('~$'):
+                    full_path = os.path.join(folder_path, file)
+                    self.logger.info(f"[INVVZD] Checking Excel file: {file}")
+                    
+                    # Try to detect version from content
+                    self.logger.info(f"[INVVZD] Detecting version for: {full_path}")
+                    version = self._detect_source_version(full_path)
+                    self.logger.info(f"[INVVZD] Detected version: {version}")
+                    
+                    if version:
+                        self.logger.info(f"[INVVZD] ✓ Valid attendance file found: {file} (version {version}h)")
+                        attendance_files.append({
+                            "path": full_path,
+                            "name": file,
+                            "version": f"{version} hodin"
+                        })
+                    else:
+                        self.logger.info(f"[INVVZD] ✗ Not an attendance file: {file}")
+                        
+            self.logger.info(f"[INVVZD] Total attendance files found: {len(attendance_files)}")
+            
+            if attendance_files:
+                result["success"] = True
+                result["files"] = attendance_files
+                result["message"] = f"Nalezeno {len(attendance_files)} souborů s docházkou"
+                self.logger.info(f"[INVVZD] SUCCESS: {result['message']}")
+            else:
+                result["message"] = "Ve složce nebyly nalezeny žádné soubory s docházkou"
+                self.logger.warning(f"[INVVZD] WARNING: {result['message']}")
+                
+        except Exception as e:
+            result["message"] = f"Chyba při procházení složky: {str(e)}"
+            self.logger.error(f"[INVVZD] ERROR: {result['message']}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
+            
+        self.logger.info(f"[INVVZD] === SELECT FOLDER END ===")
+        self.logger.info(f"[INVVZD] Result: {result}")
+        return result
+    
     def _verify_sdp_sums(self, wb):
         """Verify SDP sums match total hours - following original control logic"""
         try:
@@ -991,19 +1075,39 @@ class InvVzdProcessor(BaseTool):
                     except:
                         pass
             
-            # Compare and report
+            # Compare and report with detailed logging
+            self.logger.info(f"[INVVZD] === SDP VERIFICATION ===")
+            self.logger.info(f"[INVVZD] Activities total: {activities_total} hours")
+            self.logger.info(f"[INVVZD] SDP forma total (C4-C10): {sdp_forma_total} hours")
+            self.logger.info(f"[INVVZD] SDP tema total (C12-C28): {sdp_tema_total} hours")
+            
             self.add_info(f"Kontrola součtů:")
             self.add_info(f"  Seznam aktivit (celkem): {activities_total} hodin")
             self.add_info(f"  SDP forma (C4-C10): {sdp_forma_total} hodin")
             self.add_info(f"  SDP téma (C12-C28): {sdp_tema_total} hodin")
             
             if activities_total == sdp_forma_total == sdp_tema_total:
-                self.add_info("✅ Všechny součty souhlasí - výsledek je na 100% OK!")
+                percentage = 100.0
+                self.logger.info(f"[INVVZD] ✅ All sums match! Result is {percentage}% OK")
+                self.add_info(f"✅ Všechny součty souhlasí - výsledek je na {percentage}% OK!")
             else:
+                # Calculate percentage of match
+                if activities_total > 0:
+                    forma_pct = (sdp_forma_total / activities_total) * 100
+                    tema_pct = (sdp_tema_total / activities_total) * 100
+                    avg_pct = (forma_pct + tema_pct) / 2
+                else:
+                    forma_pct = tema_pct = avg_pct = 0
+                    
+                self.logger.error(f"[INVVZD] ❌ SUMS DO NOT MATCH!")
+                self.logger.error(f"[INVVZD] Activities: {activities_total}, Forma: {sdp_forma_total} ({forma_pct:.1f}%), Tema: {sdp_tema_total} ({tema_pct:.1f}%)")
+                self.logger.error(f"[INVVZD] Average match: {avg_pct:.1f}%")
+                
                 self.add_error(f"❌ NESOUHLASÍ součty v SDP!")
                 self.add_error(f"  Počet inv. hodin: {activities_total}")
-                self.add_error(f"  SDP forma: {sdp_forma_total}")
-                self.add_error(f"  SDP téma: {sdp_tema_total}")
+                self.add_error(f"  SDP forma: {sdp_forma_total} ({forma_pct:.1f}% shoda)")
+                self.add_error(f"  SDP téma: {sdp_tema_total} ({tema_pct:.1f}% shoda)")
+                self.add_error(f"  Průměrná shoda: {avg_pct:.1f}%")
                 self.add_error("⚠️  ZKONTROLUJTE výsledný soubor - aktivity na listu 'Seznam aktivit'")
                 
         except Exception as e:

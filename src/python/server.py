@@ -191,6 +191,53 @@ def detect_zor_spec_version():
             "message": f"Chyba při detekci verze: {str(e)}"
         }), 500
 
+@app.route('/api/select-folder', methods=['POST'])
+def select_folder():
+    """Select and scan folder for attendance files"""
+    try:
+        data = request.get_json()
+        folder_path = data.get('folderPath')
+        tool_type = data.get('toolType', 'inv-vzd')
+        
+        server_logger.info(f"[SELECT-FOLDER] Request received for tool: {tool_type}")
+        server_logger.info(f"[SELECT-FOLDER] Folder path: {folder_path}")
+        
+        if not folder_path:
+            return jsonify({
+                "success": False,
+                "message": "No folder path provided"
+            }), 400
+        
+        # Convert Windows path to WSL path if needed
+        import platform
+        if platform.system() == 'Linux' and len(folder_path) >= 3 and folder_path[1:3] == ':\\':
+            drive_letter = folder_path[0].lower()
+            remaining_path = folder_path[3:].replace('\\', '/')
+            folder_path = f'/mnt/{drive_letter}/{remaining_path}'
+            server_logger.info(f"[SELECT-FOLDER] Converted to WSL path: {folder_path}")
+        
+        if tool_type == 'inv-vzd':
+            # Create InvVzdProcessor without version for scanning
+            processor = InvVzdProcessor(logger=tool_logger)
+            result = processor.select_folder(folder_path)
+            server_logger.info(f"[SELECT-FOLDER] InvVzd scan result: {result}")
+            return jsonify(result)
+        else:
+            server_logger.warning(f"[SELECT-FOLDER] Unknown tool type: {tool_type}")
+            return jsonify({
+                "success": False,
+                "message": f"Unknown tool type: {tool_type}"
+            }), 400
+            
+    except Exception as e:
+        server_logger.error(f"[SELECT-FOLDER] Error: {str(e)}")
+        import traceback
+        server_logger.error(f"[SELECT-FOLDER] Traceback: {traceback.format_exc()}")
+        return jsonify({
+            "success": False,
+            "message": f"Chyba při procházení složky: {str(e)}"
+        }), 500
+
 @app.route('/api/process/inv-vzd', methods=['POST'])
 def process_inv_vzd():
     """Process innovative education attendance files"""
