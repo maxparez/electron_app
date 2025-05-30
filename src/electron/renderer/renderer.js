@@ -322,7 +322,7 @@ async function selectInvFolder() {
 async function scanFolderForAttendanceFiles(folderPath) {
     try {
         // Call backend API to scan folder
-        const response = await apiCall('/api/select-folder', {
+        const response = await window.electronAPI.apiCall('select-folder', 'POST', {
             folderPath: folderPath,
             toolType: 'inv-vzd'
         });
@@ -1006,27 +1006,34 @@ function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMes
     );
     
     
-    // Add processing steps
-    const steps = [
-        { pattern: /Načteno (\d+) jmen žáků/, icon: '👥', label: 'Načítání žáků' },
-        { pattern: /Zapisuji (\d+) aktivit do Seznam aktivit/, icon: '📋', label: 'Zapisování aktivit' },
-        { pattern: /Zapisuji (\d+) záznamů do Přehled/, icon: '📊', label: 'Vytváření přehledu' },
-        { pattern: /Všechny součty souhlasí/, icon: '✅', label: 'Kontrola SDP', success: true },
-        { pattern: /NESOUHLASÍ součty/, icon: '❌', label: 'Kontrola SDP', error: true }
-    ];
-    
-    steps.forEach((step, index) => {
-        const matchingMsg = fileMessages.find(msg => step.pattern.test(msg));
-        if (matchingMsg) {
-            const isSuccess = step.success || (!step.error);
-            const icon = step.error ? '❌' : (step.success ? '✅' : '✅');
+    // Add processing steps - show all messages for this file
+    if (fileMessages.length > 0) {
+        fileMessages.forEach((msg, index) => {
+            // Determine if this is a success or error message
+            const isError = msg.includes('NESOUHLASÍ') || msg.includes('❌');
+            const isSuccess = msg.includes('✅') || msg.includes('souhlasí');
+            const cssClass = isError ? 'error' : (isSuccess ? 'success' : '');
+            
             blockHtml += `
-                <div class="processing-step ${isSuccess ? 'success' : 'error'}">
-                    ${icon} <strong>Krok ${index + 1}:</strong> ${matchingMsg}
+                <div class="processing-step ${cssClass}">
+                    ${msg}
                 </div>
             `;
-        }
-    });
+        });
+    }
+    
+    // Check if there are SDP errors in the error messages
+    const sdpErrors = (errorMessages || []).filter(msg => 
+        msg.includes('NESOUHLASÍ') || msg.includes('SDP')
+    );
+    
+    if (sdpErrors.length > 0) {
+        blockHtml += '<div class="sdp-errors">';
+        sdpErrors.forEach(error => {
+            blockHtml += `<div class="processing-step error">${error}</div>`;
+        });
+        blockHtml += '</div>';
+    }
     
     // Add any warnings or errors for this file
     const fileWarnings = (warningMessages || []).filter(msg => 
