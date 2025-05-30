@@ -1092,33 +1092,22 @@ class InvVzdProcessor(BaseTool):
             self.logger.info(f"[INVVZD] SDP tema total (C12-C28): {sdp_tema_total} hours")
             
             self.add_info(f"Kontrola součtů:")
-            self.add_info(f"  Seznam aktivit (celkem): {activities_total} hodin")
-            self.add_info(f"  SDP forma (C4-C10): {sdp_forma_total} hodin")
-            self.add_info(f"  SDP téma (C12-C28): {sdp_tema_total} hodin")
+            self.add_info(f"  Aktivity: {activities_total}h")
+            self.add_info(f"  SDP forma: {sdp_forma_total}h")
+            self.add_info(f"  SDP téma: {sdp_tema_total}h")
             
             if activities_total == sdp_forma_total == sdp_tema_total:
-                percentage = 100.0
-                self.logger.info(f"[INVVZD] ✅ All sums match! Result is {percentage}% OK")
-                self.add_info(f"✅ Všechny součty souhlasí - výsledek je na {percentage}% OK!")
+                self.logger.info(f"[INVVZD] ✅ All sums match!")
+                self.add_info(f"✅ Všechny součty souhlasí")
             else:
-                # Calculate percentage of match
-                if activities_total > 0:
-                    forma_pct = (sdp_forma_total / activities_total) * 100
-                    tema_pct = (sdp_tema_total / activities_total) * 100
-                    avg_pct = (forma_pct + tema_pct) / 2
-                else:
-                    forma_pct = tema_pct = avg_pct = 0
-                    
                 self.logger.error(f"[INVVZD] ❌ SUMS DO NOT MATCH!")
-                self.logger.error(f"[INVVZD] Activities: {activities_total}, Forma: {sdp_forma_total} ({forma_pct:.1f}%), Tema: {sdp_tema_total} ({tema_pct:.1f}%)")
-                self.logger.error(f"[INVVZD] Average match: {avg_pct:.1f}%")
+                self.logger.error(f"[INVVZD] Activities: {activities_total}, Forma: {sdp_forma_total}, Tema: {sdp_tema_total}")
                 
                 self.add_error(f"❌ NESOUHLASÍ součty v SDP!")
-                self.add_error(f"  Počet inv. hodin: {activities_total}")
-                self.add_error(f"  SDP forma: {sdp_forma_total} ({forma_pct:.1f}% shoda)")
-                self.add_error(f"  SDP téma: {sdp_tema_total} ({tema_pct:.1f}% shoda)")
-                self.add_error(f"  Průměrná shoda: {avg_pct:.1f}%")
-                self.add_error("⚠️  ZKONTROLUJTE výsledný soubor - aktivity na listu 'Seznam aktivit'")
+                self.add_error(f"Aktivity: {activities_total}h")
+                self.add_error(f"SDP forma: {sdp_forma_total}h")
+                self.add_error(f"SDP téma: {sdp_tema_total}h")
+                self.add_warning("⚠️ ZKONTROLUJTE výsledný soubor - aktivity na listu 'Seznam aktivit'")
                 
         except Exception as e:
             self.add_error(f"Chyba při kontrole SDP součtů: {str(e)}")

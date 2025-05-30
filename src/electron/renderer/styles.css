@@ -650,6 +650,39 @@ h3.error {
     background-color: #f59e0b;
 }
 
+/* SDP errors special styling */
+.sdp-errors {
+    margin-top: 10px;
+    padding: 15px;
+    background: #fff5f5;
+    border: 2px solid #ff4444;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(244, 67, 54, 0.2);
+}
+
+.sdp-errors .processing-step {
+    background: #fff;
+    border: none;
+    padding: 6px 10px;
+    margin: 4px 0;
+    font-weight: 600;
+    color: #d32f2f;
+    position: relative;
+    padding-left: 24px;
+}
+
+.sdp-errors .processing-step:before {
+    left: 0;
+    width: 16px;
+    height: 16px;
+}
+
+.sdp-errors .processing-step:first-child {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #b71c1c;
+}
+
 /* Clickable features on home screen */
 .clickable-feature {
     cursor: pointer;
