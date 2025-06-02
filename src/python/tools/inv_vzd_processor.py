@@ -169,10 +169,8 @@ class InvVzdProcessor(BaseTool):
             for source_file in files:
                 self.logger.info(f"[INVVZD] Processing file: {source_file}")
                 
-                # Store current messages state before processing this file
-                info_before = len(self.info_messages)
-                warnings_before = len(self.warnings)
-                errors_before = len(self.errors)
+                # Clear messages for this file (keep only the template version message)
+                self.clear_file_messages()
                 
                 self.add_info(f"Zpracovávám soubor: {os.path.basename(source_file)}")
                 
@@ -189,9 +187,9 @@ class InvVzdProcessor(BaseTool):
                         "output": None,
                         "hours": 0,
                         "status": "error",
-                        "errors": self.errors[errors_before:],
-                        "warnings": self.warnings[warnings_before:],
-                        "info": self.info_messages[info_before:]
+                        "errors": list(self.errors),  # Copy current errors
+                        "warnings": list(self.warnings),  # Copy current warnings  
+                        "info": list(self.info_messages)  # Copy current info
                     })
                     continue
                     
@@ -205,9 +203,9 @@ class InvVzdProcessor(BaseTool):
                 )
                 
                 # Collect messages for this specific file
-                file_info = self.info_messages[info_before:]
-                file_warnings = self.warnings[warnings_before:]
-                file_errors = self.errors[errors_before:]
+                file_info = list(self.info_messages)
+                file_warnings = list(self.warnings)
+                file_errors = list(self.errors)
                 
                 if output_file:
                     self.logger.info(f"[INVVZD] File processed successfully: {output_file}")

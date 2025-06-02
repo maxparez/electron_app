@@ -61,6 +61,13 @@ class BaseTool(ABC):
         self.warnings.clear()
         self.info_messages.clear()
         
+    def clear_file_messages(self):
+        """Clear messages for current file processing"""
+        # Clear all messages for fresh file processing
+        self.errors.clear()
+        self.warnings.clear()
+        self.info_messages.clear()
+        
     def get_result(self, success: bool, data: Any = None) -> Dict[str, Any]:
         """
         Get standardized result dictionary
