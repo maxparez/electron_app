@@ -138,7 +138,7 @@ class InvVzdProcessor(BaseTool):
             
         self.version = template_version
         self.config = VERSIONS[template_version]
-        self.add_info(f"Detekována verze šablony: {template_version} hodin")
+        # Template version detected - no general message needed
         self.logger.info(f"[INVVZD] === VALIDATE INPUTS SUCCESS ===")
         self.logger.info(f"[INVVZD] Version set to: {self.version}")
         self.logger.info(f"[INVVZD] Config: {self.config}")
@@ -233,7 +233,7 @@ class InvVzdProcessor(BaseTool):
             data = {"processed_files": results}
             
             if results:
-                self.add_info(f"Úspěšně zpracováno {len(results)} souborů")
+                # Overall success - no general message needed
                 result = self.get_result(True, data)
                 self.logger.info(f"[INVVZD] === PROCESS SUCCESS ===")
                 self.logger.info(f"[INVVZD] Returning success result: {result}")
@@ -413,7 +413,7 @@ class InvVzdProcessor(BaseTool):
             )
             self.logger.info(f"[INVVZD] Template copied and filled successfully")
             
-# Output file created - no UI message needed
+            self.add_info(f"Vytvořen výstupní soubor: {os.path.basename(output_file)}")
             self.logger.info(f"[INVVZD] === PROCESS SINGLE FILE SUCCESS ===")
             return output_file
             
@@ -506,6 +506,8 @@ class InvVzdProcessor(BaseTool):
             
             # Calculate total hours
             self.hours_total = df['hodin'].sum()
+            self.add_info(f"Celkem hodin: {self.hours_total}")
+            self.add_info(f"Načteno {len(df)} aktivit")
             
             # Select required columns for output
             required_columns = ['datum', 'cas', 'hodin', 'forma', 'tema', 'ucitel']
@@ -534,7 +536,7 @@ class InvVzdProcessor(BaseTool):
                 sheet_name = wb.sheetnames[0]
                 
             sheet = wb[sheet_name]
-# Reading 32h data - no UI message needed
+            self.add_info(f"Čtu 32h data z listu: {sheet_name}")
             
             if sheet_name == "zdroj-dochazka":
                 # New format with zdroj-dochazka sheet
@@ -675,7 +677,8 @@ class InvVzdProcessor(BaseTool):
                 self.add_info("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
                 return None
             
-# Data loaded successfully - no UI message needed
+            # Log basic info only if no errors
+            self.add_info(f"Načteno {len(df)} aktivit z docházky")
             
             # Fix incomplete dates if needed (for 32h template, dates are in row 6, starting from column C=3)
             if 'datum' in df.columns:
@@ -697,6 +700,7 @@ class InvVzdProcessor(BaseTool):
             
             # Calculate total hours
             self.hours_total = df['hodin'].sum()
+            self.add_info(f"Celkem hodin: {self.hours_total}")
             
             wb.close()
             return df
@@ -1055,7 +1059,7 @@ class InvVzdProcessor(BaseTool):
                 activities_data = data[export_columns] if all(col in data.columns for col in export_columns) else data
                 
                 
-                # Writing activities to template - no UI message needed
+                self.add_info(f"Zapisuji {len(activities_data)} aktivit do Seznam aktivit")
                 sheet.range("C3").options(ndim="expand").value = activities_data.values
             
             # STEP 3: Write overview to "Přehled" sheet at C3
@@ -1065,7 +1069,7 @@ class InvVzdProcessor(BaseTool):
             # Create overview data (student-activity combinations)
             overview_data = self._create_overview_data(student_names, data)
             if len(overview_data) > 0:
-                # Writing overview to template - no UI message needed
+                self.add_info(f"Zapisuji {len(overview_data)} záznamů do Přehled")
                 sheet.range("C3").options(ndim="expand").value = overview_data
             
             # STEP 4: Control check - verify SDP sums match activities total
@@ -1120,7 +1124,7 @@ class InvVzdProcessor(BaseTool):
                     student_names.append(str(cell_value).strip())
             
             wb.close()
-# Student names loaded - no UI message needed
+            self.add_info(f"Načteno {len(student_names)} jmen žáků")
             return student_names
             
         except Exception as e:
@@ -1139,7 +1143,7 @@ class InvVzdProcessor(BaseTool):
                 for student_name in student_names:
                     overview_result.append([activity_num, student_name])
             
-            # Overview data created - no UI message needed
+            self.add_info(f"Vytvořen přehled: {len(activities_data)} aktivit × {len(student_names)} žáků = {len(overview_result)} záznamů")
             return overview_result
             
         except Exception as e:
@@ -1264,16 +1268,22 @@ class InvVzdProcessor(BaseTool):
             self.logger.info(f"[INVVZD] SDP forma total (C4-C10): {sdp_forma_total} hours")
             self.logger.info(f"[INVVZD] SDP tema total (C12-C28): {sdp_tema_total} hours")
             
-            # Internal SDP verification - no detailed UI logs needed
+            self.add_info(f"Kontrola součtů:")
+            self.add_info(f"  Aktivity: {activities_total}h")
+            self.add_info(f"  SDP forma: {sdp_forma_total}h")
+            self.add_info(f"  SDP téma: {sdp_tema_total}h")
             
             if activities_total == sdp_forma_total == sdp_tema_total:
                 self.logger.info(f"[INVVZD] All sums match!")
-                # SDP sums match - no UI message needed
+                self.add_info(f"✅ Všechny součty souhlasí")
             else:
                 self.logger.error(f"[INVVZD] ❌ SUMS DO NOT MATCH!")
                 self.logger.error(f"[INVVZD] Activities: {activities_total}, Forma: {sdp_forma_total}, Tema: {sdp_tema_total}")
                 
-                self.add_error(f"❌ NESOUHLASÍ součty v SDP! (Aktivity: {activities_total}h, SDP forma: {sdp_forma_total}h, SDP téma: {sdp_tema_total}h)")
+                self.add_error(f"❌ NESOUHLASÍ součty v SDP!")
+                self.add_error(f"Aktivity: {activities_total}h")
+                self.add_error(f"SDP forma: {sdp_forma_total}h")
+                self.add_error(f"SDP téma: {sdp_tema_total}h")
                 self.add_warning("⚠️ ZKONTROLUJTE výsledný soubor - aktivity na listu 'Seznam aktivit'")
                 
         except Exception as e:
