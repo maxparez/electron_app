@@ -516,8 +516,8 @@ class InvVzdProcessor(BaseTool):
                             # It's already a datetime object
                             datum = date_cell.strftime('%d.%m.%Y')
                         else:
-                            # Try to parse as string
-                            datum = str(date_cell)
+                            # Try to parse as string - store raw value for later fixing
+                            datum = str(date_cell).strip()
                     else:
                         datum = datetime.now().strftime('%d.%m.%Y')
                     
@@ -574,9 +574,9 @@ class InvVzdProcessor(BaseTool):
             
             df = pd.DataFrame(data)
             
-            # Fix incomplete dates if needed (for 32h template, dates are in row 6)
+            # Fix incomplete dates if needed (for 32h template, dates are in row 6, starting from column C=3)
             if 'datum' in df.columns:
-                df['datum'] = self._fix_incomplete_dates(df['datum'], start_row=6)
+                df['datum'] = self._fix_incomplete_dates(df['datum'], start_row=6, start_col=3)
                 # Convert to datetime and format
                 df['datum'] = pd.to_datetime(df['datum'], errors='coerce')
                 # Format as DD.MM.YYYY
@@ -636,7 +636,7 @@ class InvVzdProcessor(BaseTool):
         
         return clean_text
         
-    def _fix_incomplete_dates(self, date_series: pd.Series, start_row: int = 2) -> pd.Series:
+    def _fix_incomplete_dates(self, date_series: pd.Series, start_row: int = 2, start_col: str = 'C') -> pd.Series:
         """
         Fix incomplete dates by inferring missing years from context
         
@@ -655,6 +655,17 @@ class InvVzdProcessor(BaseTool):
         
         # Convert to string series for processing
         date_strings = date_series.astype(str)
+        
+        # Helper function to get cell reference
+        def get_cell_ref(index, row, col):
+            if isinstance(col, int):
+                # For 32h version, col is starting column number
+                from openpyxl.utils import get_column_letter
+                col_letter = get_column_letter(col + index)
+                return f"{col_letter}{row}"
+            else:
+                # For 16h version, it's column letter with row offset
+                return f"{col}{row + index}"
         
         for i, date_str in enumerate(date_strings):
             original_date = date_str
@@ -678,8 +689,7 @@ class InvVzdProcessor(BaseTool):
             # Replace commas with dots: "25,1.2025" → "25.1.2025"
             if ',' in date_str:
                 date_str = date_str.replace(',', '.')
-                excel_row = i + start_row
-                cell_ref = f"C{excel_row}"
+                cell_ref = get_cell_ref(i, start_row, start_col)
                 self.add_info(f"Opravena čárka v datu v buňce {cell_ref}: {original_date} → {date_str}")
             
             # Remove extra spaces: "24 .1.2025" → "24.1.2025" or "25. 6. 2025" → "25.6.2025"
@@ -688,8 +698,7 @@ class InvVzdProcessor(BaseTool):
                 date_str = re.sub(r'\.\s+', '.', date_str)
                 date_str = re.sub(r'\s+', ' ', date_str)  # Normalize multiple spaces to single space
                 if date_str != cleaned_date:
-                    excel_row = i + start_row
-                    cell_ref = f"C{excel_row}"
+                    cell_ref = get_cell_ref(i, start_row, start_col)
                     self.add_info(f"Opraveny mezery v datu v buňce {cell_ref}: {original_date} → {date_str}")
             
             # Handle dates with spaces between parts: "25 . 6 . 25" → "25.6.25"
@@ -707,23 +716,19 @@ class InvVzdProcessor(BaseTool):
                 if inferred_year['confidence'] == 'high':
                     fixed_date = f"{day}.{month}.{inferred_year['year']}"
                     fixed_dates.append(fixed_date)
-                    # Calculate Excel cell reference (assuming column C for dates, starting at row 2)
-                    excel_row = i + start_row
-                    cell_ref = f"C{excel_row}"
+                    cell_ref = get_cell_ref(i, start_row, start_col)
                     self.add_info(f"Opraven datum v buňce {cell_ref}: {original_date} → {fixed_date}")
                 elif inferred_year['confidence'] == 'medium':
                     fixed_date = f"{day}.{month}.{inferred_year['year']}"
                     fixed_dates.append(fixed_date)
-                    excel_row = i + start_row
-                    cell_ref = f"C{excel_row}"
+                    cell_ref = get_cell_ref(i, start_row, start_col)
                     uncertain_fixes.append(f"Buňka {cell_ref}: {original_date} → {fixed_date}")
                 else:
                     # Low confidence - add current year as fallback
                     current_year = datetime.now().year
                     fixed_date = f"{day}.{month}.{current_year}"
                     fixed_dates.append(fixed_date)
-                    excel_row = i + start_row
-                    cell_ref = f"C{excel_row}"
+                    cell_ref = get_cell_ref(i, start_row, start_col)
                     uncertain_fixes.append(f"Buňka {cell_ref}: {original_date} → {fixed_date} (neistý)")
                     
             elif len(parts) == 3:  # DD.MM.YYYY format - check if year is empty
@@ -734,22 +739,19 @@ class InvVzdProcessor(BaseTool):
                     if inferred_year['confidence'] == 'high':
                         fixed_date = f"{day}.{month}.{inferred_year['year']}"
                         fixed_dates.append(fixed_date)
-                        excel_row = i + start_row
-                        cell_ref = f"C{excel_row}"
+                        cell_ref = get_cell_ref(i, start_row, start_col)
                         self.add_info(f"Opraven datum v buňce {cell_ref}: {original_date} → {fixed_date}")
                     elif inferred_year['confidence'] == 'medium':
                         fixed_date = f"{day}.{month}.{inferred_year['year']}"
                         fixed_dates.append(fixed_date)
-                        excel_row = i + start_row
-                        cell_ref = f"C{excel_row}"
+                        cell_ref = get_cell_ref(i, start_row, start_col)
                         uncertain_fixes.append(f"Buňka {cell_ref}: {original_date} → {fixed_date}")
                     else:
                         # Low confidence - add current year as fallback
                         current_year = datetime.now().year
                         fixed_date = f"{day}.{month}.{current_year}"
                         fixed_dates.append(fixed_date)
-                        excel_row = i + start_row
-                        cell_ref = f"C{excel_row}"
+                        cell_ref = get_cell_ref(i, start_row, start_col)
                         uncertain_fixes.append(f"Buňka {cell_ref}: {original_date} → {fixed_date} (neistý)")
                 else:
                     # Complete date
@@ -768,14 +770,12 @@ class InvVzdProcessor(BaseTool):
                         full_year = 1900 + year_int
                     fixed_date = f"{day}.{month}.{full_year}"
                     fixed_dates.append(fixed_date)
-                    excel_row = i + start_row
-                    cell_ref = f"C{excel_row}"
+                    cell_ref = get_cell_ref(i, start_row, start_col)
                     self.add_info(f"Opraven formát roku v buňce {cell_ref}: {original_date} → {fixed_date}")
                 else:
                     # Really invalid format
                     fixed_dates.append(date_str)
-                    excel_row = i + start_row
-                    cell_ref = f"C{excel_row}"
+                    cell_ref = get_cell_ref(i, start_row, start_col)
                     self.add_warning(f"Neplatný formát data v buňce {cell_ref}: {original_date} (očekáván formát DD.MM.YYYY)")
         
         # Report uncertain fixes
