@@ -894,3 +894,64 @@ h3.error {
     font-size: 24px;
     font-weight: bold;
 }
+
+/* Collapsible Report Styles */
+.file-processing-block.collapsible {
+    margin-bottom: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.collapsible-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.collapsible-header:hover {
+    background-color: #e9ecef;
+}
+
+.collapse-icon {
+    font-size: 12px;
+    color: #666;
+    transition: transform 0.2s;
+    width: 12px;
+    text-align: center;
+}
+
+.file-status {
+    margin-left: auto;
+    font-size: 14px;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-weight: 500;
+}
+
+.file-status.status-success {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.file-status.status-error {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.collapsible-content {
+    border-top: 1px solid #e0e0e0;
+    background-color: #fff;
+    padding: 16px;
+}
+
+.file-processing-block.collapsible .file-header {
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+}

@@ -983,17 +983,24 @@ async function saveFilesAutomatically(files, targetFolder) {
     return results;
 }
 
+// Toggle collapsible section
+function toggleCollapsible(blockId) {
+    const content = document.getElementById(blockId);
+    const icon = document.getElementById(`icon-${blockId}`);
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.textContent = '▼';
+    } else {
+        content.style.display = 'none';
+        icon.textContent = '▶';
+    }
+}
+
 // Format file processing block with steps
 function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMessages) {
     const sourceBasename = file.source.split(/[/\\]/).pop();
-    
-    let blockHtml = `
-        <div class="file-processing-block">
-            <div class="file-header">
-                📄 <strong>${sourceBasename} → ${file.filename} (${file.hours} hodin)</strong>
-            </div>
-            <div class="processing-steps">
-    `;
+    const blockId = `file-block-${Math.random().toString(36).substr(2, 9)}`;
     
     // Filter messages for this specific file only
     const fileNameWithoutExt = sourceBasename.replace(/\.[^.]+$/, ''); // Remove extension
@@ -1022,6 +1029,26 @@ function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMes
         }
     });
     
+    // Check if there are errors
+    const hasError = fileMessages.some(msg => 
+        msg.includes('NESOUHLASÍ') || msg.includes('❌') || 
+        (msg.includes('SDP forma:') && msg.includes('31h'))
+    );
+    
+    // Determine status text and icon
+    const statusText = hasError ? 'nesouhlasí součty' : 'zpracováno bez chyb';
+    const statusIcon = hasError ? '❌' : '✅';
+    const statusClass = hasError ? 'status-error' : 'status-success';
+    
+    let blockHtml = `
+        <div class="file-processing-block collapsible">
+            <div class="file-header collapsible-header" onclick="toggleCollapsible('${blockId}')">
+                <span class="collapse-icon" id="icon-${blockId}">▶</span>
+                📄 <strong>${sourceBasename} → ${file.filename} (${file.hours} hodin)</strong>
+                <span class="file-status ${statusClass}">${statusIcon} ${statusText}</span>
+            </div>
+            <div class="processing-steps collapsible-content" id="${blockId}" style="display: none;">
+    `;
     
     // Add processing steps - show all messages for this file
     if (fileMessages.length > 0) {
@@ -1040,11 +1067,6 @@ function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMes
     }
     
     // Check if there are SDP errors for THIS file
-    // Look for the specific error pattern in this file's messages
-    const hasError = fileMessages.some(msg => 
-        msg.includes('SDP forma:') && msg.includes('31h')
-    );
-    
     if (hasError) {
         // Extract error messages for this specific file from the fileMessages
         const errorMsgs = fileMessages.filter(msg => 
