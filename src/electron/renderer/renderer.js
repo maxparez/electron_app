@@ -455,7 +455,7 @@ async function processInvVzd() {
         
         showLoading(false);
         
-        if (result.status === 'success' || (result.data && result.data.info)) {
+        if (result.status === 'success' || result.status === 'partial' || (result.data && result.data.info)) {
             // Display results - could be full success or partial success with errors
             const hasErrors = result.data && result.data.errors && result.data.errors.length > 0;
             const title = hasErrors ? 

@@ -417,9 +417,15 @@ def process_inv_vzd_paths():
         server_logger.info(f"Processing result: success={result.get('success')}, errors={result.get('errors', [])}")
         server_logger.info(f"Full result: {result}")
         
-        if result['success']:
-            # Prepare response
-            output_files = []
+        # Check if we have ANY data or messages
+        has_data = result.get('data') and result.get('data', {}).get('processed_files')
+        has_info = result.get('info', [])
+        has_errors = result.get('errors', [])
+        has_warnings = result.get('warnings', [])
+        
+        # Prepare output files list
+        output_files = []
+        if has_data:
             for processed in result['data']['processed_files']:
                 # Convert numpy/pandas types to native Python types for JSON serialization
                 hours_value = processed['hours']
@@ -434,36 +440,31 @@ def process_inv_vzd_paths():
                     'hours': int(hours_value) if hours_value is not None else 0,
                     'path': processed['output']
                 })
-            
-            return jsonify({
-                "status": "success",
-                "message": f"Úspěšně zpracováno {len(output_files)} souborů",
-                "data": {
-                    "processed": len(output_files),
-                    "files": output_files
-                },
-                "errors": result.get('errors', []),
-                "warnings": result.get('warnings', []),
-                "info": result.get('info', [])
-            })
-        else:
-            server_logger.error(f"Processing failed. Errors: {result.get('errors', [])}")
-            # Enhanced error message for path issues
-            errors = result.get('errors', [])
-            enhanced_errors = []
-            for error in errors:
-                if 'neexistuje' in error and ('D:\\' in error or 'C:\\' in error):
-                    enhanced_errors.append(f"{error} - PROBLÉM: Používáte Windows cestu na Linux systému. Zkopírujte soubory do Linux souborového systému nebo použijte WSL mount cestu (např. /mnt/d/...)")
-                else:
-                    enhanced_errors.append(error)
-            
-            server_logger.error(f"Returning error response with errors: {enhanced_errors}")
-            return jsonify({
-                "status": "error", 
-                "message": "Zpracování selhalo",
+        
+        # Enhanced error message for path issues
+        enhanced_errors = []
+        for error in has_errors:
+            if 'neexistuje' in error and ('D:\\' in error or 'C:\\' in error):
+                enhanced_errors.append(f"{error} - PROBLÉM: Používáte Windows cestu na Linux systému. Zkopírujte soubory do Linux souborového systému nebo použijte WSL mount cestu (např. /mnt/d/...)")
+            else:
+                enhanced_errors.append(error)
+        
+        # Always return info/errors/warnings in the data field so UI can display them
+        # Use "success" status even if result['success'] is False to ensure UI displays the detailed report
+        return jsonify({
+            "status": "success" if result['success'] else "partial",
+            "message": f"Úspěšně zpracováno {len(output_files)} souborů" if output_files else "Zpracování dokončeno s chybami",
+            "data": {
+                "processed": len(output_files),
+                "files": output_files,
+                "info": has_info,
                 "errors": enhanced_errors,
-                "warnings": result.get('warnings', [])
-            }), 400
+                "warnings": has_warnings
+            },
+            "errors": enhanced_errors,
+            "warnings": has_warnings,
+            "info": has_info
+        })
             
     except Exception as e:
         debug_print(f"EXCEPTION in inv-vzd-paths: {str(e)}")

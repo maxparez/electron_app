@@ -35,7 +35,7 @@ VERSIONS = {
     "32": {
         "hours": 32,
         "template": {
-            "B1": "32 hodin inovativního vzdělávání"
+            "B1": "32 hodin"  # Simplified to match actual template
         },
         "source": {
             "B6": "datum aktivity",
@@ -55,7 +55,7 @@ VERSIONS = {
     "16": {
         "hours": 16,
         "template": {
-            "B1": "Evidence 16 hodin inovativního vzdělávání"
+            "B1": "16 hodin"  # Simplified to match actual template
         },
         "source": {
             "B2": "Pořadové číslo aktivity",
@@ -198,17 +198,21 @@ class InvVzdProcessor(BaseTool):
                 else:
                     self.logger.error(f"[INVVZD] Failed to process file: {source_file}")
                     
+            # Always return data structure, even if empty
+            data = {"processed_files": results}
+            
             if results:
                 self.add_info(f"Úspěšně zpracováno {len(results)} souborů")
-                result = self.get_result(True, {"processed_files": results})
+                result = self.get_result(True, data)
                 self.logger.info(f"[INVVZD] === PROCESS SUCCESS ===")
                 self.logger.info(f"[INVVZD] Returning success result: {result}")
-                return result
             else:
-                result = self.get_result(False)
+                # No files succeeded, but return data structure with empty results
+                result = self.get_result(False, data)
                 self.logger.error(f"[INVVZD] === PROCESS FAILED - No results ===")
-                self.logger.info(f"[INVVZD] Returning failure result: {result}")
-                return result
+                self.logger.info(f"[INVVZD] Returning failure result with empty data: {result}")
+                
+            return result
                 
         except Exception as e:
             self.logger.error(f"[INVVZD] === PROCESS EXCEPTION ===")
