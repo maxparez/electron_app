@@ -574,6 +574,11 @@ class InvVzdProcessor(BaseTool):
             
             df = pd.DataFrame(data)
             
+            # Debug log the raw data
+            self.logger.info(f"[INVVZD] Raw data before date fixing:")
+            for idx, row in df.iterrows():
+                self.logger.info(f"[INVVZD] Activity {idx+1}: datum={row.get('datum', 'N/A')}, hodin={row.get('hodin', 'N/A')}")
+            
             # Fix incomplete dates if needed (for 32h template, dates are in row 6, starting from column C=3)
             if 'datum' in df.columns:
                 df['datum'] = self._fix_incomplete_dates(df['datum'], start_row=6, start_col=3)
@@ -581,6 +586,11 @@ class InvVzdProcessor(BaseTool):
                 df['datum'] = pd.to_datetime(df['datum'], errors='coerce')
                 # Format as DD.MM.YYYY
                 df['datum'] = df['datum'].dt.strftime('%d.%m.%Y')
+            
+            # Debug log the data after date fixing
+            self.logger.info(f"[INVVZD] Data after date fixing:")
+            for idx, row in df.iterrows():
+                self.logger.info(f"[INVVZD] Activity {idx+1}: datum={row.get('datum', 'N/A')}, hodin={row.get('hodin', 'N/A')}")
             
             # Calculate total hours
             self.hours_total = df['hodin'].sum()
@@ -941,6 +951,11 @@ class InvVzdProcessor(BaseTool):
                 # For 32h version, export_columns should be ["datum","hodin","forma","tema","ucitel"]
                 export_columns = ["datum", "hodin", "forma", "tema", "ucitel"]
                 activities_data = data[export_columns] if all(col in data.columns for col in export_columns) else data
+                
+                # Debug log what we're writing
+                self.logger.info(f"[INVVZD] Writing activities to Seznam aktivit:")
+                for idx, row in activities_data.iterrows():
+                    self.logger.info(f"[INVVZD] Row {idx+1}: {row.to_dict()}")
                 
                 self.add_info(f"Zapisuji {len(activities_data)} aktivit do Seznam aktivit")
                 sheet.range("C3").options(ndim="expand").value = activities_data.values
