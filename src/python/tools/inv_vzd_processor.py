@@ -477,6 +477,8 @@ class InvVzdProcessor(BaseTool):
             
             # Try to find the correct sheet - prefer zdroj-dochazka, fallback to List1
             sheet_name = None
+            self.add_info(f"Dostupné listy v souboru: {wb.sheetnames}")
+            
             if "zdroj-dochazka" in wb.sheetnames:
                 sheet_name = "zdroj-dochazka"
             elif "List1" in wb.sheetnames:
@@ -601,10 +603,13 @@ class InvVzdProcessor(BaseTool):
             
             df = pd.DataFrame(data)
             
-            # Debug log the raw data
-            self.logger.info(f"[INVVZD] Raw data before date fixing:")
-            for idx, row in df.iterrows():
-                self.logger.info(f"[INVVZD] Activity {idx+1}: datum={row.get('datum', 'N/A')}, hodin={row.get('hodin', 'N/A')}")
+            # Debug log the raw data using add_info to avoid logging buffer issue
+            self.add_info(f"Načteno {len(df)} aktivit z docházky")
+            
+            # Show first few and last few dates for debugging
+            if len(df) > 0:
+                self.add_info(f"První 3 data: {df['datum'].head(3).tolist()}")
+                self.add_info(f"Poslední 3 data: {df['datum'].tail(3).tolist()}")
             
             # Fix incomplete dates if needed (for 32h template, dates are in row 6, starting from column C=3)
             if 'datum' in df.columns:
@@ -613,11 +618,10 @@ class InvVzdProcessor(BaseTool):
                 df['datum'] = pd.to_datetime(df['datum'], errors='coerce')
                 # Format as DD.MM.YYYY
                 df['datum'] = df['datum'].dt.strftime('%d.%m.%Y')
-            
-            # Debug log the data after date fixing
-            self.logger.info(f"[INVVZD] Data after date fixing:")
-            for idx, row in df.iterrows():
-                self.logger.info(f"[INVVZD] Activity {idx+1}: datum={row.get('datum', 'N/A')}, hodin={row.get('hodin', 'N/A')}")
+                
+                # Show dates after fixing
+                self.add_info(f"Data po opravě - první 3: {df['datum'].head(3).tolist()}")
+                self.add_info(f"Data po opravě - poslední 3: {df['datum'].tail(3).tolist()}")
             
             # Calculate total hours
             self.hours_total = df['hodin'].sum()
@@ -980,9 +984,8 @@ class InvVzdProcessor(BaseTool):
                 activities_data = data[export_columns] if all(col in data.columns for col in export_columns) else data
                 
                 # Debug log what we're writing
-                self.logger.info(f"[INVVZD] Writing activities to Seznam aktivit:")
-                for idx, row in activities_data.iterrows():
-                    self.logger.info(f"[INVVZD] Row {idx+1}: {row.to_dict()}")
+                self.add_info(f"První 3 aktivity do výstupu: {activities_data.head(3).values.tolist()}")
+                self.add_info(f"Poslední 3 aktivity do výstupu: {activities_data.tail(3).values.tolist()}")
                 
                 self.add_info(f"Zapisuji {len(activities_data)} aktivit do Seznam aktivit")
                 sheet.range("C3").options(ndim="expand").value = activities_data.values
