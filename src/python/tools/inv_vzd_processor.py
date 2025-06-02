@@ -520,7 +520,11 @@ class InvVzdProcessor(BaseTool):
                             # Try to parse as string - store raw value for later fixing
                             datum = str(date_cell).strip()
                     else:
-                        datum = datetime.now().strftime('%d.%m.%Y')
+                        # ERROR: Missing date in activity column
+                        from openpyxl.utils import get_column_letter
+                        col_letter = get_column_letter(col)
+                        self.add_error(f"Chybí datum aktivity v buňce {col_letter}6")
+                        datum = None  # Mark as invalid
                     
                     # Get form (row 7)
                     forma_cell = sheet.cell(row=7, column=col).value
@@ -534,13 +538,15 @@ class InvVzdProcessor(BaseTool):
                     ucitel_cell = sheet.cell(row=9, column=col).value
                     ucitel = str(ucitel_cell) if ucitel_cell else 'Neurčeno'
                     
-                    data.append({
-                        'datum': datum,
-                        'hodin': hours,
-                        'forma': forma,
-                        'tema': tema,
-                        'ucitel': ucitel
-                    })
+                    # Only add data if datum is valid
+                    if datum is not None:
+                        data.append({
+                            'datum': datum,
+                            'hodin': hours,
+                            'forma': forma,
+                            'tema': tema,
+                            'ucitel': ucitel
+                        })
                     
                     col += 1
                     
@@ -575,8 +581,11 @@ class InvVzdProcessor(BaseTool):
                             # Try to parse as string - store raw value for later fixing
                             datum = str(date_cell).strip()
                     else:
-                        # Only use current date as last resort
-                        datum = datetime.now().strftime('%d.%m.%Y')
+                        # ERROR: Missing date in activity column
+                        from openpyxl.utils import get_column_letter
+                        col_letter = get_column_letter(col)
+                        self.add_error(f"Chybí datum aktivity v buňce {col_letter}6")
+                        datum = None  # Mark as invalid
                     
                     # Get form (row 7)
                     forma_cell = sheet.cell(row=7, column=col).value
@@ -590,15 +599,24 @@ class InvVzdProcessor(BaseTool):
                     ucitel_cell = sheet.cell(row=9, column=col).value
                     ucitel = str(ucitel_cell) if ucitel_cell else 'Neurčeno'
                     
-                    data.append({
-                        'datum': datum,
-                        'hodin': hours,
-                        'forma': forma,
-                        'tema': tema,
-                        'ucitel': ucitel
-                    })
+                    # Only add data if datum is valid
+                    if datum is not None:
+                        data.append({
+                            'datum': datum,
+                            'hodin': hours,
+                            'forma': forma,
+                            'tema': tema,
+                            'ucitel': ucitel
+                        })
                     
                     col += 1
+            
+            # Check if we have any errors from missing dates
+            if len(self.errors) > 0:
+                self.add_error("❌ Zpracování zastaveno kvůli chybám v datech")
+                self.add_error("Opravte chybějící data a spusťte znovu")
+                wb.close()
+                return None
             
             df = pd.DataFrame(data)
             
