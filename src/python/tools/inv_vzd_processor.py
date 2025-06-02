@@ -613,8 +613,7 @@ class InvVzdProcessor(BaseTool):
             
             # Check if we have any errors from missing dates
             if len(self.errors) > 0:
-                self.add_error("❌ Zpracování zastaveno kvůli chybám v datech")
-                self.add_error("Opravte chybějící data a spusťte znovu")
+                # Don't add more errors, just return None
                 wb.close()
                 return None
             
@@ -1264,7 +1263,11 @@ class InvVzdProcessor(BaseTool):
                 
             # Process files
             output_files = []
+            files_processed = []
+            
             for source_file in source_files:
+                self.add_info(f"Zpracovávám soubor: {os.path.basename(source_file)}")
+                
                 if not self.file_exists(source_file):
                     self.add_error(f"Zdrojový soubor neexistuje: {source_file}")
                     continue
@@ -1281,11 +1284,21 @@ class InvVzdProcessor(BaseTool):
                 
                 if output_file:
                     output_files.append(output_file)
+                    files_processed.append({
+                        "source": source_file,
+                        "filename": os.path.basename(output_file),
+                        "hours": self.config['hours'] if self.config else 0
+                    })
+                else:
+                    # File failed but we continue with others
+                    self.add_error(f"❌ Soubor {os.path.basename(source_file)} nebyl zpracován kvůli chybám")
                     
-            success = len(output_files) > 0 and len(self.errors) == 0
+            # Success if at least one file was processed
+            success = len(output_files) > 0
             return {
                 "success": success,
                 "output_files": output_files,
+                "files": files_processed,
                 "errors": self.errors,
                 "warnings": self.warnings,
                 "info": self.info_messages

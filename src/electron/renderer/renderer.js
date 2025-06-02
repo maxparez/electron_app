@@ -455,16 +455,48 @@ async function processInvVzd() {
         
         showLoading(false);
         
-        if (result.status === 'success') {
-            // Display results with improved formatting
-            let resultHtml = `<h3>Zpracování dokončeno ✅</h3>`;
+        if (result.status === 'success' || (result.data && result.data.info)) {
+            // Display results - could be full success or partial success with errors
+            const hasErrors = result.data && result.data.errors && result.data.errors.length > 0;
+            const title = hasErrors ? 
+                '<h3>Zpracování dokončeno s chybami ⚠️</h3>' : 
+                '<h3>Zpracování dokončeno ✅</h3>';
             
-            if (result.data && result.data.files) {
-                // Group messages by source file
-                const fileBlocks = result.data.files.map(file => {
-                    return formatFileProcessingBlock(file, result.info, result.warnings, result.errors);
+            let resultHtml = title;
+            
+            // Show info messages (including file processing info)
+            if (result.data && result.data.info && result.data.info.length > 0) {
+                resultHtml += '<div class="info-messages">';
+                result.data.info.forEach(msg => {
+                    resultHtml += `<div class="info-item">${msg}</div>`;
                 });
-                
+                resultHtml += '</div>';
+            }
+            
+            // Show errors if any
+            if (hasErrors) {
+                resultHtml += '<h4>Chyby:</h4><ul class="error-messages">';
+                result.data.errors.forEach(error => {
+                    resultHtml += `<li class="error-item">${error}</li>`;
+                });
+                resultHtml += '</ul>';
+            }
+            
+            // Show warnings if any
+            if (result.data && result.data.warnings && result.data.warnings.length > 0) {
+                resultHtml += '<h4>Upozornění:</h4><ul class="warning-messages">';
+                result.data.warnings.forEach(warning => {
+                    resultHtml += `<li class="warning-item">${warning}</li>`;
+                });
+                resultHtml += '</ul>';
+            }
+            
+            // Show file blocks if available
+            if (result.data && result.data.files && result.data.files.length > 0) {
+                resultHtml += '<h4>Zpracované soubory:</h4>';
+                const fileBlocks = result.data.files.map(file => {
+                    return formatFileProcessingBlock(file, result.data.info, result.data.warnings, result.data.errors);
+                });
                 resultHtml += fileBlocks.join('');
             }
             
