@@ -484,7 +484,21 @@ class InvVzdProcessor(BaseTool):
                 df['datum'] = self._fix_incomplete_dates(df['datum'], start_row=6)
                 # Then convert to datetime and format - SPECIFY dayfirst=True for DD.MM.YYYY format!
                 df['datum'] = pd.to_datetime(df['datum'], format='%d.%m.%Y', dayfirst=True, errors='coerce')
-                # Format as DD.MM.YYYY (this also handles already-datetime objects)
+                
+                # Check for any failed date conversions
+                nan_count = df['datum'].isna().sum()
+                if nan_count > 0:
+                    # Find which rows have invalid dates and report specific cells
+                    failed_indices = df[df['datum'].isna()].index.tolist()
+                    for idx in failed_indices:
+                        # Row number in Excel is idx + 3 (header at 1, data starts at 3, 0-based index)
+                        excel_row = idx + 3
+                        self.add_error(f"Chybí nebo neplatné datum v řádku {excel_row}")
+                    
+                    self.add_info("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
+                    return None
+                
+                # Format as DD.MM.YYYY
                 df['datum'] = df['datum'].dt.strftime('%d.%m.%Y')
             
             # Format time if present
@@ -657,13 +671,16 @@ class InvVzdProcessor(BaseTool):
                 self.add_error("Soubor neobsahuje žádné platné aktivity")
                 return None
             
-            # Log basic info
-            self.add_info(f"Načteno {len(df)} aktivit z docházky")
-            
-            # If we had errors but also some data, add info about skipped activities
+            # Check for any errors in data
             error_count = sum(1 for msg in self.errors if "Chybí datum aktivity" in msg)
             if error_count > 0:
-                self.add_info(f"Přeskočeno {error_count} aktivit kvůli chybějícím datům")
+                # If there are data errors, don't create output file
+                wb.close()
+                self.add_info("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
+                return None
+            
+            # Log basic info only if no errors
+            self.add_info(f"Načteno {len(df)} aktivit z docházky")
             
             # Fix incomplete dates if needed (for 32h template, dates are in row 6, starting from column C=3)
             if 'datum' in df.columns:
@@ -1214,19 +1231,13 @@ class InvVzdProcessor(BaseTool):
             aktivit_sheet = wb.sheets['Seznam aktivit']
             activities_total = 0
             row = 3
-            self.logger.info(f"[INVVZD] Reading activities hours (D3 onwards):")
             while True:
                 cell_value = aktivit_sheet.range(f"D{row}").value
-                self.logger.info(f"[INVVZD]   D{row}: {cell_value}")
                 if cell_value is None or str(cell_value).strip() == '':
-                    self.logger.info(f"[INVVZD]   Empty cell at D{row}, stopping")
                     break
                 try:
-                    value = int(float(str(cell_value)))
-                    activities_total += value
-                    self.logger.info(f"[INVVZD]   Added: {value}, Running total: {activities_total}")
+                    activities_total += int(float(str(cell_value)))
                 except:
-                    self.logger.info(f"[INVVZD]   Could not convert to number")
                     pass
                 row += 1
             
@@ -1235,17 +1246,12 @@ class InvVzdProcessor(BaseTool):
             
             # Sum C4:C10 (forma range)
             sdp_forma_total = 0
-            self.logger.info(f"[INVVZD] Reading SDP forma values (C4-C10):")
             for row in range(4, 11):  # C4 to C10
                 cell_value = sdp_sheet.range(f"C{row}").value
-                self.logger.info(f"[INVVZD]   C{row}: {cell_value}")
                 if cell_value is not None:
                     try:
-                        value = int(float(str(cell_value)))
-                        sdp_forma_total += value
-                        self.logger.info(f"[INVVZD]   Added: {value}, Running total: {sdp_forma_total}")
+                        sdp_forma_total += int(float(str(cell_value)))
                     except:
-                        self.logger.info(f"[INVVZD]   Could not convert to number")
                         pass
             
             # Sum C12:C28 (tema range) 
