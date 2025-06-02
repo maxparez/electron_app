@@ -495,7 +495,7 @@ async function processInvVzd() {
             if (result.data && result.data.files && result.data.files.length > 0) {
                 resultHtml += '<h4>Zpracované soubory:</h4>';
                 const fileBlocks = result.data.files.map(file => {
-                    return formatFileProcessingBlock(file, result.data.info, result.data.warnings, result.data.errors);
+                    return formatFileProcessingBlock(file);
                 });
                 resultHtml += fileBlocks.join('');
             }
@@ -1030,61 +1030,64 @@ function toggleCollapsible(blockId) {
 }
 
 // Format file processing block with steps
-function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMessages) {
+function formatFileProcessingBlock(file) {
     const sourceBasename = file.source.split(/[/\\]/).pop();
     const blockId = `file-block-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Filter messages for this specific file only
-    const fileNameWithoutExt = sourceBasename.replace(/\.[^.]+$/, ''); // Remove extension
+    // Get messages directly from file object if available
+    const fileInfo = file.info || [];
+    const fileWarnings = file.warnings || [];
+    const fileErrors = file.errors || [];
     
-    // Track which messages belong to which file by looking for file-specific markers
-    let collectingForThisFile = false;
-    const fileMessages = [];
+    // Determine status based on file status or errors
+    let statusText, statusIcon, statusClass;
     
-    (infoMessages || []).forEach(msg => {
-        // Start collecting when we see "Zpracovávám soubor: [this file]"
-        if (msg.includes(`Zpracovávám soubor: ${sourceBasename}`)) {
-            collectingForThisFile = true;
+    if (file.status === 'error' || fileErrors.length > 0) {
+        if (file.output === null) {
+            statusText = 'zpracování selhalo';
+            statusIcon = '❌';
+            statusClass = 'status-error';
+        } else {
+            statusText = 'zpracováno s chybami';
+            statusIcon = '⚠️';
+            statusClass = 'status-warning';
         }
-        // Stop collecting when we see another file being processed
-        else if (msg.includes('Zpracovávám soubor:') && !msg.includes(sourceBasename)) {
-            collectingForThisFile = false;
+    } else if (file.status === 'warning' || fileWarnings.length > 0) {
+        statusText = 'zpracováno s upozorněními';
+        statusIcon = '⚠️';
+        statusClass = 'status-warning';
+    } else {
+        // Check for SDP errors in info messages
+        const hasSDPError = fileInfo.some(msg => 
+            msg.includes('NESOUHLASÍ') || msg.includes('❌')
+        );
+        if (hasSDPError) {
+            statusText = 'nesouhlasí součty';
+            statusIcon = '❌';
+            statusClass = 'status-error';
+        } else {
+            statusText = 'zpracováno bez chyb';
+            statusIcon = '✅';
+            statusClass = 'status-success';
         }
-        // Also stop at "Úspěšně zpracováno"
-        else if (msg.includes('Úspěšně zpracováno')) {
-            collectingForThisFile = false;
-        }
-        
-        // Collect messages for this file
-        if (collectingForThisFile || msg.includes(`Vytvořen výstupní soubor: ${file.filename}`)) {
-            fileMessages.push(msg);
-        }
-    });
+    }
     
-    // Check if there are errors
-    const hasError = fileMessages.some(msg => 
-        msg.includes('NESOUHLASÍ') || msg.includes('❌') || 
-        (msg.includes('SDP forma:') && msg.includes('31h'))
-    );
-    
-    // Determine status text and icon
-    const statusText = hasError ? 'nesouhlasí součty' : 'zpracováno bez chyb';
-    const statusIcon = hasError ? '❌' : '✅';
-    const statusClass = hasError ? 'status-error' : 'status-success';
+    // Build the header with proper filename display
+    const outputFilename = file.output ? file.output.split(/[/\\]/).pop() : 'nedokončeno';
     
     let blockHtml = `
         <div class="file-processing-block collapsible">
             <div class="file-header collapsible-header" onclick="toggleCollapsible('${blockId}')">
                 <span class="collapse-icon" id="icon-${blockId}">▶</span>
-                📄 <strong>${sourceBasename} → ${file.filename} (${file.hours} hodin)</strong>
+                📄 <strong>${sourceBasename} → ${outputFilename} (${file.hours} hodin)</strong>
                 <span class="file-status ${statusClass}">${statusIcon} ${statusText}</span>
             </div>
             <div class="processing-steps collapsible-content" id="${blockId}" style="display: none;">
     `;
     
-    // Add processing steps - show all messages for this file
-    if (fileMessages.length > 0) {
-        fileMessages.forEach((msg, index) => {
+    // Add info messages for this file
+    if (fileInfo.length > 0) {
+        fileInfo.forEach(msg => {
             // Determine if this is a success or error message
             const isError = msg.includes('NESOUHLASÍ') || msg.includes('❌');
             const isSuccess = msg.includes('✅') || msg.includes('souhlasí');
@@ -1098,34 +1101,7 @@ function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMes
         });
     }
     
-    // Check if there are SDP errors for THIS file
-    if (hasError) {
-        // Extract error messages for this specific file from the fileMessages
-        const errorMsgs = fileMessages.filter(msg => 
-            msg.includes('NESOUHLASÍ') || 
-            msg.includes('Aktivity:') ||
-            msg.includes('SDP forma:') ||
-            msg.includes('SDP téma:')
-        );
-        
-        if (errorMsgs.length > 0) {
-            blockHtml += '<div class="sdp-errors">';
-            errorMsgs.forEach(error => {
-                blockHtml += `<div class="processing-step error">${error}</div>`;
-            });
-            blockHtml += '</div>';
-        }
-    }
-    
-    // Add any warnings or errors for this file
-    const fileWarnings = (warningMessages || []).filter(msg => 
-        msg.includes(sourceBasename) || msg.includes(file.filename.replace('.xlsx', ''))
-    );
-    
-    const fileErrors = (errorMessages || []).filter(msg => 
-        msg.includes(sourceBasename) || msg.includes(file.filename.replace('.xlsx', ''))
-    );
-    
+    // Add warnings for this file
     if (fileWarnings.length > 0) {
         fileWarnings.forEach(warning => {
             blockHtml += `
@@ -1136,6 +1112,7 @@ function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMes
         });
     }
     
+    // Add errors for this file
     if (fileErrors.length > 0) {
         fileErrors.forEach(error => {
             blockHtml += `

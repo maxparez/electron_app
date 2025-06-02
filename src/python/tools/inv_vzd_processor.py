@@ -168,14 +168,31 @@ class InvVzdProcessor(BaseTool):
             
             for source_file in files:
                 self.logger.info(f"[INVVZD] Processing file: {source_file}")
+                
+                # Store current messages state before processing this file
+                info_before = len(self.info_messages)
+                warnings_before = len(self.warnings)
+                errors_before = len(self.errors)
+                
                 self.add_info(f"Zpracovávám soubor: {os.path.basename(source_file)}")
                 
                 # Validate version match
                 self.logger.info(f"[INVVZD] Validating version match...")
                 version_match = self._validate_version_match(source_file, template)
                 self.logger.info(f"[INVVZD] Version match: {version_match}")
+                
                 if not version_match:
                     self.logger.error(f"[INVVZD] Version mismatch, skipping file")
+                    # Still add to results with error status
+                    results.append({
+                        "source": source_file,
+                        "output": None,
+                        "hours": 0,
+                        "status": "error",
+                        "errors": self.errors[errors_before:],
+                        "warnings": self.warnings[warnings_before:],
+                        "info": self.info_messages[info_before:]
+                    })
                     continue
                     
                 # Process the file
@@ -187,16 +204,34 @@ class InvVzdProcessor(BaseTool):
                     optimize
                 )
                 
+                # Collect messages for this specific file
+                file_info = self.info_messages[info_before:]
+                file_warnings = self.warnings[warnings_before:]
+                file_errors = self.errors[errors_before:]
+                
                 if output_file:
                     self.logger.info(f"[INVVZD] File processed successfully: {output_file}")
                     self.logger.info(f"[INVVZD] Total hours: {self.hours_total}")
                     results.append({
                         "source": source_file,
                         "output": output_file,
-                        "hours": self.hours_total
+                        "hours": self.hours_total,
+                        "status": "success" if not file_errors else "warning",
+                        "errors": file_errors,
+                        "warnings": file_warnings,
+                        "info": file_info
                     })
                 else:
                     self.logger.error(f"[INVVZD] Failed to process file: {source_file}")
+                    results.append({
+                        "source": source_file,
+                        "output": None,
+                        "hours": 0,
+                        "status": "error",
+                        "errors": file_errors,
+                        "warnings": file_warnings,
+                        "info": file_info
+                    })
                     
             # Always return data structure, even if empty
             data = {"processed_files": results}
@@ -615,16 +650,22 @@ class InvVzdProcessor(BaseTool):
                     
                     col += 1
             
-            # Check if we have any errors from missing dates
-            if len(self.errors) > 0:
-                # Don't add more errors, just return None
-                wb.close()
-                return None
-            
             df = pd.DataFrame(data)
+            
+            # Check if we have any valid data
+            if len(data) == 0:
+                # No valid activities found
+                wb.close()
+                self.add_error("Soubor neobsahuje žádné platné aktivity")
+                return None
             
             # Log basic info
             self.add_info(f"Načteno {len(df)} aktivit z docházky")
+            
+            # If we had errors but also some data, add info about skipped activities
+            error_count = sum(1 for msg in self.errors if "Chybí datum aktivity" in msg)
+            if error_count > 0:
+                self.add_info(f"Přeskočeno {error_count} aktivit kvůli chybějícím datům")
             
             # Fix incomplete dates if needed (for 32h template, dates are in row 6, starting from column C=3)
             if 'datum' in df.columns:
