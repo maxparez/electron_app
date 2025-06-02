@@ -39,6 +39,14 @@ TEMA_ORDER = [
     "občanské vzdělávání a demokratické myšlení"
 ]
 
+# Text replacements for normalization
+TEXT_REPLACEMENTS = {
+    'forma': {
+        'projektové vzdělávání (ve škole / mimo školu)': 'projektové vzdělávání / projektová výuka',
+        'propojování formálního a neformálního vzdělávání': 'propojování neformálního a formálního vzdělávání'
+    }
+}
+
 
 class ZorSpecDatProcessor(BaseTool):
     """Processor for special data items in ZoR (závěrečná zpráva o realizaci)"""
@@ -190,13 +198,8 @@ class ZorSpecDatProcessor(BaseTool):
             # Clean string data
             df = df.applymap(lambda x: x.lower().strip() if isinstance(x, str) else x)
             
-            # Standardize forma values
-            replacements = {
-                'projektové vzdělávání (ve škole / mimo školu)': 'projektové vzdělávání / projektová výuka',
-                'propojování formálního a neformálního vzdělávání': 'propojování neformálního a formálního vzdělávání'
-            }
-            
-            for old_val, new_val in replacements.items():
+            # Standardize forma values using TEXT_REPLACEMENTS
+            for old_val, new_val in TEXT_REPLACEMENTS['forma'].items():
                 df['forma'] = df['forma'].replace(old_val, new_val)
                 
             # Add file identifier and clean data
