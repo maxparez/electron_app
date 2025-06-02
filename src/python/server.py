@@ -423,7 +423,7 @@ def process_inv_vzd_paths():
         has_errors = result.get('errors', [])
         has_warnings = result.get('warnings', [])
         
-        # Prepare output files list
+        # Prepare output files list - keep per-file structure for UI
         output_files = []
         if has_data:
             for processed in result['data']['processed_files']:
@@ -434,11 +434,15 @@ def process_inv_vzd_paths():
                 elif hasattr(hours_value, 'tolist'):
                     hours_value = hours_value.tolist()  # Convert numpy array to list
                 
+                # Preserve per-file structure with output filename properly set
                 output_files.append({
-                    'filename': os.path.basename(processed['output']),
-                    'source': os.path.basename(processed['source']),
+                    'source': processed['source'],
+                    'output': processed['output'] if processed['output'] else None,
                     'hours': int(hours_value) if hours_value is not None else 0,
-                    'path': processed['output']
+                    'status': processed.get('status', 'unknown'),
+                    'errors': processed.get('errors', []),
+                    'warnings': processed.get('warnings', []),
+                    'info': processed.get('info', [])
                 })
         
         # Enhanced error message for path issues

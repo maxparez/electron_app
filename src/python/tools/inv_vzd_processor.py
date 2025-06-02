@@ -1214,13 +1214,19 @@ class InvVzdProcessor(BaseTool):
             aktivit_sheet = wb.sheets['Seznam aktivit']
             activities_total = 0
             row = 3
+            self.logger.info(f"[INVVZD] Reading activities hours (D3 onwards):")
             while True:
                 cell_value = aktivit_sheet.range(f"D{row}").value
+                self.logger.info(f"[INVVZD]   D{row}: {cell_value}")
                 if cell_value is None or str(cell_value).strip() == '':
+                    self.logger.info(f"[INVVZD]   Empty cell at D{row}, stopping")
                     break
                 try:
-                    activities_total += int(float(str(cell_value)))
+                    value = int(float(str(cell_value)))
+                    activities_total += value
+                    self.logger.info(f"[INVVZD]   Added: {value}, Running total: {activities_total}")
                 except:
+                    self.logger.info(f"[INVVZD]   Could not convert to number")
                     pass
                 row += 1
             
@@ -1229,12 +1235,17 @@ class InvVzdProcessor(BaseTool):
             
             # Sum C4:C10 (forma range)
             sdp_forma_total = 0
+            self.logger.info(f"[INVVZD] Reading SDP forma values (C4-C10):")
             for row in range(4, 11):  # C4 to C10
                 cell_value = sdp_sheet.range(f"C{row}").value
+                self.logger.info(f"[INVVZD]   C{row}: {cell_value}")
                 if cell_value is not None:
                     try:
-                        sdp_forma_total += int(float(str(cell_value)))
+                        value = int(float(str(cell_value)))
+                        sdp_forma_total += value
+                        self.logger.info(f"[INVVZD]   Added: {value}, Running total: {sdp_forma_total}")
                     except:
+                        self.logger.info(f"[INVVZD]   Could not convert to number")
                         pass
             
             # Sum C12:C28 (tema range) 
