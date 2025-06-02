@@ -1079,7 +1079,7 @@ function formatFileProcessingBlock(file) {
         <div class="file-processing-block collapsible">
             <div class="file-header collapsible-header" onclick="toggleCollapsible('${blockId}')">
                 <span class="collapse-icon" id="icon-${blockId}">▶</span>
-                📄 <strong>${sourceBasename} → ${outputFilename} (${file.hours} hodin)</strong>
+                📄 <strong>${sourceBasename} → ${outputFilename}</strong>
                 <span class="file-status ${statusClass}">${statusIcon} ${statusText}</span>
             </div>
             <div class="processing-steps collapsible-content" id="${blockId}" style="display: none;">
