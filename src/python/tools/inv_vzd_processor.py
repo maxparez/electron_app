@@ -445,8 +445,8 @@ class InvVzdProcessor(BaseTool):
                 # First try to fix incomplete dates if they exist
                 # For 16h template, data starts at row 6 (C6)
                 df['datum'] = self._fix_incomplete_dates(df['datum'], start_row=6)
-                # Then convert to datetime and format
-                df['datum'] = pd.to_datetime(df['datum'], errors='coerce')
+                # Then convert to datetime and format - SPECIFY dayfirst=True for DD.MM.YYYY format!
+                df['datum'] = pd.to_datetime(df['datum'], format='%d.%m.%Y', dayfirst=True, errors='coerce')
                 # Format as DD.MM.YYYY (this also handles already-datetime objects)
                 df['datum'] = df['datum'].dt.strftime('%d.%m.%Y')
             
@@ -614,8 +614,18 @@ class InvVzdProcessor(BaseTool):
             # Fix incomplete dates if needed (for 32h template, dates are in row 6, starting from column C=3)
             if 'datum' in df.columns:
                 df['datum'] = self._fix_incomplete_dates(df['datum'], start_row=6, start_col=3)
-                # Convert to datetime and format
-                df['datum'] = pd.to_datetime(df['datum'], errors='coerce')
+                # Convert to datetime and format - SPECIFY dayfirst=True for DD.MM.YYYY format!
+                df['datum'] = pd.to_datetime(df['datum'], format='%d.%m.%Y', dayfirst=True, errors='coerce')
+                
+                # Check for any failed conversions
+                nan_count = df['datum'].isna().sum()
+                if nan_count > 0:
+                    self.add_warning(f"Upozornění: {nan_count} datumů se nepodařilo převést")
+                    # Try to show which dates failed
+                    failed_indices = df[df['datum'].isna()].index.tolist()
+                    if failed_indices:
+                        self.add_warning(f"Problematické řádky: {failed_indices[:5]}...")  # Show first 5
+                
                 # Format as DD.MM.YYYY
                 df['datum'] = df['datum'].dt.strftime('%d.%m.%Y')
                 
