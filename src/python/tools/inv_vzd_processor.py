@@ -831,10 +831,10 @@ class InvVzdProcessor(BaseTool):
         
         # Report uncertain fixes
         if uncertain_fixes:
-            self.add_warning("Následující data byla opravena s nejistotou:")
+            self.add_info("Následující data byla opravena s nejistotou:")
             for fix in uncertain_fixes:
-                self.add_warning(f"  {fix}")
-            self.add_warning("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
+                self.add_info(f"  {fix}")
+            self.add_info("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
             
         return pd.Series(fixed_dates)
         
