@@ -544,33 +544,60 @@ class InvVzdProcessor(BaseTool):
                     col += 1
                     
             else:
-                # Legacy format with List1 sheet
-                hours_data = []
-                activities = []
-                
-                # Get hours for each activity (row 10, starting from column C)
-                col = 3  # Column C
-                while True:
-                    cell_value = sheet.cell(row=10, column=col).value
-                    if cell_value is None or cell_value == 0:
-                        break
-                    hours_data.append(int(cell_value))
-                    activities.append(f"Aktivita {col-2}")  # Activity 1, 2, 3...
-                    col += 1
-                
-                # Create DataFrame with activity data  
-                current_date = datetime.now()
+                # Legacy format with List1 sheet - still read dates from row 6!
                 data = []
-                for i, (activity, hours) in enumerate(zip(activities, hours_data)):
-                    # Use sequential dates starting from today
-                    activity_date = current_date.replace(day=1) + pd.Timedelta(days=i*7)  # Weekly intervals
+                
+                # Read data from specific rows (same as zdroj-dochazka format)
+                # Row 6: dates, Row 7: forms, Row 8: topics, Row 9: teachers, Row 10: hours
+                col = 3  # Start from column C (first activity)
+                
+                while True:
+                    # Check if there's data in this column
+                    hours_cell = sheet.cell(row=10, column=col).value
+                    if hours_cell is None or str(hours_cell).strip() == '':
+                        break
+                        
+                    try:
+                        hours = int(float(str(hours_cell)))
+                        if hours <= 0:
+                            break
+                    except (ValueError, TypeError):
+                        break
+                    
+                    # Get date (row 6) - same as in zdroj-dochazka format!
+                    date_cell = sheet.cell(row=6, column=col).value
+                    if date_cell:
+                        if hasattr(date_cell, 'strftime'):
+                            # It's already a datetime object
+                            datum = date_cell.strftime('%d.%m.%Y')
+                        else:
+                            # Try to parse as string - store raw value for later fixing
+                            datum = str(date_cell).strip()
+                    else:
+                        # Only use current date as last resort
+                        datum = datetime.now().strftime('%d.%m.%Y')
+                    
+                    # Get form (row 7)
+                    forma_cell = sheet.cell(row=7, column=col).value
+                    forma = str(forma_cell) if forma_cell else 'Neurčeno'
+                    
+                    # Get topic (row 8)
+                    tema_cell = sheet.cell(row=8, column=col).value
+                    tema = str(tema_cell) if tema_cell else f'Aktivita {col-2}'
+                    
+                    # Get teacher (row 9)
+                    ucitel_cell = sheet.cell(row=9, column=col).value
+                    ucitel = str(ucitel_cell) if ucitel_cell else 'Neurčeno'
+                    
                     data.append({
-                        'datum': activity_date.strftime('%d.%m.%Y'),
+                        'datum': datum,
                         'hodin': hours,
-                        'forma': 'Neurčeno',
-                        'tema': activity,
-                        'ucitel': 'Neurčeno'
+                        'forma': forma,
+                        'tema': tema,
+                        'ucitel': ucitel
                     })
+                    
+                    col += 1
             
             df = pd.DataFrame(data)
             
