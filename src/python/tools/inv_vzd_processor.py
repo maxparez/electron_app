@@ -472,9 +472,12 @@ class InvVzdProcessor(BaseTool):
             col = 3  # Start from column C (first activity)
             
             while True:
-                # Check if we have data in this column
+                # Check if we have data in this column - check activity number or hours
                 activity_num = sheet.cell(row=6, column=col).value
-                if not activity_num:
+                hours_val = sheet.cell(row=12, column=col).value
+                
+                # Stop if both activity number and hours are empty
+                if not activity_num and not hours_val:
                     break
                     
                 # Read all values for this activity
@@ -483,12 +486,7 @@ class InvVzdProcessor(BaseTool):
                 form_val = sheet.cell(row=9, column=col).value
                 topic_val = sheet.cell(row=10, column=col).value
                 teacher_val = sheet.cell(row=11, column=col).value
-                hours_val = sheet.cell(row=12, column=col).value
-                
-                # Skip if no hours value
-                if not hours_val:
-                    col += 1
-                    continue
+                # hours_val already read above
                     
                 data.append({
                     'datum': date_val,
@@ -510,9 +508,23 @@ class InvVzdProcessor(BaseTool):
             # Create DataFrame
             df = pd.DataFrame(data)
             
+            # Debug: log the data before filtering
+            self.logger.info(f"[INVVZD] Raw data before filtering: {len(df)} rows")
+            if len(df) > 0:
+                self.logger.info(f"[INVVZD] First row data: {df.iloc[0].to_dict()}")
+                self.logger.info(f"[INVVZD] Hours column before conversion: {df['hodin'].tolist()}")
+            
             # Convert hours to numeric before filtering
             df['hodin'] = pd.to_numeric(df['hodin'], errors='coerce')
+            
+            # Debug: log after conversion
+            self.logger.info(f"[INVVZD] Hours column after conversion: {df['hodin'].tolist()}")
+            
+            # Filter only rows with valid hours
+            df = df.dropna(subset=['hodin'])
             df = df[df['hodin'] > 0]
+            
+            self.logger.info(f"[INVVZD] Data after filtering: {len(df)} rows")
             
             # Format dates properly - ensure they include full date (DD.MM.YYYY)
             if 'datum' in df.columns:
