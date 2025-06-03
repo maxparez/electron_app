@@ -601,8 +601,7 @@ h3.error {
 
 .processing-step {
     margin: 2px 0;
-    padding: 4px 10px;
-    padding-left: 30px;
+    padding: 8px 14px;
     border-radius: 6px;
     font-size: 13px;
     line-height: 1.3;
@@ -610,14 +609,7 @@ h3.error {
 }
 
 .processing-step:before {
-    content: "";
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+    display: none;
 }
 
 .processing-step.success {
@@ -626,9 +618,6 @@ h3.error {
     border: 1px solid #a7f3d0;
 }
 
-.processing-step.success:before {
-    background-color: #10b981;
-}
 
 .processing-step.error {
     background-color: #fef2f2;
@@ -636,9 +625,6 @@ h3.error {
     border: 1px solid #fecaca;
 }
 
-.processing-step.error:before {
-    background-color: #ef4444;
-}
 
 .processing-step.warning {
     background-color: #fffbeb;
@@ -646,9 +632,6 @@ h3.error {
     border: 1px solid #fde68a;
 }
 
-.processing-step.warning:before {
-    background-color: #f59e0b;
-}
 
 /* SDP errors special styling */
 .sdp-errors {
@@ -672,9 +655,7 @@ h3.error {
 }
 
 .sdp-errors .processing-step:before {
-    left: 0;
-    width: 16px;
-    height: 16px;
+    display: none;
 }
 
 .sdp-errors .processing-step:first-child {

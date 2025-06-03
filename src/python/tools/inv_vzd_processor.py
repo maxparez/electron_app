@@ -1284,7 +1284,7 @@ class InvVzdProcessor(BaseTool):
                 self.add_error(f"Aktivity: {activities_total}h")
                 self.add_error(f"SDP forma: {sdp_forma_total}h")
                 self.add_error(f"SDP téma: {sdp_tema_total}h")
-                self.add_warning("⚠️ ZKONTROLUJTE výsledný soubor - aktivity na listu 'Seznam aktivit'")
+                self.add_warning("ZKONTROLUJTE výsledný soubor - aktivity na listu 'Seznam aktivit'")
                 
         except Exception as e:
             self.add_error(f"Chyba při kontrole SDP součtů: {str(e)}")
