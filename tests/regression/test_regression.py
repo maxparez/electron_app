@@ -106,9 +106,10 @@ class RegressionTester:
         
         # Prepare options
         options = {
-            'template_path': str(template_file),
+            'template': str(template_file),
             'output_dir': str(self.outputs_dir / version),
-            'output_filename': f"{source_file.stem}_output.xlsx"
+            'keep_filename': False,  # We want our custom output name
+            'optimize': False
         }
         
         # Process the file
