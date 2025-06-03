@@ -3,15 +3,19 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 module.exports = {
   packagerConfig: {
-    name: 'NastrojeOPJAK',
-    // icon: './src/electron/assets/icon',
+    name: 'ElektronApp',
+    productName: 'ElektronApp - Nástroje OP JAK',
+    icon: './src/electron/assets/icon',
     asar: {
-      unpack: '{*.{node,dll,exe,so,dylib},src/python/**/*}'
+      unpack: '{*.{node,dll,exe,so,dylib},src/python/**/*,src/launcher.js}'
     },
     extraResource: [
-      './resources/python-dist'
+      './src/python',
+      './requirements.txt',
+      './python-backend-install.bat'
     ],
     ignore: [
+      /electron-app-env/,
       /venv/,
       /logs/,
       /out/,
@@ -30,38 +34,32 @@ module.exports = {
       /test_complete/,
       /ui_preview/,
       /\.sh$/,
-      /\.bat$/
+      /template_.*\.xlsx$/,
+      /standalone-backend\.py$/,
+      /start-.*\.bat$/,
+      /test-.*\.bat$/,
+      /quick-fix-.*\.bat$/,
+      /debug-.*\.bat$/,
+      /build-.*\.bat$/,
+      /next-tag\.sh$/,
+      /install_mcp_servers\.sh$/
     ]
   },
   rebuildConfig: {},
   makers: [
     {
-      name: '@electron-forge/maker-zip',
-      platforms: ['win32', 'darwin', 'linux'],
-    },
-    // {
-    //   name: '@electron-forge/maker-squirrel',
-    //   config: {
-    //     name: 'NastrojeOPJAK',
-    //     authors: 'Max Parez',
-    //     description: 'Nástroje pro ŠI a ŠII OP JAK',
-    //     // setupIcon: './src/electron/assets/icon.ico',
-    //     setupExe: 'NastrojeOPJAK-Setup.exe',
-    //     noMsi: true
-    //   },
-    // },
-    {
-      name: '@electron-forge/maker-deb',
+      name: '@electron-forge/maker-squirrel',
+      platforms: ['win32'],
       config: {
-        options: {
-          maintainer: 'Max Parez',
-          homepage: 'https://github.com/maxparez/electron_app'
-        }
+        name: 'ElektronApp',
+        authors: 'Max Parez',
+        description: 'ElektronApp - Nástroje pro zpracování projektové dokumentace OP JAK',
+        setupExe: 'ElektronApp-Setup.exe',
+        noMsi: true,
+        remoteReleases: false,
+        createDesktopShortcut: true,
+        createStartMenuShortcut: true
       },
-    },
-    {
-      name: '@electron-forge/maker-rpm',
-      config: {},
     },
   ],
   plugins: [

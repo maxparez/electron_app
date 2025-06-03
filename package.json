@@ -13,9 +13,13 @@
     "test": "jest",
     "build": "electron-forge package",
     "make": "electron-forge make",
+    "make-launcher": "electron-forge make --targets @electron-forge/maker-squirrel --arch x64",
     "package": "electron-forge package",
     "prepare-python": "node scripts/prepare-python.js",
-    "build-win": "node scripts/build-win.js"
+    "build-win": "node scripts/build-win.js",
+    "build-launcher": "node scripts/build-launcher.js",
+    "launcher": "node src/launcher.js",
+    "build-all": "npm run build-launcher && npm run make"
   },
   "keywords": [
     "electron",

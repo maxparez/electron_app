@@ -28,14 +28,27 @@ class BackendManager {
             // Determine Python executable path
             let pythonPath;
             if (isProd) {
-                // In production, use bundled Python from resources
-                // Try multiple possible locations
+                // In production, first try the electron-app-env created by our installer
+                const appDir = path.dirname(process.execPath);
+                const userInstallVenv = path.join(appDir, 'electron-app-env', 'Scripts', 'python.exe');
+                
+                // Also try parent directory (where user might have installed)
+                const parentVenv = path.join(appDir, '..', 'electron-app-env', 'Scripts', 'python.exe');
+                
+                // Check environment variable set by launcher
+                const envPythonPath = process.env.ELECTRON_APP_PYTHON_ENV ? 
+                    path.join(process.env.ELECTRON_APP_PYTHON_ENV, 'Scripts', 'python.exe') : null;
+                
+                // Original bundled locations (if we had bundled Python)
                 const possiblePaths = [
+                    envPythonPath,    // NEW: From environment variable
+                    userInstallVenv,  // NEW: From our install script
+                    parentVenv,       // NEW: Parent directory
                     path.join(process.resourcesPath, 'python', 'python.exe'),
                     path.join(process.resourcesPath, 'python-dist', 'python', 'python.exe'),
                     path.join(process.resourcesPath, 'app.asar.unpacked', 'python-dist', 'python', 'python.exe'),
                     path.join(process.resourcesPath, '..', 'python', 'python.exe')
-                ];
+                ].filter(p => p); // Remove null entries
                 
                 pythonPath = possiblePaths.find(p => fs.existsSync(p));
                 
