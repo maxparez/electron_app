@@ -471,21 +471,35 @@ class InvVzdProcessor(BaseTool):
             data = []
             col = 3  # Start from column C (first activity)
             
+            # Debug: Check the first few cells
+            self.logger.info(f"[INVVZD] 16h Debug - Starting to read from column {col}")
+            for test_col in range(3, 6):  # Check columns C, D, E
+                hours_test = sheet.cell(row=12, column=test_col).value
+                self.logger.info(f"[INVVZD] 16h Debug - Row 12, Column {test_col}: {repr(hours_test)} (type: {type(hours_test)})")
+            
             while True:
                 # Check if there's data in this column by checking hours (same as 32h version)
                 hours_cell = sheet.cell(row=12, column=col).value
+                self.logger.info(f"[INVVZD] 16h Debug - Checking column {col}, hours_cell: {repr(hours_cell)}")
+                
                 if hours_cell is None or str(hours_cell).strip() == '':
+                    self.logger.info(f"[INVVZD] 16h Debug - Hours cell is empty, breaking at column {col}")
                     break
                     
                 try:
                     hours = int(float(str(hours_cell)))
+                    self.logger.info(f"[INVVZD] 16h Debug - Converted hours: {hours}")
                     if hours <= 0:
+                        self.logger.info(f"[INVVZD] 16h Debug - Hours <= 0, breaking")
                         break
-                except (ValueError, TypeError):
+                except (ValueError, TypeError) as e:
+                    self.logger.info(f"[INVVZD] 16h Debug - Failed to convert hours: {e}")
                     break
                 
                 # Get date (row 7)
                 date_cell = sheet.cell(row=7, column=col).value
+                self.logger.info(f"[INVVZD] 16h Debug - Date cell: {repr(date_cell)}")
+                
                 if date_cell:
                     if hasattr(date_cell, 'strftime'):
                         datum = date_cell.strftime('%d.%m.%Y')
@@ -515,18 +529,24 @@ class InvVzdProcessor(BaseTool):
                 
                 # Only add data if datum is valid
                 if datum is not None:
-                    data.append({
+                    activity_data = {
                         'datum': datum,
                         'cas': cas,
                         'forma': forma,
                         'tema': tema,
                         'ucitel': ucitel,
                         'hodin': hours
-                    })
+                    }
+                    self.logger.info(f"[INVVZD] 16h Debug - Adding activity data: {activity_data}")
+                    data.append(activity_data)
+                else:
+                    self.logger.info(f"[INVVZD] 16h Debug - Skipping data due to invalid datum")
                 
                 col += 1
             
             wb.close()
+            
+            self.logger.info(f"[INVVZD] 16h Debug - Total data collected: {len(data)} activities")
             
             if not data:
                 self.add_error("Nenalezena žádná data aktivit")
