@@ -464,29 +464,10 @@ async function processInvVzd() {
             
             let resultHtml = title;
             
-            // Skip general info messages - they're now shown in per-file blocks
-            
-            // Show errors if any
-            if (hasErrors) {
-                resultHtml += '<h4>Chyby:</h4><ul class="error-messages">';
-                result.data.errors.forEach(error => {
-                    resultHtml += `<li class="error-item">${error}</li>`;
-                });
-                resultHtml += '</ul>';
-            }
-            
-            // Show warnings if any
-            if (result.data && result.data.warnings && result.data.warnings.length > 0) {
-                resultHtml += '<h4>Upozornění:</h4><ul class="warning-messages">';
-                result.data.warnings.forEach(warning => {
-                    resultHtml += `<li class="warning-item">${warning}</li>`;
-                });
-                resultHtml += '</ul>';
-            }
+            // Skip general messages - all information is now shown in per-file blocks
             
             // Show file blocks if available
             if (result.data && result.data.files && result.data.files.length > 0) {
-                resultHtml += '<h4>Zpracované soubory:</h4>';
                 const fileBlocks = result.data.files.map(file => {
                     return formatFileProcessingBlock(file);
                 });
@@ -1115,13 +1096,47 @@ function formatFileProcessingBlock(file) {
     
     // Add errors for this file
     if (fileErrors.length > 0) {
-        fileErrors.forEach(error => {
+        // Check if we have SDP error sequence
+        let sdpErrorIndex = fileErrors.findIndex(err => err.includes('NESOUHLASÍ součty v SDP'));
+        
+        if (sdpErrorIndex !== -1 && sdpErrorIndex + 3 < fileErrors.length) {
+            // Process errors before SDP error normally
+            for (let i = 0; i < sdpErrorIndex; i++) {
+                blockHtml += `
+                    <div class="processing-step error">
+                        ❌ <strong>Chyba:</strong> ${fileErrors[i]}
+                    </div>
+                `;
+            }
+            
+            // Combine SDP errors into one block
             blockHtml += `
                 <div class="processing-step error">
-                    ❌ <strong>Chyba:</strong> ${error}
+                    <strong>❌ NESOUHLASÍ součty v SDP!</strong><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;Aktivity: ${fileErrors[sdpErrorIndex + 1].replace('Aktivity: ', '')}<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;SDP forma: ${fileErrors[sdpErrorIndex + 2].replace('SDP forma: ', '')}<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;SDP téma: ${fileErrors[sdpErrorIndex + 3].replace('SDP téma: ', '')}
                 </div>
             `;
-        });
+            
+            // Process remaining errors after SDP block
+            for (let i = sdpErrorIndex + 4; i < fileErrors.length; i++) {
+                blockHtml += `
+                    <div class="processing-step error">
+                        ❌ <strong>Chyba:</strong> ${fileErrors[i]}
+                    </div>
+                `;
+            }
+        } else {
+            // No SDP error sequence, process normally
+            fileErrors.forEach(error => {
+                blockHtml += `
+                    <div class="processing-step error">
+                        ❌ <strong>Chyba:</strong> ${error}
+                    </div>
+                `;
+            });
+        }
     }
     
     blockHtml += `
