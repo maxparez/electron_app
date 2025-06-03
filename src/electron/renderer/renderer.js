@@ -63,6 +63,10 @@ function init() {
     // Setup file selection buttons
     elements.invSelectBtn.addEventListener('click', () => selectFiles('inv-vzd'));
     elements.invFolderBtn.addEventListener('click', selectInvFolder);
+    
+    // Initially disable file selection buttons until template is selected
+    elements.invSelectBtn.disabled = true;
+    elements.invFolderBtn.disabled = true;
     elements.zorSelectBtn.addEventListener('click', () => selectFiles('zor-spec'));
     elements.zorFolderBtn.addEventListener('click', selectZorFolder);
     elements.invTemplateBtn.addEventListener('click', selectInvTemplate);
@@ -184,14 +188,48 @@ async function selectFiles(tool) {
                 } else {
                     showMessage('Žádný z vybraných souborů neobsahuje požadovaný list', 'error');
                 }
+            } else if (tool === 'inv-vzd') {
+                // For InvVzd, check compatibility with selected template
+                if (!state.detectedTemplateVersion) {
+                    showMessage('Nejprve vyberte platnou šablonu', 'error');
+                    return;
+                }
+                
+                const validFiles = [];
+                const incompatibleFiles = [];
+                
+                for (const filePath of filePaths) {
+                    try {
+                        // Check if file is compatible with template
+                        const compatible = await isFileCompatibleWithTemplate(filePath);
+                        if (compatible) {
+                            validFiles.push(filePath);
+                        } else {
+                            incompatibleFiles.push(filePath);
+                        }
+                    } catch (error) {
+                        console.error(`Error checking file ${filePath}:`, error);
+                        incompatibleFiles.push(filePath);
+                    }
+                }
+                
+                // Show messages for incompatible files
+                incompatibleFiles.forEach(file => {
+                    const displayPath = wslToWindowsPath(file);
+                    showMessage(`Soubor ${displayPath} neodpovídá vybrané šabloně`, 'warning');
+                });
+                
+                if (validFiles.length > 0) {
+                    state.selectedFiles[tool] = validFiles;
+                    updateFilesList(tool);
+                    checkInvVzdReady();
+                    showMessage(`Vybráno ${validFiles.length} vhodných souborů`, 'success');
+                } else {
+                    showMessage('Žádný z vybraných souborů neodpovídá vybrané šabloně', 'error');
+                }
             } else {
                 state.selectedFiles[tool] = filePaths;
                 updateFilesList(tool);
-                
-                // Enable process button
-                if (tool === 'inv-vzd') {
-                    checkInvVzdReady();
-                }
             }
         }
     } catch (error) {
@@ -291,7 +329,7 @@ async function selectInvTemplate() {
             // Detect template version
             await detectTemplateVersion(filePaths[0]);
             
-            // Enable process button if both template and files are selected
+            // Update button states
             checkInvVzdReady();
         }
     } catch (error) {
@@ -439,6 +477,12 @@ function checkInvVzdReady() {
     const hasTemplate = state.selectedTemplate['inv-vzd'] !== null;
     const hasFiles = state.selectedFiles['inv-vzd'].length > 0;
     const hasValidVersion = state.detectedTemplateVersion !== null;
+    
+    // Enable/disable file selection buttons based on template validity
+    elements.invSelectBtn.disabled = !hasValidVersion;
+    elements.invFolderBtn.disabled = !hasValidVersion;
+    
+    // Enable process button only if everything is ready
     elements.invProcessBtn.disabled = !(hasTemplate && hasFiles && hasValidVersion);
 }
 
@@ -1198,16 +1242,28 @@ async function detectTemplateVersion(templatePath) {
             
             // Store detected version
             state.detectedTemplateVersion = version;
+            
+            // Enable file selection buttons when template is valid
+            checkInvVzdReady();
         } else {
             elements.invTemplateVersion.innerHTML = `<strong>Neplatná šablona:</strong> ${result.message || 'Nepodařilo se detekovat verzi'}`;
             elements.invTemplateVersion.className = 'template-version invalid';
             state.detectedTemplateVersion = null;
+            
+            // Clear selected files when template is invalid
+            state.selectedFiles['inv-vzd'] = [];
+            updateFilesList('inv-vzd');
         }
     } catch (error) {
         console.error('Template version detection error:', error);
         elements.invTemplateVersion.innerHTML = '<strong>Chyba:</strong> Nepodařilo se detekovat verzi šablony';
         elements.invTemplateVersion.className = 'template-version invalid';
         state.detectedTemplateVersion = null;
+        
+        // Clear selected files and update buttons
+        state.selectedFiles['inv-vzd'] = [];
+        updateFilesList('inv-vzd');
+        checkInvVzdReady();
     }
 }
 
