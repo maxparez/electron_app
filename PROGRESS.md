@@ -83,13 +83,21 @@
 ## 🔄 Current Status - Ready for Testing!
 
 ### All Core Features Completed! ✅
-- **Tool 1:** Inovativní vzdělávání - Fully tested and working
+- **Tool 1:** Inovativní vzdělávání - Fully tested and working (both 16h and 32h versions)
 - **Tool 2:** Speciální data ZoR - Fully tested and working  
 - **Tool 3:** Generátor plakátů - Enhanced with auto-save and folder selection
 - **Frontend:** Complete UI with progress indicators, localization, config system
 - **Windows Support:** Batch scripts for easy testing
 
-### ⚡ Latest Enhancements (2025-01-06)
+### ⚡ Latest Enhancements (2025-06-03)
+- [x] **16h Version Support:** Complete implementation and testing of 16h innovative education format
+- [x] **Template Validation:** File selection disabled until valid template chosen
+- [x] **File Compatibility:** Automatic checking of source files against selected template
+- [x] **UI Polish:** Removed bullet points, cleaned up error messages formatting
+- [x] **Path Display:** Windows path format in UI instead of WSL paths
+- [x] **SDP Verification:** Fixed for 16h version (hours in column E vs D)
+
+### Previous Enhancements (2025-01-06)
 - [x] **InvVzd Error Handling:** Fixed validation errors not showing in UI
 - [x] **InvVzd Logging:** Implemented per-file message isolation
 - [x] **InvVzd Errors:** Specific cell error references (e.g. "Chybí datum v buňce Z6")
@@ -123,11 +131,11 @@
 - [x] **InvVzd error handling and UI display** - fully tested
 - [x] Complete InvVzd workflow validation
 - [x] Final ZorSpec and Plakat validation
-- [ ] **Windows testing with xlwings** (Ready for deployment)
+- [x] **Windows testing with xlwings** (Successfully tested - 16h and 32h both working)
 
 ### Week 6: Testing & Deployment
-- [ ] Windows testing with xlwings
-- [ ] Integration testing
+- [x] Windows testing with xlwings - InvVzd 16h and 32h both working perfectly
+- [x] Integration testing - All tools working on Windows
 - [ ] Build Windows installer
 - [ ] User documentation
 - [ ] Deployment preparation
@@ -137,9 +145,9 @@
 1. **xlwings on Linux** - Successfully resolved with path-based processing (Linux logic complete)
 2. ~~**InvVzd validation errors not showing**~~ - FIXED: Now displays specific error details
 3. ~~**Files with errors create empty outputs**~~ - FIXED: No output files on data errors
-4. **Windows testing pending** - All tools ready for final Windows validation with xlwings
+4. ~~**Windows testing pending**~~ - COMPLETED: All tools tested and working on Windows with xlwings
 
-## 📊 Overall Progress: 98%
+## 📊 Overall Progress: 99%
 
 ### By Component:
 - Environment Setup: 100% ✅
@@ -147,8 +155,8 @@
 - Flask API: 100% ✅
 - Electron Frontend: 100% ✅
 - Git Workflow: 100% ✅
-- Testing: 90% 🟢
-- Deployment: 20% 🔴
+- Testing: 100% ✅
+- Deployment: 30% 🟡
 
 ### Major Milestones Achieved:
 ✅ All 3 tools implemented and working  
