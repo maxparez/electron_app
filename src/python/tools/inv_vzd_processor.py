@@ -443,36 +443,71 @@ class InvVzdProcessor(BaseTool):
             return None
             
     def _read_16_hour_data(self, source_file: str) -> Optional[pd.DataFrame]:
-        """Read data from 16 hour source file (Seznam aktivit sheet)"""
+        """Read data from 16 hour source file (zdroj-dochazka sheet)"""
         try:
-            # Read from Seznam aktivit sheet with header=1 to use row 1 as headers
-            df = pd.read_excel(source_file, sheet_name="Seznam aktivit", header=0)
+            wb = load_workbook(source_file)
             
-            # The actual column names from the debug output
-            expected_columns = {
-                'Unnamed: 1': 'poradi',
-                'Unnamed: 2': 'datum', 
-                'Unnamed: 3': 'cas',
-                'Unnamed: 4': 'hodin',
-                'Unnamed: 5': 'forma',
-                'Unnamed: 6': 'tema',
-                'Unnamed: 7': 'ucitel'
-            }
+            # Find the correct sheet - prefer zdroj-dochazka
+            sheet_name = None
+            if "zdroj-dochazka" in wb.sheetnames:
+                sheet_name = "zdroj-dochazka"
+            elif "List1" in wb.sheetnames:
+                sheet_name = "List1"
+            else:
+                sheet_name = wb.sheetnames[0]
+                
+            sheet = wb[sheet_name]
+            self.add_info(f"Čtu 16h data z listu: {sheet_name}")
             
-            # Rename columns 
-            df = df.rename(columns=expected_columns)
+            # 16h format is similar to 32h but with additional time column
+            # Read data from specific rows:
+            # Row 6: dates
+            # Row 7: times (čas zahájení) - specific to 16h
+            # Row 8: forms (forma výuky)
+            # Row 9: topics (téma)
+            # Row 10: teachers (jméno učitele)
+            # Row 11: hours (počet hodin)
             
-            # Remove rows where poradi is NaN (empty rows)
-            df = df.dropna(subset=['poradi'])
+            data = []
+            col = 3  # Start from column C (first activity)
             
-            # Keep only rows with actual activity numbers (skip header rows)
-            df = df[df['poradi'].apply(lambda x: str(x).isdigit() if pd.notna(x) else False)]
+            while True:
+                # Check if we have data in this column
+                date_val = sheet.cell(row=6, column=col).value
+                if not date_val:
+                    break
+                    
+                # Read all values for this activity
+                time_val = sheet.cell(row=7, column=col).value  # Time - specific to 16h
+                form_val = sheet.cell(row=8, column=col).value
+                topic_val = sheet.cell(row=9, column=col).value
+                teacher_val = sheet.cell(row=10, column=col).value
+                hours_val = sheet.cell(row=11, column=col).value
+                
+                # Skip if no hours value
+                if not hours_val:
+                    col += 1
+                    continue
+                    
+                data.append({
+                    'datum': date_val,
+                    'cas': time_val,
+                    'forma': form_val,
+                    'tema': topic_val,
+                    'ucitel': teacher_val,
+                    'hodin': hours_val
+                })
+                
+                col += 1
             
-            # Convert hours to numeric
-            df['hodin'] = pd.to_numeric(df['hodin'], errors='coerce')
+            wb.close()
             
-            # Remove rows with invalid hours
-            df = df.dropna(subset=['hodin'])
+            if not data:
+                self.add_error("Nenalezena žádná data aktivit")
+                return None
+                
+            # Create DataFrame
+            df = pd.DataFrame(data)
             df = df[df['hodin'] > 0]
             
             # Format dates properly - ensure they include full date (DD.MM.YYYY)
@@ -1054,8 +1089,11 @@ class InvVzdProcessor(BaseTool):
             
             # Prepare activities data for export (following original export_columns)
             if len(data) > 0:
-                # For 32h version, export_columns should be ["datum","hodin","forma","tema","ucitel"]
-                export_columns = ["datum", "hodin", "forma", "tema", "ucitel"]
+                # For 16h version include time column, for 32h version exclude it
+                if self.version == "16":
+                    export_columns = ["datum", "cas", "hodin", "forma", "tema", "ucitel"]
+                else:
+                    export_columns = ["datum", "hodin", "forma", "tema", "ucitel"]
                 activities_data = data[export_columns] if all(col in data.columns for col in export_columns) else data
                 
                 
