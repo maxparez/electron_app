@@ -459,14 +459,13 @@ class InvVzdProcessor(BaseTool):
             sheet = wb[sheet_name]
             self.add_info(f"Čtu 16h data z listu: {sheet_name}")
             
-            # 16h format structure:
-            # Row 6: activity number (pořadové číslo)
-            # Row 7: dates (datum aktivity)
-            # Row 8: times (čas zahájení) - specific to 16h
-            # Row 9: forms (forma výuky)
-            # Row 10: topics (téma výuky)
-            # Row 11: teachers (jméno pedagoga)
-            # Row 12: hours (počet hodin)
+            # 16h format structure (from actual file inspection):
+            # Row 6: dates (datum aktivity)
+            # Row 7: times (čas zahájení) - specific to 16h
+            # Row 8: forms (forma výuky)
+            # Row 9: topics (téma výuky)
+            # Row 10: teachers (jméno pedagoga)
+            # Row 11: hours (počet hodin)
             
             data = []
             col = 3  # Start from column C (first activity)
@@ -474,12 +473,12 @@ class InvVzdProcessor(BaseTool):
             # Debug: Check the first few cells
             self.logger.info(f"[INVVZD] 16h Debug - Starting to read from column {col}")
             for test_col in range(3, 6):  # Check columns C, D, E
-                hours_test = sheet.cell(row=12, column=test_col).value
-                self.logger.info(f"[INVVZD] 16h Debug - Row 12, Column {test_col}: {repr(hours_test)} (type: {type(hours_test)})")
+                hours_test = sheet.cell(row=11, column=test_col).value
+                self.logger.info(f"[INVVZD] 16h Debug - Row 11, Column {test_col}: {repr(hours_test)} (type: {type(hours_test)})")
             
             while True:
-                # Check if there's data in this column by checking hours (same as 32h version)
-                hours_cell = sheet.cell(row=12, column=col).value
+                # Check if there's data in this column by checking hours (row 11 for 16h)
+                hours_cell = sheet.cell(row=11, column=col).value
                 self.logger.info(f"[INVVZD] 16h Debug - Checking column {col}, hours_cell: {repr(hours_cell)}")
                 
                 if hours_cell is None or str(hours_cell).strip() == '':
@@ -496,8 +495,8 @@ class InvVzdProcessor(BaseTool):
                     self.logger.info(f"[INVVZD] 16h Debug - Failed to convert hours: {e}")
                     break
                 
-                # Get date (row 7)
-                date_cell = sheet.cell(row=7, column=col).value
+                # Get date (row 6)
+                date_cell = sheet.cell(row=6, column=col).value
                 self.logger.info(f"[INVVZD] 16h Debug - Date cell: {repr(date_cell)}")
                 
                 if date_cell:
@@ -508,23 +507,23 @@ class InvVzdProcessor(BaseTool):
                 else:
                     from openpyxl.utils import get_column_letter
                     col_letter = get_column_letter(col)
-                    self.add_error(f"Chybí datum aktivity v buňce {col_letter}7")
+                    self.add_error(f"Chybí datum aktivity v buňce {col_letter}6")
                     datum = None
                 
-                # Get time (row 8) - specific to 16h
-                time_cell = sheet.cell(row=8, column=col).value
+                # Get time (row 7) - specific to 16h
+                time_cell = sheet.cell(row=7, column=col).value
                 cas = str(time_cell) if time_cell else ''
                 
-                # Get form (row 9)
-                forma_cell = sheet.cell(row=9, column=col).value
+                # Get form (row 8)
+                forma_cell = sheet.cell(row=8, column=col).value
                 forma = str(forma_cell) if forma_cell else 'Neurčeno'
                 
-                # Get topic (row 10)
-                tema_cell = sheet.cell(row=10, column=col).value
+                # Get topic (row 9)
+                tema_cell = sheet.cell(row=9, column=col).value
                 tema = str(tema_cell) if tema_cell else 'Neurčeno'
                 
-                # Get teacher (row 11)
-                ucitel_cell = sheet.cell(row=11, column=col).value
+                # Get teacher (row 10)
+                ucitel_cell = sheet.cell(row=10, column=col).value
                 ucitel = str(ucitel_cell) if ucitel_cell else 'Neurčeno'
                 
                 # Only add data if datum is valid
@@ -1197,8 +1196,8 @@ class InvVzdProcessor(BaseTool):
             student_names = []
             empty_count = 0
             
-            # Start from row 11 for 32h version, row 14 for 16h version
-            start_row = 13 if self.version == "16" else 10  # 0-indexed
+            # Start from row 11 for 32h version, row 12 for 16h version  
+            start_row = 11 if self.version == "16" else 10  # 0-indexed
             for row in range(start_row, sheet.max_row):
                 cell_value = sheet.cell(row=row+1, column=2).value  # Column B
                 
