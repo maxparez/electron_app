@@ -472,30 +472,57 @@ class InvVzdProcessor(BaseTool):
             col = 3  # Start from column C (first activity)
             
             while True:
-                # Check if we have data in this column - check activity number or hours
-                activity_num = sheet.cell(row=6, column=col).value
-                hours_val = sheet.cell(row=12, column=col).value
-                
-                # Stop if both activity number and hours are empty
-                if not activity_num and not hours_val:
+                # Check if there's data in this column by checking hours (same as 32h version)
+                hours_cell = sheet.cell(row=12, column=col).value
+                if hours_cell is None or str(hours_cell).strip() == '':
                     break
                     
-                # Read all values for this activity
-                date_val = sheet.cell(row=7, column=col).value
-                time_val = sheet.cell(row=8, column=col).value  # Time - specific to 16h
-                form_val = sheet.cell(row=9, column=col).value
-                topic_val = sheet.cell(row=10, column=col).value
-                teacher_val = sheet.cell(row=11, column=col).value
-                # hours_val already read above
-                    
-                data.append({
-                    'datum': date_val,
-                    'cas': time_val,
-                    'forma': form_val,
-                    'tema': topic_val,
-                    'ucitel': teacher_val,
-                    'hodin': hours_val
-                })
+                try:
+                    hours = int(float(str(hours_cell)))
+                    if hours <= 0:
+                        break
+                except (ValueError, TypeError):
+                    break
+                
+                # Get date (row 7)
+                date_cell = sheet.cell(row=7, column=col).value
+                if date_cell:
+                    if hasattr(date_cell, 'strftime'):
+                        datum = date_cell.strftime('%d.%m.%Y')
+                    else:
+                        datum = str(date_cell).strip()
+                else:
+                    from openpyxl.utils import get_column_letter
+                    col_letter = get_column_letter(col)
+                    self.add_error(f"Chybí datum aktivity v buňce {col_letter}7")
+                    datum = None
+                
+                # Get time (row 8) - specific to 16h
+                time_cell = sheet.cell(row=8, column=col).value
+                cas = str(time_cell) if time_cell else ''
+                
+                # Get form (row 9)
+                forma_cell = sheet.cell(row=9, column=col).value
+                forma = str(forma_cell) if forma_cell else 'Neurčeno'
+                
+                # Get topic (row 10)
+                tema_cell = sheet.cell(row=10, column=col).value
+                tema = str(tema_cell) if tema_cell else 'Neurčeno'
+                
+                # Get teacher (row 11)
+                ucitel_cell = sheet.cell(row=11, column=col).value
+                ucitel = str(ucitel_cell) if ucitel_cell else 'Neurčeno'
+                
+                # Only add data if datum is valid
+                if datum is not None:
+                    data.append({
+                        'datum': datum,
+                        'cas': cas,
+                        'forma': forma,
+                        'tema': tema,
+                        'ucitel': ucitel,
+                        'hodin': hours
+                    })
                 
                 col += 1
             
@@ -508,23 +535,8 @@ class InvVzdProcessor(BaseTool):
             # Create DataFrame
             df = pd.DataFrame(data)
             
-            # Debug: log the data before filtering
-            self.logger.info(f"[INVVZD] Raw data before filtering: {len(df)} rows")
-            if len(df) > 0:
-                self.logger.info(f"[INVVZD] First row data: {df.iloc[0].to_dict()}")
-                self.logger.info(f"[INVVZD] Hours column before conversion: {df['hodin'].tolist()}")
-            
-            # Convert hours to numeric before filtering
-            df['hodin'] = pd.to_numeric(df['hodin'], errors='coerce')
-            
-            # Debug: log after conversion
-            self.logger.info(f"[INVVZD] Hours column after conversion: {df['hodin'].tolist()}")
-            
-            # Filter only rows with valid hours
-            df = df.dropna(subset=['hodin'])
-            df = df[df['hodin'] > 0]
-            
-            self.logger.info(f"[INVVZD] Data after filtering: {len(df)} rows")
+            # No need to convert hours - they're already numeric from reading
+            # Filter is already done during reading (hours > 0)
             
             # Format dates properly - ensure they include full date (DD.MM.YYYY)
             if 'datum' in df.columns:
