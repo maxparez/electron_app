@@ -459,30 +459,31 @@ class InvVzdProcessor(BaseTool):
             sheet = wb[sheet_name]
             self.add_info(f"Čtu 16h data z listu: {sheet_name}")
             
-            # 16h format is similar to 32h but with additional time column
-            # Read data from specific rows:
-            # Row 6: dates
-            # Row 7: times (čas zahájení) - specific to 16h
-            # Row 8: forms (forma výuky)
-            # Row 9: topics (téma)
-            # Row 10: teachers (jméno učitele)
-            # Row 11: hours (počet hodin)
+            # 16h format structure:
+            # Row 6: activity number (pořadové číslo)
+            # Row 7: dates (datum aktivity)
+            # Row 8: times (čas zahájení) - specific to 16h
+            # Row 9: forms (forma výuky)
+            # Row 10: topics (téma výuky)
+            # Row 11: teachers (jméno pedagoga)
+            # Row 12: hours (počet hodin)
             
             data = []
             col = 3  # Start from column C (first activity)
             
             while True:
                 # Check if we have data in this column
-                date_val = sheet.cell(row=6, column=col).value
-                if not date_val:
+                activity_num = sheet.cell(row=6, column=col).value
+                if not activity_num:
                     break
                     
                 # Read all values for this activity
-                time_val = sheet.cell(row=7, column=col).value  # Time - specific to 16h
-                form_val = sheet.cell(row=8, column=col).value
-                topic_val = sheet.cell(row=9, column=col).value
-                teacher_val = sheet.cell(row=10, column=col).value
-                hours_val = sheet.cell(row=11, column=col).value
+                date_val = sheet.cell(row=7, column=col).value
+                time_val = sheet.cell(row=8, column=col).value  # Time - specific to 16h
+                form_val = sheet.cell(row=9, column=col).value
+                topic_val = sheet.cell(row=10, column=col).value
+                teacher_val = sheet.cell(row=11, column=col).value
+                hours_val = sheet.cell(row=12, column=col).value
                 
                 # Skip if no hours value
                 if not hours_val:
@@ -1140,7 +1141,7 @@ class InvVzdProcessor(BaseTool):
             raise
     
     def _extract_student_names_from_data(self, source_file: str) -> List[str]:
-        """Extract student names from source file column B starting from row 11"""
+        """Extract student names from source file column B"""
         try:
             wb = load_workbook(source_file, read_only=True)
             sheet_name = "zdroj-dochazka" if "zdroj-dochazka" in wb.sheetnames else wb.sheetnames[0]
@@ -1149,8 +1150,9 @@ class InvVzdProcessor(BaseTool):
             student_names = []
             empty_count = 0
             
-            # Start from row 11 (0-indexed = 10)
-            for row in range(10, sheet.max_row):
+            # Start from row 11 for 32h version, row 14 for 16h version
+            start_row = 13 if self.version == "16" else 10  # 0-indexed
+            for row in range(start_row, sheet.max_row):
                 cell_value = sheet.cell(row=row+1, column=2).value  # Column B
                 
                 if cell_value is None or str(cell_value).strip() == "":
