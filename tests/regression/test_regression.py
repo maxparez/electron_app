@@ -104,12 +104,15 @@ class RegressionTester:
         # Create output path
         output_file = self.outputs_dir / version / f"{source_file.stem}_output.xlsx"
         
+        # Prepare options
+        options = {
+            'template_path': str(template_file),
+            'output_dir': str(self.outputs_dir / version),
+            'output_filename': f"{source_file.stem}_output.xlsx"
+        }
+        
         # Process the file
-        result = self.processor.process_file(
-            str(source_file),
-            str(template_file),
-            str(output_file)
-        )
+        result = self.processor.process([str(source_file)], options)
         
         return result
         
