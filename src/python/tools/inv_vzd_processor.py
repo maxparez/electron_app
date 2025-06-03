@@ -509,6 +509,9 @@ class InvVzdProcessor(BaseTool):
                 
             # Create DataFrame
             df = pd.DataFrame(data)
+            
+            # Convert hours to numeric before filtering
+            df['hodin'] = pd.to_numeric(df['hodin'], errors='coerce')
             df = df[df['hodin'] > 0]
             
             # Format dates properly - ensure they include full date (DD.MM.YYYY)
