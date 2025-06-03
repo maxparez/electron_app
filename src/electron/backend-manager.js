@@ -39,11 +39,18 @@ class BackendManager {
                 const envPythonPath = process.env.ELECTRON_APP_PYTHON_ENV ? 
                     path.join(process.env.ELECTRON_APP_PYTHON_ENV, 'Scripts', 'python.exe') : null;
                 
+                // Check common installation locations relative to exe
+                const exeDir = path.dirname(process.execPath);
+                const twoLevelsUp = path.join(exeDir, '..', '..', 'electron-app-env', 'Scripts', 'python.exe');
+                const threeLevelsUp = path.join(exeDir, '..', '..', '..', 'electron-app-env', 'Scripts', 'python.exe');
+                
                 // Original bundled locations (if we had bundled Python)
                 const possiblePaths = [
                     envPythonPath,    // NEW: From environment variable
                     userInstallVenv,  // NEW: From our install script
                     parentVenv,       // NEW: Parent directory
+                    twoLevelsUp,      // NEW: Common installation location
+                    threeLevelsUp,    // NEW: Alternative installation location
                     path.join(process.resourcesPath, 'python', 'python.exe'),
                     path.join(process.resourcesPath, 'python-dist', 'python', 'python.exe'),
                     path.join(process.resourcesPath, 'app.asar.unpacked', 'python-dist', 'python', 'python.exe'),
@@ -71,9 +78,26 @@ class BackendManager {
                 }
             }
             
-            const scriptPath = isProd 
-                ? path.join(process.resourcesPath, 'app.asar.unpacked', 'src', 'python', 'server.py')
-                : path.join(appPath, 'src', 'python', 'server.py');
+            // Determine script path - check multiple possible locations
+            let scriptPath;
+            if (isProd) {
+                const possibleScriptPaths = [
+                    path.join(process.resourcesPath, 'python', 'server.py'),
+                    path.join(process.resourcesPath, 'app.asar.unpacked', 'src', 'python', 'server.py'),
+                    path.join(process.resourcesPath, 'app.asar.unpacked', 'python', 'server.py'),
+                    path.join(appPath, 'resources', 'python', 'server.py')
+                ];
+                
+                scriptPath = possibleScriptPaths.find(p => fs.existsSync(p));
+                
+                if (!scriptPath) {
+                    console.error('[BackendManager] Script not found. Tried paths:');
+                    possibleScriptPaths.forEach(p => console.error(`  - ${p}`));
+                    throw new Error('Python script server.py not found');
+                }
+            } else {
+                scriptPath = path.join(appPath, 'src', 'python', 'server.py');
+            }
             
             console.log('[BackendManager] Python path:', pythonPath);
             console.log('[BackendManager] Script path:', scriptPath);
