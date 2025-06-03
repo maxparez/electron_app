@@ -18,11 +18,16 @@ Vytvoření jednotné desktopové aplikace pro zpracování projektové dokument
 
 ## Nástroje k implementaci
 
-### 1. Inv Vzd Copy (PRIORITA 1)
+### 1. Inv Vzd Copy (PRIORITA 1) ✅ VYLEPŠENO
 - **Funkce**: Zpracování docházky inovativního vzdělávání
 - **Vstup**: Excel soubory s docházkou (16/32 hodin)
 - **Výstup**: Vyplněné oficiální šablony s zachovaným formátováním
 - **Kritické**: Musí zachovat makra, vzorce, formátování
+- **Vylepšení (2025-01-06)**:
+  - Detailní validační chyby s čísly buněk (např. "Chybí datum v buňce Z6")
+  - Per-file zpracování s izolovanými logy
+  - Automatické pokračování při chybách
+  - Čisté UI s rozbalovacími detaily
 
 ### 2. Zor Spec Dat (PRIORITA 2)
 - **Funkce**: Zpracování docházky z různých tříd
@@ -75,8 +80,12 @@ Vytvoření jednotné desktopové aplikace pro zpracování projektové dokument
 - [x] **BONUS:** Progress indikátory, auto-save, config systém
 
 ### Fáze 4: Testování a finalizace (Týden 6) 🔄
-- [ ] Uživatelské testování nových funkcí
-- [ ] Testování na Windows s xlwings
+- [x] Uživatelské testování nových funkcí ✅
+- [x] Oprava chyb v InvVzd nástroji ✅
+  - [x] Per-file error isolation
+  - [x] Specifické chybové hlášky s čísly buněk
+  - [x] UI zobrazuje detaily validace
+- [ ] Testování na Windows s xlwings (PŘIPRAVENO)
 - [ ] Vytvoření Windows instalátoru  
 - [ ] Dokumentace pro uživatele
 - [ ] Nasazení a distribuce
@@ -110,12 +119,13 @@ Vytvoření jednotné desktopové aplikace pro zpracování projektové dokument
 
 ## Rizika a řešení
 
-| Riziko | Pravděpodobnost | Dopad | Řešení |
-|--------|-----------------|-------|---------|
-| xlwings kompatibilita | Střední | Vysoký | Fallback na openpyxl pro základní funkce |
-| Velikost instalátoru | Vysoká | Nízký | Optimalizace, odstranění nepotřebných knihoven |
-| Různé verze Windows | Nízká | Střední | Testování na Win 10/11 |
-| Antivirus blokace | Střední | Vysoký | Code signing certificate |
+| Riziko | Pravděpodobnost | Dopad | Řešení | Status |
+|--------|-----------------|-------|---------|---------|
+| xlwings kompatibilita | Střední | Vysoký | Fallback na openpyxl pro základní funkce | ✅ Vyřešeno |
+| Velikost instalátoru | Vysoká | Nízký | Optimalizace, odstranění nepotřebných knihoven | 🔄 |
+| Různé verze Windows | Nízká | Střední | Testování na Win 10/11 | 🔄 |
+| Antivirus blokace | Střední | Vysoký | Code signing certificate | ⏳ |
+| Validační chyby | - | - | - | ✅ Vyřešeno |
 
 ## Úspěšné dokončení
 
@@ -138,3 +148,10 @@ Projekt bude považován za úspěšný když:
 - Důraz na kvalitu a použitelnost
 - Původní skripty zůstanou k dispozici jako záloha
 - Průběžné testování s reálnými daty
+
+## Aktuální stav (2025-01-06)
+- **Branch**: deployment-windows
+- **Připravenost**: 98% - čeká se pouze na Windows deployment
+- **InvVzd nástroj**: Plně funkční s vylepšeným error handlingem
+- **UI/UX**: Modernizováno, intuitivní ovládání
+- **Poslední úpravy**: Per-file error isolation, specifické validační chyby

@@ -464,14 +464,7 @@ async function processInvVzd() {
             
             let resultHtml = title;
             
-            // Show info messages (including file processing info)
-            if (result.data && result.data.info && result.data.info.length > 0) {
-                resultHtml += '<div class="info-messages">';
-                result.data.info.forEach(msg => {
-                    resultHtml += `<div class="info-item">${msg}</div>`;
-                });
-                resultHtml += '</div>';
-            }
+            // Skip general info messages - they're now shown in per-file blocks
             
             // Show errors if any
             if (hasErrors) {
@@ -1079,7 +1072,7 @@ function formatFileProcessingBlock(file) {
         <div class="file-processing-block collapsible">
             <div class="file-header collapsible-header" onclick="toggleCollapsible('${blockId}')">
                 <span class="collapse-icon" id="icon-${blockId}">▶</span>
-                📄 <strong>${sourceBasename} → ${outputFilename} (${file.hours} hodin)</strong>
+                📄 <strong>${sourceBasename} → ${outputFilename}</strong>
                 <span class="file-status ${statusClass}">${statusIcon} ${statusText}</span>
             </div>
             <div class="processing-steps collapsible-content" id="${blockId}" style="display: none;">
@@ -1093,9 +1086,17 @@ function formatFileProcessingBlock(file) {
             const isSuccess = msg.includes('✅') || msg.includes('souhlasí');
             const cssClass = isError ? 'error' : (isSuccess ? 'success' : '');
             
+            // Clean up repeated "Chyba" text in SDP messages
+            let cleanMsg = msg;
+            if (msg.includes('NESOUHLASÍ součty v SDP')) {
+                // Remove multiple "Chyba:" prefixes and clean up formatting
+                cleanMsg = msg.replace(/Chyba: /g, '').replace(/\s+Chyba/g, '');
+                cleanMsg = cleanMsg.replace('NESOUHLASÍ součty v SDP!', '❌ NESOUHLASÍ součty v SDP');
+            }
+            
             blockHtml += `
                 <div class="processing-step ${cssClass}">
-                    ${msg}
+                    ${cleanMsg}
                 </div>
             `;
         });
