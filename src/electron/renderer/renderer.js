@@ -200,6 +200,15 @@ async function selectFiles(tool) {
     }
 }
 
+// Convert WSL path to Windows path for display
+function wslToWindowsPath(path) {
+    if (path.startsWith('/mnt/')) {
+        const driveLetter = path[5].toUpperCase();
+        return `${driveLetter}:${path.substring(6).replace(/\//g, '\\')}`;
+    }
+    return path;
+}
+
 // Update files list display
 function updateFilesList(tool) {
     const filesList = tool === 'inv-vzd' ? elements.invFilesList : elements.zorFilesList;
@@ -219,7 +228,7 @@ function updateFilesList(tool) {
                 fileDiv.innerHTML = `
                     <div class="file-item-content">
                         <div class="file-path">
-                            <strong>Cesta:</strong> ${file}
+                            <strong>Cesta:</strong> ${wslToWindowsPath(file)}
                             <br><strong>Verze:</strong> ${state.zorFileVersions[file]}
                         </div>
                         <button class="btn-remove" onclick="removeFile('${tool}', '${file.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')">✕</button>
@@ -229,7 +238,7 @@ function updateFilesList(tool) {
                 fileDiv.innerHTML = `
                     <div class="file-item-content">
                         <div class="file-path">
-                            <strong>Cesta:</strong> ${file}
+                            <strong>Cesta:</strong> ${wslToWindowsPath(file)}
                         </div>
                         <button class="btn-remove" onclick="removeFile('${tool}', '${file.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')">✕</button>
                     </div>
@@ -275,7 +284,7 @@ async function selectInvTemplate() {
             state.selectedTemplate['inv-vzd'] = filePaths[0];
             elements.invTemplateName.innerHTML = `
                 <div class="template-path">
-                    <strong>Cesta:</strong> ${filePaths[0]}
+                    <strong>Cesta:</strong> ${wslToWindowsPath(filePaths[0])}
                 </div>
             `;
             
