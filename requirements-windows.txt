@@ -1,0 +1,25 @@
+# ElektronApp - Python Backend Dependencies pro Windows
+# Používá pouze předkompilované verze (wheel soubory)
+
+# Web framework a API
+flask==3.1.1
+flask-cors==6.0.0
+
+# Excel file handling - priority kvůli xlwings
+xlwings==0.33.15
+openpyxl==3.1.5
+
+# HTTP requests a utility
+requests==2.32.3
+beautifulsoup4==4.12.3
+python-dateutil>=2.8.0
+
+# PDF generation
+reportlab==4.4.1
+
+# Data processing - staršíverze pro kompatibilitu
+pandas==2.1.4
+numpy==1.24.4
+
+# Timezone support
+pytz>=2023.3

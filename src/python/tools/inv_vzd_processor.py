@@ -1,3 +1,14 @@
+"""
+InvVzd Processor - Process innovative education attendance files
+
+DEBUG FINDINGS (2025-05-30):
+- Files are loading correctly when paths are valid
+- Processing correctly calculates total hours (e.g., 57 hours, not 100%)
+- The tool requires Windows with MS Excel due to xlwings dependency
+- Enhanced logging with [INVVZD] prefix shows all processing steps
+- Platform check added to provide clear error message on non-Windows systems
+"""
+
 import pandas as pd
 import numpy as np
 from openpyxl import load_workbook
@@ -5,7 +16,12 @@ from openpyxl.utils import get_column_letter
 import os
 import warnings
 from typing import Dict, Any, List, Optional, Tuple
-import xlwings as xw
+import platform
+try:
+    import xlwings as xw
+    XLWINGS_AVAILABLE = True
+except ImportError:
+    XLWINGS_AVAILABLE = False
 from datetime import datetime
 import unicodedata
 import re
@@ -19,7 +35,7 @@ VERSIONS = {
     "32": {
         "hours": 32,
         "template": {
-            "B1": "32 hodin inovativního vzdělávání"
+            "B1": "32 hodin"  # Simplified to match actual template
         },
         "source": {
             "B6": "datum aktivity",
@@ -39,7 +55,7 @@ VERSIONS = {
     "16": {
         "hours": 16,
         "template": {
-            "B1": "Evidence 16 hodin inovativního vzdělávání"
+            "B1": "16 hodin"  # Simplified to match actual template
         },
         "source": {
             "B2": "Pořadové číslo aktivity",
@@ -73,53 +89,74 @@ class InvVzdProcessor(BaseTool):
     def validate_inputs(self, files: List[str], options: Dict[str, Any]) -> bool:
         """Validate input files and options"""
         self.clear_messages()
-        self.logger.info(f"Validating inputs: {len(files)} files")
+        self.logger.info(f"[INVVZD] === VALIDATE INPUTS START ===")
+        self.logger.info(f"[INVVZD] Validating inputs: {len(files)} files")
+        self.logger.info(f"[INVVZD] Files: {files}")
+        self.logger.info(f"[INVVZD] Options: {options}")
         
         # Check if files provided
         if not files:
             self.add_error("Žádné soubory nebyly poskytnuty")
-            self.logger.error("No files provided")
+            self.logger.error("[INVVZD] ERROR: No files provided")
             return False
             
         # Check if template provided
         template = options.get('template')
-        self.logger.info(f"Template path: {template}")
+        self.logger.info(f"[INVVZD] Template path: {template}")
         if not template:
             self.add_error("Šablona nebyla poskytnuta")
-            self.logger.error("No template provided")
+            self.logger.error("[INVVZD] ERROR: No template provided")
             return False
             
         # Check if template exists
-        if not self.file_exists(template):
+        self.logger.info(f"[INVVZD] Checking if template exists: {template}")
+        template_exists = self.file_exists(template)
+        self.logger.info(f"[INVVZD] Template exists: {template_exists}")
+        if not template_exists:
             self.add_error(f"Šablona neexistuje: {template}")
+            self.logger.error(f"[INVVZD] ERROR: Template does not exist: {template}")
             return False
             
         # Validate all source files exist
         for file in files:
-            if not self.file_exists(file):
+            self.logger.info(f"[INVVZD] Checking if source file exists: {file}")
+            file_exists = self.file_exists(file)
+            self.logger.info(f"[INVVZD] File exists: {file_exists}")
+            if not file_exists:
                 self.add_error(f"Soubor neexistuje: {file}")
+                self.logger.error(f"[INVVZD] ERROR: Source file does not exist: {file}")
                 return False
                 
         # Detect template version
+        self.logger.info(f"[INVVZD] Detecting template version...")
         template_version = self._detect_template_version(template)
+        self.logger.info(f"[INVVZD] Detected template version: {template_version}")
         if not template_version:
             self.add_error("Nepodařilo se detekovat verzi šablony")
+            self.logger.error(f"[INVVZD] ERROR: Failed to detect template version")
             return False
             
         self.version = template_version
         self.config = VERSIONS[template_version]
-        self.add_info(f"Detekována verze šablony: {template_version} hodin")
+        # Template version detected - no general message needed
+        self.logger.info(f"[INVVZD] === VALIDATE INPUTS SUCCESS ===")
+        self.logger.info(f"[INVVZD] Version set to: {self.version}")
+        self.logger.info(f"[INVVZD] Config: {self.config}")
         
         return True
         
     def process(self, files: List[str], options: Dict[str, Any]) -> Dict[str, Any]:
         """Process attendance files"""
-        self.logger.info(f"InvVzdProcessor.process called with {len(files)} files")
-        self.logger.info(f"Options: {options}")
+        self.logger.info(f"[INVVZD] === PROCESS START ===")
+        self.logger.info(f"[INVVZD] InvVzdProcessor.process called with {len(files)} files")
+        self.logger.info(f"[INVVZD] Files: {files}")
+        self.logger.info(f"[INVVZD] Options: {options}")
         
         if not self.validate_inputs(files, options):
-            self.logger.error("Input validation failed")
-            return self.get_result(False)
+            self.logger.error("[INVVZD] ERROR: Input validation failed")
+            result = self.get_result(False)
+            self.logger.info(f"[INVVZD] Returning validation failure result: {result}")
+            return result
             
         try:
             template = options.get('template')
@@ -130,10 +167,28 @@ class InvVzdProcessor(BaseTool):
             results = []
             
             for source_file in files:
-                self.add_info(f"Zpracovávám soubor: {os.path.basename(source_file)}")
+                self.logger.info(f"[INVVZD] Processing file: {source_file}")
+                
+                # Clear messages for this file (keep only the template version message)
+                self.clear_file_messages()
                 
                 # Validate version match
-                if not self._validate_version_match(source_file, template):
+                self.logger.info(f"[INVVZD] Validating version match...")
+                version_match = self._validate_version_match(source_file, template)
+                self.logger.info(f"[INVVZD] Version match: {version_match}")
+                
+                if not version_match:
+                    self.logger.error(f"[INVVZD] Version mismatch, skipping file")
+                    # Still add to results with error status
+                    results.append({
+                        "source": source_file,
+                        "output": None,
+                        "hours": 0,
+                        "status": "error",
+                        "errors": list(self.errors),  # Copy current errors
+                        "warnings": list(self.warnings),  # Copy current warnings  
+                        "info": list(self.info_messages)  # Copy current info
+                    })
                     continue
                     
                 # Process the file
@@ -145,95 +200,164 @@ class InvVzdProcessor(BaseTool):
                     optimize
                 )
                 
+                # Collect messages for this specific file
+                file_info = list(self.info_messages)
+                file_warnings = list(self.warnings)
+                file_errors = list(self.errors)
+                
                 if output_file:
+                    self.logger.info(f"[INVVZD] File processed successfully: {output_file}")
+                    self.logger.info(f"[INVVZD] Total hours: {self.hours_total}")
                     results.append({
                         "source": source_file,
                         "output": output_file,
-                        "hours": self.hours_total
+                        "hours": self.hours_total,
+                        "status": "success" if not file_errors else "warning",
+                        "errors": file_errors,
+                        "warnings": file_warnings,
+                        "info": file_info
+                    })
+                else:
+                    self.logger.error(f"[INVVZD] Failed to process file: {source_file}")
+                    results.append({
+                        "source": source_file,
+                        "output": None,
+                        "hours": 0,
+                        "status": "error",
+                        "errors": file_errors,
+                        "warnings": file_warnings,
+                        "info": file_info
                     })
                     
+            # Always return data structure, even if empty
+            data = {"processed_files": results}
+            
             if results:
-                self.add_info(f"Úspěšně zpracováno {len(results)} souborů")
-                return self.get_result(True, {"processed_files": results})
+                # Overall success - no general message needed
+                result = self.get_result(True, data)
+                self.logger.info(f"[INVVZD] === PROCESS SUCCESS ===")
+                self.logger.info(f"[INVVZD] Returning success result: {result}")
             else:
-                return self.get_result(False)
+                # No files succeeded, but return data structure with empty results
+                result = self.get_result(False, data)
+                self.logger.error(f"[INVVZD] === PROCESS FAILED - No results ===")
+                self.logger.info(f"[INVVZD] Returning failure result with empty data: {result}")
+                
+            return result
                 
         except Exception as e:
+            self.logger.error(f"[INVVZD] === PROCESS EXCEPTION ===")
+            self.logger.error(f"[INVVZD] Exception: {str(e)}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
             self.add_error(f"Chyba při zpracování: {str(e)}")
-            return self.get_result(False)
+            result = self.get_result(False)
+            self.logger.info(f"[INVVZD] Returning exception result: {result}")
+            return result
             
     def _detect_template_version(self, template_path: str) -> Optional[str]:
         """Detect version from template content"""
         try:
+            self.logger.info(f"[INVVZD] Loading template workbook: {template_path}")
             wb = load_workbook(template_path, read_only=True)
             sheet = wb.worksheets[0]
+            self.logger.info(f"[INVVZD] First sheet name: {sheet.title}")
             
             for version, config in VERSIONS.items():
+                self.logger.info(f"[INVVZD] Checking for version {version}...")
                 match = True
                 for cell, expected_value in config["template"].items():
                     actual_value = sheet[cell].value
+                    self.logger.info(f"[INVVZD]   Checking cell {cell}: expected='{expected_value}', actual='{actual_value}'")
                     if expected_value.lower() not in str(actual_value).lower():
                         match = False
                         break
                 if match:
                     wb.close()
+                    self.logger.info(f"[INVVZD] Template version detected: {version}")
                     return version
                     
             wb.close()
+            self.logger.error(f"[INVVZD] No matching template version found")
             return None
         except Exception as e:
+            self.logger.error(f"[INVVZD] Exception in template version detection: {str(e)}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
             self.add_error(f"Chyba při detekci verze šablony: {str(e)}")
             return None
             
     def _detect_source_version(self, source_file: str) -> Optional[str]:
         """Detect version from source content"""
+        self.logger.info(f"[INVVZD] === DETECT SOURCE VERSION START ===")
+        self.logger.info(f"[INVVZD] Source file: {source_file}")
+        
         try:
             wb = load_workbook(source_file, read_only=True)
             sheet_names = wb.sheetnames
+            self.logger.info(f"[INVVZD] Sheet names in file: {sheet_names}")
             
             # Priority 1: Check for "zdroj-dochazka" sheet (preferred format)
             if "zdroj-dochazka" in sheet_names:
+                self.logger.info(f"[INVVZD] Found 'zdroj-dochazka' sheet")
                 sheet = wb["zdroj-dochazka"]
                 b7_value = sheet["B7"].value
+                self.logger.info(f"[INVVZD] B7 value in zdroj-dochazka: '{b7_value}'")
                 
                 # If B7 contains "čas zahájení" then it's 16h version
                 if b7_value and "čas zahájení" in str(b7_value).lower():
                     wb.close()
+                    self.logger.info(f"[INVVZD] Detected version: 16h (found 'čas zahájení' in B7)")
                     return "16"
                 else:
                     # If zdroj-dochazka exists but no "čas zahájení" in B7, it's 32h
-                    wb.close() 
+                    wb.close()
+                    self.logger.info(f"[INVVZD] Detected version: 32h (zdroj-dochazka exists but no 'čas zahájení')") 
                     return "32"
             
             # Priority 2: If no "zdroj-dochazka", use first sheet and check B6/B7
             if sheet_names:
+                self.logger.info(f"[INVVZD] No 'zdroj-dochazka' sheet, checking first sheet: {sheet_names[0]}")
                 sheet = wb[sheet_names[0]]  # Take first sheet regardless of name
                 b6_value = sheet["B6"].value
                 b7_value = sheet["B7"].value
+                self.logger.info(f"[INVVZD] B6 value: '{b6_value}'")
+                self.logger.info(f"[INVVZD] B7 value: '{b7_value}'")
                 
                 # Check if B6 contains "datum aktivity"
                 if b6_value and "datum aktivity" in str(b6_value).lower():
+                    self.logger.info(f"[INVVZD] Found 'datum aktivity' in B6")
                     # If B7 contains "čas zahájení" then 16h, otherwise 32h
                     if b7_value and "čas zahájení" in str(b7_value).lower():
                         wb.close()
+                        self.logger.info(f"[INVVZD] Detected version: 16h (found 'čas zahájení' in B7)")
                         return "16"
                     else:
                         wb.close()
+                        self.logger.info(f"[INVVZD] Detected version: 32h (B6 has 'datum aktivity' but no 'čas zahájení' in B7)")
                         return "32"
             
             # Fallback: Check legacy formats
+            self.logger.info(f"[INVVZD] Checking legacy formats...")
             # Check for 16 hour version (complex sheet structure)
             if "Seznam aktivit" in sheet_names:
+                self.logger.info(f"[INVVZD] Found 'Seznam aktivit' sheet")
                 sheet = wb["Seznam aktivit"]
                 b2_value = sheet["B2"].value
+                self.logger.info(f"[INVVZD] B2 value in Seznam aktivit: '{b2_value}'")
                 
                 if b2_value and "pořadové číslo aktivity" in str(b2_value).lower():
                     wb.close()
+                    self.logger.info(f"[INVVZD] Detected version: 16h (found 'pořadové číslo aktivity' in Seznam aktivit B2)")
                     return "16"
                     
             wb.close()
+            self.logger.warning(f"[INVVZD] Could not detect version - no matching patterns found")
             return None
         except Exception as e:
+            self.logger.error(f"[INVVZD] Exception in _detect_source_version: {str(e)}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
             self.add_error(f"Chyba při detekci verze zdroje: {str(e)}")
             return None
             
@@ -261,10 +385,17 @@ class InvVzdProcessor(BaseTool):
                            optimize: bool) -> Optional[str]:
         """Process a single attendance file"""
         try:
+            self.logger.info(f"[INVVZD] === PROCESS SINGLE FILE START ===")
+            self.logger.info(f"[INVVZD] Source: {source_file}")
+            self.logger.info(f"[INVVZD] Template: {template_path}")
+            self.logger.info(f"[INVVZD] Output dir: {output_dir}")
             # Read source data
+            self.logger.info(f"[INVVZD] Reading source data...")
             source_data = self._read_source_data(source_file)
             if source_data is None:
+                self.logger.error(f"[INVVZD] Failed to read source data")
                 return None
+            self.logger.info(f"[INVVZD] Source data read successfully, shape: {source_data.shape}")
                 
             # Optimize if requested
             if optimize:
@@ -276,26 +407,35 @@ class InvVzdProcessor(BaseTool):
             )
             
             # Copy template and fill with data
+            self.logger.info(f"[INVVZD] Copying template and filling with data...")
             self._copy_template_with_data(
                 template_path, output_file, source_data, source_file
             )
+            self.logger.info(f"[INVVZD] Template copied and filled successfully")
             
             self.add_info(f"Vytvořen výstupní soubor: {os.path.basename(output_file)}")
+            self.logger.info(f"[INVVZD] === PROCESS SINGLE FILE SUCCESS ===")
             return output_file
             
         except Exception as e:
+            self.logger.error(f"[INVVZD] === PROCESS SINGLE FILE EXCEPTION ===")
+            self.logger.error(f"[INVVZD] Exception: {str(e)}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
             self.add_error(f"Chyba při zpracování souboru {os.path.basename(source_file)}: {str(e)}")
             return None
             
     def _read_source_data(self, source_file: str) -> Optional[pd.DataFrame]:
         """Read and process source data"""
         try:
+            self.logger.info(f"[INVVZD] Reading source data for version: {self.version}")
             if self.version == "16":
                 return self._read_16_hour_data(source_file)
             elif self.version == "32":
                 return self._read_32_hour_data(source_file)
             else:
                 self.add_error(f"Nepodporovaná verze: {self.version}")
+                self.logger.error(f"[INVVZD] Unsupported version: {self.version}")
                 return None
                 
         except Exception as e:
@@ -303,45 +443,142 @@ class InvVzdProcessor(BaseTool):
             return None
             
     def _read_16_hour_data(self, source_file: str) -> Optional[pd.DataFrame]:
-        """Read data from 16 hour source file (Seznam aktivit sheet)"""
+        """Read data from 16 hour source file (zdroj-dochazka sheet)"""
         try:
-            # Read from Seznam aktivit sheet with header=1 to use row 1 as headers
-            df = pd.read_excel(source_file, sheet_name="Seznam aktivit", header=0)
+            wb = load_workbook(source_file)
             
-            # The actual column names from the debug output
-            expected_columns = {
-                'Unnamed: 1': 'poradi',
-                'Unnamed: 2': 'datum', 
-                'Unnamed: 3': 'cas',
-                'Unnamed: 4': 'hodin',
-                'Unnamed: 5': 'forma',
-                'Unnamed: 6': 'tema',
-                'Unnamed: 7': 'ucitel'
-            }
+            # Find the correct sheet - prefer zdroj-dochazka
+            sheet_name = None
+            if "zdroj-dochazka" in wb.sheetnames:
+                sheet_name = "zdroj-dochazka"
+            elif "List1" in wb.sheetnames:
+                sheet_name = "List1"
+            else:
+                sheet_name = wb.sheetnames[0]
+                
+            sheet = wb[sheet_name]
+            self.add_info(f"Čtu 16h data z listu: {sheet_name}")
             
-            # Rename columns 
-            df = df.rename(columns=expected_columns)
+            # 16h format structure (from actual file inspection):
+            # Row 6: dates (datum aktivity)
+            # Row 7: times (čas zahájení) - specific to 16h
+            # Row 8: forms (forma výuky)
+            # Row 9: topics (téma výuky)
+            # Row 10: teachers (jméno pedagoga)
+            # Row 11: hours (počet hodin)
             
-            # Remove rows where poradi is NaN (empty rows)
-            df = df.dropna(subset=['poradi'])
+            data = []
+            col = 3  # Start from column C (first activity)
             
-            # Keep only rows with actual activity numbers (skip header rows)
-            df = df[df['poradi'].apply(lambda x: str(x).isdigit() if pd.notna(x) else False)]
+            # Debug: Check the first few cells
+            self.logger.info(f"[INVVZD] 16h Debug - Starting to read from column {col}")
+            for test_col in range(3, 6):  # Check columns C, D, E
+                hours_test = sheet.cell(row=11, column=test_col).value
+                self.logger.info(f"[INVVZD] 16h Debug - Row 11, Column {test_col}: {repr(hours_test)} (type: {type(hours_test)})")
             
-            # Convert hours to numeric
-            df['hodin'] = pd.to_numeric(df['hodin'], errors='coerce')
+            while True:
+                # Check if there's data in this column by checking hours (row 11 for 16h)
+                hours_cell = sheet.cell(row=11, column=col).value
+                self.logger.info(f"[INVVZD] 16h Debug - Checking column {col}, hours_cell: {repr(hours_cell)}")
+                
+                if hours_cell is None or str(hours_cell).strip() == '':
+                    self.logger.info(f"[INVVZD] 16h Debug - Hours cell is empty, breaking at column {col}")
+                    break
+                    
+                try:
+                    hours = int(float(str(hours_cell)))
+                    self.logger.info(f"[INVVZD] 16h Debug - Converted hours: {hours}")
+                    if hours <= 0:
+                        self.logger.info(f"[INVVZD] 16h Debug - Hours <= 0, breaking")
+                        break
+                except (ValueError, TypeError) as e:
+                    self.logger.info(f"[INVVZD] 16h Debug - Failed to convert hours: {e}")
+                    break
+                
+                # Get date (row 6)
+                date_cell = sheet.cell(row=6, column=col).value
+                self.logger.info(f"[INVVZD] 16h Debug - Date cell: {repr(date_cell)}")
+                
+                if date_cell:
+                    if hasattr(date_cell, 'strftime'):
+                        datum = date_cell.strftime('%d.%m.%Y')
+                    else:
+                        datum = str(date_cell).strip()
+                else:
+                    from openpyxl.utils import get_column_letter
+                    col_letter = get_column_letter(col)
+                    self.add_error(f"Chybí datum aktivity v buňce {col_letter}6")
+                    datum = None
+                
+                # Get time (row 7) - specific to 16h
+                time_cell = sheet.cell(row=7, column=col).value
+                cas = str(time_cell) if time_cell else ''
+                
+                # Get form (row 8)
+                forma_cell = sheet.cell(row=8, column=col).value
+                forma = str(forma_cell) if forma_cell else 'Neurčeno'
+                
+                # Get topic (row 9)
+                tema_cell = sheet.cell(row=9, column=col).value
+                tema = str(tema_cell) if tema_cell else 'Neurčeno'
+                
+                # Get teacher (row 10)
+                ucitel_cell = sheet.cell(row=10, column=col).value
+                ucitel = str(ucitel_cell) if ucitel_cell else 'Neurčeno'
+                
+                # Only add data if datum is valid
+                if datum is not None:
+                    activity_data = {
+                        'datum': datum,
+                        'cas': cas,
+                        'forma': forma,
+                        'tema': tema,
+                        'ucitel': ucitel,
+                        'hodin': hours
+                    }
+                    self.logger.info(f"[INVVZD] 16h Debug - Adding activity data: {activity_data}")
+                    data.append(activity_data)
+                else:
+                    self.logger.info(f"[INVVZD] 16h Debug - Skipping data due to invalid datum")
+                
+                col += 1
             
-            # Remove rows with invalid hours
-            df = df.dropna(subset=['hodin'])
-            df = df[df['hodin'] > 0]
+            wb.close()
+            
+            self.logger.info(f"[INVVZD] 16h Debug - Total data collected: {len(data)} activities")
+            
+            if not data:
+                self.add_error("Nenalezena žádná data aktivit")
+                return None
+                
+            # Create DataFrame
+            df = pd.DataFrame(data)
+            
+            # No need to convert hours - they're already numeric from reading
+            # Filter is already done during reading (hours > 0)
             
             # Format dates properly - ensure they include full date (DD.MM.YYYY)
             if 'datum' in df.columns:
                 # First try to fix incomplete dates if they exist
-                df['datum'] = self._fix_incomplete_dates(df['datum'])
-                # Then convert to datetime and format
-                df['datum'] = pd.to_datetime(df['datum'], errors='coerce')
-                # Format as DD.MM.YYYY (this also handles already-datetime objects)
+                # For 16h template, data starts at row 6 (C6)
+                df['datum'] = self._fix_incomplete_dates(df['datum'], start_row=6)
+                # Then convert to datetime and format - SPECIFY dayfirst=True for DD.MM.YYYY format!
+                df['datum'] = pd.to_datetime(df['datum'], format='%d.%m.%Y', dayfirst=True, errors='coerce')
+                
+                # Check for any failed date conversions
+                nan_count = df['datum'].isna().sum()
+                if nan_count > 0:
+                    # Find which rows have invalid dates and report specific cells
+                    failed_indices = df[df['datum'].isna()].index.tolist()
+                    for idx in failed_indices:
+                        # Row number in Excel is idx + 3 (header at 1, data starts at 3, 0-based index)
+                        excel_row = idx + 3
+                        self.add_error(f"Chybí nebo neplatné datum v řádku {excel_row}")
+                    
+                    self.add_info("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
+                    return None
+                
+                # Format as DD.MM.YYYY
                 df['datum'] = df['datum'].dt.strftime('%d.%m.%Y')
             
             # Format time if present
@@ -371,6 +608,7 @@ class InvVzdProcessor(BaseTool):
             
             # Try to find the correct sheet - prefer zdroj-dochazka, fallback to List1
             sheet_name = None
+            
             if "zdroj-dochazka" in wb.sheetnames:
                 sheet_name = "zdroj-dochazka"
             elif "List1" in wb.sheetnames:
@@ -410,10 +648,14 @@ class InvVzdProcessor(BaseTool):
                             # It's already a datetime object
                             datum = date_cell.strftime('%d.%m.%Y')
                         else:
-                            # Try to parse as string
-                            datum = str(date_cell)
+                            # Try to parse as string - store raw value for later fixing
+                            datum = str(date_cell).strip()
                     else:
-                        datum = datetime.now().strftime('%d.%m.%Y')
+                        # ERROR: Missing date in activity column
+                        from openpyxl.utils import get_column_letter
+                        col_letter = get_column_letter(col)
+                        self.add_error(f"Chybí datum aktivity v buňce {col_letter}6")
+                        datum = None  # Mark as invalid
                     
                     # Get form (row 7)
                     forma_cell = sheet.cell(row=7, column=col).value
@@ -427,46 +669,116 @@ class InvVzdProcessor(BaseTool):
                     ucitel_cell = sheet.cell(row=9, column=col).value
                     ucitel = str(ucitel_cell) if ucitel_cell else 'Neurčeno'
                     
-                    data.append({
-                        'datum': datum,
-                        'hodin': hours,
-                        'forma': forma,
-                        'tema': tema,
-                        'ucitel': ucitel
-                    })
+                    # Only add data if datum is valid
+                    if datum is not None:
+                        data.append({
+                            'datum': datum,
+                            'hodin': hours,
+                            'forma': forma,
+                            'tema': tema,
+                            'ucitel': ucitel
+                        })
                     
                     col += 1
                     
             else:
-                # Legacy format with List1 sheet
-                hours_data = []
-                activities = []
-                
-                # Get hours for each activity (row 10, starting from column C)
-                col = 3  # Column C
-                while True:
-                    cell_value = sheet.cell(row=10, column=col).value
-                    if cell_value is None or cell_value == 0:
-                        break
-                    hours_data.append(int(cell_value))
-                    activities.append(f"Aktivita {col-2}")  # Activity 1, 2, 3...
-                    col += 1
-                
-                # Create DataFrame with activity data  
-                current_date = datetime.now()
+                # Legacy format with List1 sheet - still read dates from row 6!
                 data = []
-                for i, (activity, hours) in enumerate(zip(activities, hours_data)):
-                    # Use sequential dates starting from today
-                    activity_date = current_date.replace(day=1) + pd.Timedelta(days=i*7)  # Weekly intervals
-                    data.append({
-                        'datum': activity_date.strftime('%d.%m.%Y'),
-                        'hodin': hours,
-                        'forma': 'Neurčeno',
-                        'tema': activity,
-                        'ucitel': 'Neurčeno'
-                    })
+                
+                # Read data from specific rows (same as zdroj-dochazka format)
+                # Row 6: dates, Row 7: forms, Row 8: topics, Row 9: teachers, Row 10: hours
+                col = 3  # Start from column C (first activity)
+                
+                while True:
+                    # Check if there's data in this column
+                    hours_cell = sheet.cell(row=10, column=col).value
+                    if hours_cell is None or str(hours_cell).strip() == '':
+                        break
+                        
+                    try:
+                        hours = int(float(str(hours_cell)))
+                        if hours <= 0:
+                            break
+                    except (ValueError, TypeError):
+                        break
+                    
+                    # Get date (row 6) - same as in zdroj-dochazka format!
+                    date_cell = sheet.cell(row=6, column=col).value
+                    if date_cell:
+                        if hasattr(date_cell, 'strftime'):
+                            # It's already a datetime object
+                            datum = date_cell.strftime('%d.%m.%Y')
+                        else:
+                            # Try to parse as string - store raw value for later fixing
+                            datum = str(date_cell).strip()
+                    else:
+                        # ERROR: Missing date in activity column
+                        from openpyxl.utils import get_column_letter
+                        col_letter = get_column_letter(col)
+                        self.add_error(f"Chybí datum aktivity v buňce {col_letter}6")
+                        datum = None  # Mark as invalid
+                    
+                    # Get form (row 7)
+                    forma_cell = sheet.cell(row=7, column=col).value
+                    forma = str(forma_cell) if forma_cell else 'Neurčeno'
+                    
+                    # Get topic (row 8)
+                    tema_cell = sheet.cell(row=8, column=col).value
+                    tema = str(tema_cell) if tema_cell else f'Aktivita {col-2}'
+                    
+                    # Get teacher (row 9)
+                    ucitel_cell = sheet.cell(row=9, column=col).value
+                    ucitel = str(ucitel_cell) if ucitel_cell else 'Neurčeno'
+                    
+                    # Only add data if datum is valid
+                    if datum is not None:
+                        data.append({
+                            'datum': datum,
+                            'hodin': hours,
+                            'forma': forma,
+                            'tema': tema,
+                            'ucitel': ucitel
+                        })
+                    
+                    col += 1
             
             df = pd.DataFrame(data)
+            
+            # Check if we have any valid data
+            if len(data) == 0:
+                # No valid activities found
+                wb.close()
+                self.add_error("Soubor neobsahuje žádné platné aktivity")
+                return None
+            
+            # Check for any errors in data
+            error_count = sum(1 for msg in self.errors if "Chybí datum aktivity" in msg)
+            if error_count > 0:
+                # If there are data errors, don't create output file
+                wb.close()
+                self.add_info("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
+                return None
+            
+            # Log basic info only if no errors
+            self.add_info(f"Načteno {len(df)} aktivit z docházky")
+            
+            # Fix incomplete dates if needed (for 32h template, dates are in row 6, starting from column C=3)
+            if 'datum' in df.columns:
+                df['datum'] = self._fix_incomplete_dates(df['datum'], start_row=6, start_col=3)
+                # Convert to datetime and format - SPECIFY dayfirst=True for DD.MM.YYYY format!
+                df['datum'] = pd.to_datetime(df['datum'], format='%d.%m.%Y', dayfirst=True, errors='coerce')
+                
+                # Check for any failed conversions
+                nan_count = df['datum'].isna().sum()
+                if nan_count > 0:
+                    self.add_warning(f"Upozornění: {nan_count} datumů se nepodařilo převést")
+                    # Try to show which dates failed
+                    failed_indices = df[df['datum'].isna()].index.tolist()
+                    if failed_indices:
+                        self.add_warning(f"Problematické řádky: {failed_indices[:5]}...")  # Show first 5
+                
+                # Format as DD.MM.YYYY
+                df['datum'] = df['datum'].dt.strftime('%d.%m.%Y')
             
             # Calculate total hours
             self.hours_total = df['hodin'].sum()
@@ -522,7 +834,7 @@ class InvVzdProcessor(BaseTool):
         
         return clean_text
         
-    def _fix_incomplete_dates(self, date_series: pd.Series) -> pd.Series:
+    def _fix_incomplete_dates(self, date_series: pd.Series, start_row: int = 2, start_col: str = 'C') -> pd.Series:
         """
         Fix incomplete dates by inferring missing years from context
         
@@ -542,6 +854,17 @@ class InvVzdProcessor(BaseTool):
         # Convert to string series for processing
         date_strings = date_series.astype(str)
         
+        # Helper function to get cell reference
+        def get_cell_ref(index, row, col):
+            if isinstance(col, int):
+                # For 32h version, col is starting column number
+                from openpyxl.utils import get_column_letter
+                col_letter = get_column_letter(col + index)
+                return f"{col_letter}{row}"
+            else:
+                # For 16h version, it's column letter with row offset
+                return f"{col}{row + index}"
+        
         for i, date_str in enumerate(date_strings):
             original_date = date_str
             
@@ -558,10 +881,27 @@ class InvVzdProcessor(BaseTool):
                 
             # Clean up common issues
             date_str = str(date_str).strip()
+            cleaned_date = date_str
             
-            # Remove extra spaces: "24 .1.2025" → "24.1.2025"
-            date_str = re.sub(r'\s+\.', '.', date_str)
-            date_str = re.sub(r'\.\s+', '.', date_str)
+            # Fix common typos and formatting issues
+            # Replace commas with dots: "25,1.2025" → "25.1.2025"
+            if ',' in date_str:
+                date_str = date_str.replace(',', '.')
+                cell_ref = get_cell_ref(i, start_row, start_col)
+                self.add_info(f"Opravena čárka v datu v buňce {cell_ref}: {original_date} → {date_str}")
+            
+            # Remove extra spaces: "24 .1.2025" → "24.1.2025" or "25. 6. 2025" → "25.6.2025"
+            if ' .' in date_str or '. ' in date_str:
+                date_str = re.sub(r'\s+\.', '.', date_str)
+                date_str = re.sub(r'\.\s+', '.', date_str)
+                date_str = re.sub(r'\s+', ' ', date_str)  # Normalize multiple spaces to single space
+                if date_str != cleaned_date:
+                    cell_ref = get_cell_ref(i, start_row, start_col)
+                    self.add_info(f"Opraveny mezery v datu v buňce {cell_ref}: {original_date} → {date_str}")
+            
+            # Handle dates with spaces between parts: "25 . 6 . 25" → "25.6.25"
+            if re.match(r'^\d{1,2}\s+\.\s+\d{1,2}\s+\.\s+\d{2,4}$', date_str):
+                date_str = date_str.replace(' ', '')
             
             # Check if date is incomplete (missing year)
             parts = date_str.split('.')
@@ -574,17 +914,20 @@ class InvVzdProcessor(BaseTool):
                 if inferred_year['confidence'] == 'high':
                     fixed_date = f"{day}.{month}.{inferred_year['year']}"
                     fixed_dates.append(fixed_date)
-                    self.add_info(f"Doplněn rok {inferred_year['year']} pro datum {original_date} → {fixed_date}")
+                    cell_ref = get_cell_ref(i, start_row, start_col)
+                    self.add_info(f"Opraven datum v buňce {cell_ref}: {original_date} → {fixed_date}")
                 elif inferred_year['confidence'] == 'medium':
                     fixed_date = f"{day}.{month}.{inferred_year['year']}"
                     fixed_dates.append(fixed_date)
-                    uncertain_fixes.append(f"{original_date} → {fixed_date}")
+                    cell_ref = get_cell_ref(i, start_row, start_col)
+                    uncertain_fixes.append(f"Buňka {cell_ref}: {original_date} → {fixed_date}")
                 else:
                     # Low confidence - add current year as fallback
                     current_year = datetime.now().year
                     fixed_date = f"{day}.{month}.{current_year}"
                     fixed_dates.append(fixed_date)
-                    uncertain_fixes.append(f"{original_date} → {fixed_date} (neistý)")
+                    cell_ref = get_cell_ref(i, start_row, start_col)
+                    uncertain_fixes.append(f"Buňka {cell_ref}: {original_date} → {fixed_date} (neistý)")
                     
             elif len(parts) == 3:  # DD.MM.YYYY format - check if year is empty
                 day, month, year = parts
@@ -594,31 +937,51 @@ class InvVzdProcessor(BaseTool):
                     if inferred_year['confidence'] == 'high':
                         fixed_date = f"{day}.{month}.{inferred_year['year']}"
                         fixed_dates.append(fixed_date)
-                        self.add_info(f"Doplněn rok {inferred_year['year']} pro datum {original_date} → {fixed_date}")
+                        cell_ref = get_cell_ref(i, start_row, start_col)
+                        self.add_info(f"Opraven datum v buňce {cell_ref}: {original_date} → {fixed_date}")
                     elif inferred_year['confidence'] == 'medium':
                         fixed_date = f"{day}.{month}.{inferred_year['year']}"
                         fixed_dates.append(fixed_date)
-                        uncertain_fixes.append(f"{original_date} → {fixed_date}")
+                        cell_ref = get_cell_ref(i, start_row, start_col)
+                        uncertain_fixes.append(f"Buňka {cell_ref}: {original_date} → {fixed_date}")
                     else:
                         # Low confidence - add current year as fallback
                         current_year = datetime.now().year
                         fixed_date = f"{day}.{month}.{current_year}"
                         fixed_dates.append(fixed_date)
-                        uncertain_fixes.append(f"{original_date} → {fixed_date} (neistý)")
+                        cell_ref = get_cell_ref(i, start_row, start_col)
+                        uncertain_fixes.append(f"Buňka {cell_ref}: {original_date} → {fixed_date} (neistý)")
                 else:
                     # Complete date
                     fixed_dates.append(date_str)
             else:
-                # Invalid format
-                fixed_dates.append(date_str)
-                self.add_warning(f"Nerozpoznaný formát data: {original_date}")
+                # Invalid format - check for dd.mm.yy format
+                if re.match(r'^\d{1,2}\.\d{1,2}\.\d{2}$', date_str):
+                    # Two digit year format
+                    parts = date_str.split('.')
+                    day, month, year = parts
+                    # Convert 2-digit year to 4-digit
+                    year_int = int(year)
+                    if year_int < 30:
+                        full_year = 2000 + year_int
+                    else:
+                        full_year = 1900 + year_int
+                    fixed_date = f"{day}.{month}.{full_year}"
+                    fixed_dates.append(fixed_date)
+                    cell_ref = get_cell_ref(i, start_row, start_col)
+                    self.add_info(f"Opraven formát roku v buňce {cell_ref}: {original_date} → {fixed_date}")
+                else:
+                    # Really invalid format
+                    fixed_dates.append(date_str)
+                    cell_ref = get_cell_ref(i, start_row, start_col)
+                    self.add_warning(f"Neplatný formát data v buňce {cell_ref}: {original_date} (očekáván formát DD.MM.YYYY)")
         
         # Report uncertain fixes
         if uncertain_fixes:
-            self.add_warning("Následující data byla opravena s nejistotou:")
+            self.add_info("Následující data byla opravena s nejistotou:")
             for fix in uncertain_fixes:
-                self.add_warning(f"  {fix}")
-            self.add_warning("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
+                self.add_info(f"  {fix}")
+            self.add_info("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
             
         return pd.Series(fixed_dates)
         
@@ -729,33 +1092,63 @@ class InvVzdProcessor(BaseTool):
                                 data: pd.DataFrame, source_file: str):
         """Copy template file and fill with data using xlwings - following original approach"""
         try:
+            self.logger.info(f"[INVVZD] === COPY TEMPLATE START ===")
+            self.logger.info(f"[INVVZD] Template: {template_path}")
+            self.logger.info(f"[INVVZD] Output: {output_path}")
+            self.logger.info(f"[INVVZD] Data shape: {data.shape}")
+            self.logger.info(f"[INVVZD] Source file: {source_file}")
+            
+            # Check platform compatibility
+            current_platform = platform.system()
+            self.logger.info(f"[INVVZD] Current platform: {current_platform}")
+            
+            if current_platform != 'Windows':
+                self.add_error(f"Nástroj InvVzd vyžaduje Windows s nainstalovaným MS Excel. Aktuální platforma: {current_platform}")
+                self.add_warning("Pro zpracování souborů použijte Windows počítač s MS Excel")
+                self.logger.error(f"[INVVZD] Platform not supported: {current_platform}. xlwings requires Windows with Excel.")
+                raise Exception("Platform not supported for xlwings")
+            
+            if not XLWINGS_AVAILABLE:
+                self.add_error("xlwings není dostupný. Ujistěte se, že je nainstalován.")
+                raise Exception("xlwings not available")
+            
             # Following original approach exactly: visible=True, no unprotect
+            self.logger.info(f"[INVVZD] Opening Excel application...")
             app = xw.App(visible=True)
+            self.logger.info(f"[INVVZD] Loading template workbook...")
             wb = xw.Book(template_path)
             
             # STEP 1: Write student names to "Seznam účastníků" sheet at B4
+            self.logger.info(f"[INVVZD] STEP 1: Writing student names...")
             sheet = wb.sheets['Seznam účastníků']
             
             # Extract student names from source file (column B, from row 11 until two empty rows)
             student_names = self._extract_student_names_from_data(source_file)
+            self.logger.info(f"[INVVZD] Extracted {len(student_names)} student names")
             
             # Write student names exactly like original
             if len(student_names) > 0:
                 sheet.range("B4").options(ndim="expand", transpose=True).value = student_names
             
             # STEP 2: Write activities to "Seznam aktivit" sheet at C3
+            self.logger.info(f"[INVVZD] STEP 2: Writing activities...")
             sheet = wb.sheets['Seznam aktivit']
             
             # Prepare activities data for export (following original export_columns)
             if len(data) > 0:
-                # For 32h version, export_columns should be ["datum","hodin","forma","tema","ucitel"]
-                export_columns = ["datum", "hodin", "forma", "tema", "ucitel"]
+                # For 16h version include time column, for 32h version exclude it
+                if self.version == "16":
+                    export_columns = ["datum", "cas", "hodin", "forma", "tema", "ucitel"]
+                else:
+                    export_columns = ["datum", "hodin", "forma", "tema", "ucitel"]
                 activities_data = data[export_columns] if all(col in data.columns for col in export_columns) else data
+                
                 
                 self.add_info(f"Zapisuji {len(activities_data)} aktivit do Seznam aktivit")
                 sheet.range("C3").options(ndim="expand").value = activities_data.values
             
             # STEP 3: Write overview to "Přehled" sheet at C3
+            self.logger.info(f"[INVVZD] STEP 3: Writing overview...")
             sheet = wb.sheets['Přehled']
             
             # Create overview data (student-activity combinations)
@@ -765,19 +1158,36 @@ class InvVzdProcessor(BaseTool):
                 sheet.range("C3").options(ndim="expand").value = overview_data
             
             # STEP 4: Control check - verify SDP sums match activities total
+            self.logger.info(f"[INVVZD] STEP 4: Verifying SDP sums...")
             self._verify_sdp_sums(wb)
             
             # Save as new file and close
+            self.logger.info(f"[INVVZD] Saving output file: {output_path}")
             wb.save(output_path)
+            self.logger.info(f"[INVVZD] Closing workbook...")
             wb.close()
+            self.logger.info(f"[INVVZD] Quitting Excel application...")
             app.quit()
+            self.logger.info(f"[INVVZD] === COPY TEMPLATE SUCCESS ===")
             
         except Exception as e:
+            self.logger.error(f"[INVVZD] === COPY TEMPLATE EXCEPTION ===")
+            self.logger.error(f"[INVVZD] Exception: {str(e)}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
             self.add_error(f"Chyba při kopírování šablony: {str(e)}")
+            # Try to close Excel if still open
+            try:
+                if 'wb' in locals():
+                    wb.close()
+                if 'app' in locals():
+                    app.quit()
+            except:
+                pass
             raise
     
     def _extract_student_names_from_data(self, source_file: str) -> List[str]:
-        """Extract student names from source file column B starting from row 11"""
+        """Extract student names from source file column B"""
         try:
             wb = load_workbook(source_file, read_only=True)
             sheet_name = "zdroj-dochazka" if "zdroj-dochazka" in wb.sheetnames else wb.sheetnames[0]
@@ -786,8 +1196,9 @@ class InvVzdProcessor(BaseTool):
             student_names = []
             empty_count = 0
             
-            # Start from row 11 (0-indexed = 10)
-            for row in range(10, sheet.max_row):
+            # Start from row 11 for 32h version, row 12 for 16h version  
+            start_row = 11 if self.version == "16" else 10  # 0-indexed
+            for row in range(start_row, sheet.max_row):
                 cell_value = sheet.cell(row=row+1, column=2).value  # Column B
                 
                 if cell_value is None or str(cell_value).strip() == "":
@@ -825,15 +1236,92 @@ class InvVzdProcessor(BaseTool):
             self.add_error(f"Chyba při vytváření přehledu: {str(e)}")
             return []
     
+    def select_folder(self, folder_path: str) -> Dict[str, Any]:
+        """Scan folder for attendance files and filter them"""
+        self.logger.info(f"[INVVZD] === SELECT FOLDER START ===")
+        self.logger.info(f"[INVVZD] Folder path: {folder_path}")
+        
+        result = {"success": False, "files": [], "message": ""}
+        
+        try:
+            # Check if folder exists
+            if not os.path.exists(folder_path):
+                self.logger.error(f"[INVVZD] Folder does not exist: {folder_path}")
+                result["message"] = f"Složka neexistuje: {folder_path}"
+                return result
+                
+            # List all files in folder
+            all_files = os.listdir(folder_path)
+            self.logger.info(f"[INVVZD] All files in folder: {all_files}")
+            
+            attendance_files = []
+            
+            # Scan for Excel files
+            for file in all_files:
+                if file.endswith(('.xlsx', '.xls')) and not file.startswith('~$'):
+                    full_path = os.path.join(folder_path, file)
+                    self.logger.info(f"[INVVZD] Checking Excel file: {file}")
+                    
+                    # Skip output files (already processed)
+                    if file.startswith(('32h_inv_', '16h_inv_', '32_hodin_inovativniho_vzdelavani_', '16_hodin_inovativniho_vzdelavani_')):
+                        self.logger.info(f"[INVVZD] Skipping output file: {file}")
+                        continue
+                    
+                    # Skip template files
+                    if 'sablona' in file.lower() or 'template' in file.lower():
+                        self.logger.info(f"[INVVZD] Skipping template file: {file}")
+                        continue
+                    
+                    # Try to detect version from content
+                    self.logger.info(f"[INVVZD] Detecting version for: {full_path}")
+                    version = self._detect_source_version(full_path)
+                    self.logger.info(f"[INVVZD] Detected version: {version}")
+                    
+                    if version:
+                        self.logger.info(f"[INVVZD] Valid attendance file found: {file} (version {version}h)")
+                        attendance_files.append({
+                            "path": full_path,
+                            "name": file,
+                            "version": f"{version} hodin"
+                        })
+                    else:
+                        self.logger.info(f"[INVVZD] Not an attendance file: {file}")
+                        
+            self.logger.info(f"[INVVZD] Total attendance files found: {len(attendance_files)}")
+            
+            if attendance_files:
+                result["success"] = True
+                result["files"] = attendance_files
+                result["message"] = f"Nalezeno {len(attendance_files)} souborů s docházkou"
+                self.logger.info(f"[INVVZD] SUCCESS: {result['message']}")
+            else:
+                result["message"] = "Ve složce nebyly nalezeny žádné soubory s docházkou"
+                self.logger.warning(f"[INVVZD] WARNING: {result['message']}")
+                
+        except Exception as e:
+            result["message"] = f"Chyba při procházení složky: {str(e)}"
+            self.logger.error(f"[INVVZD] ERROR: {result['message']}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
+            
+        self.logger.info(f"[INVVZD] === SELECT FOLDER END ===")
+        self.logger.info(f"[INVVZD] Result: {result}")
+        return result
+    
     def _verify_sdp_sums(self, wb):
         """Verify SDP sums match total hours - following original control logic"""
         try:
-            # Calculate activities total (Seznam aktivit D3 to end)
+            # Calculate activities total (Seznam aktivit column depends on version)
             aktivit_sheet = wb.sheets['Seznam aktivit']
             activities_total = 0
             row = 3
+            
+            # For 16h version, hours are in column E (includes time column)
+            # For 32h version, hours are in column D  
+            hours_column = "E" if self.version == "16" else "D"
+            
             while True:
-                cell_value = aktivit_sheet.range(f"D{row}").value
+                cell_value = aktivit_sheet.range(f"{hours_column}{row}").value
                 if cell_value is None or str(cell_value).strip() == '':
                     break
                 try:
@@ -865,20 +1353,29 @@ class InvVzdProcessor(BaseTool):
                     except:
                         pass
             
-            # Compare and report
+            # Compare and report with detailed logging
+            self.logger.info(f"[INVVZD] === SDP VERIFICATION ===")
+            self.logger.info(f"[INVVZD] Activities total: {activities_total} hours")
+            self.logger.info(f"[INVVZD] SDP forma total (C4-C10): {sdp_forma_total} hours")
+            self.logger.info(f"[INVVZD] SDP tema total (C12-C28): {sdp_tema_total} hours")
+            
             self.add_info(f"Kontrola součtů:")
-            self.add_info(f"  Seznam aktivit (celkem): {activities_total} hodin")
-            self.add_info(f"  SDP forma (C4-C10): {sdp_forma_total} hodin")
-            self.add_info(f"  SDP téma (C12-C28): {sdp_tema_total} hodin")
+            self.add_info(f"  Aktivity: {activities_total}h")
+            self.add_info(f"  SDP forma: {sdp_forma_total}h")
+            self.add_info(f"  SDP téma: {sdp_tema_total}h")
             
             if activities_total == sdp_forma_total == sdp_tema_total:
-                self.add_info("✅ Všechny součty souhlasí - výsledek je na 100% OK!")
+                self.logger.info(f"[INVVZD] All sums match!")
+                self.add_info(f"✅ Všechny součty souhlasí")
             else:
+                self.logger.error(f"[INVVZD] ❌ SUMS DO NOT MATCH!")
+                self.logger.error(f"[INVVZD] Activities: {activities_total}, Forma: {sdp_forma_total}, Tema: {sdp_tema_total}")
+                
                 self.add_error(f"❌ NESOUHLASÍ součty v SDP!")
-                self.add_error(f"  Počet inv. hodin: {activities_total}")
-                self.add_error(f"  SDP forma: {sdp_forma_total}")
-                self.add_error(f"  SDP téma: {sdp_tema_total}")
-                self.add_error("⚠️  ZKONTROLUJTE výsledný soubor - aktivity na listu 'Seznam aktivit'")
+                self.add_error(f"Aktivity: {activities_total}h")
+                self.add_error(f"SDP forma: {sdp_forma_total}h")
+                self.add_error(f"SDP téma: {sdp_tema_total}h")
+                self.add_warning("ZKONTROLUJTE výsledný soubor - aktivity na listu 'Seznam aktivit'")
                 
         except Exception as e:
             self.add_error(f"Chyba při kontrole SDP součtů: {str(e)}")
@@ -915,7 +1412,11 @@ class InvVzdProcessor(BaseTool):
                 
             # Process files
             output_files = []
+            files_processed = []
+            
             for source_file in source_files:
+                self.add_info(f"Zpracovávám soubor: {os.path.basename(source_file)}")
+                
                 if not self.file_exists(source_file):
                     self.add_error(f"Zdrojový soubor neexistuje: {source_file}")
                     continue
@@ -932,11 +1433,21 @@ class InvVzdProcessor(BaseTool):
                 
                 if output_file:
                     output_files.append(output_file)
+                    files_processed.append({
+                        "source": source_file,
+                        "filename": os.path.basename(output_file),
+                        "hours": self.config['hours'] if self.config else 0
+                    })
+                else:
+                    # File failed but we continue with others
+                    self.add_error(f"❌ Soubor {os.path.basename(source_file)} nebyl zpracován kvůli chybám")
                     
-            success = len(output_files) > 0 and len(self.errors) == 0
+            # Success if at least one file was processed
+            success = len(output_files) > 0
             return {
                 "success": success,
                 "output_files": output_files,
+                "files": files_processed,
                 "errors": self.errors,
                 "warnings": self.warnings,
                 "info": self.info_messages
@@ -954,4 +1465,14 @@ class InvVzdProcessor(BaseTool):
         
     def file_exists(self, filepath: str) -> bool:
         """Check if file exists"""
-        return os.path.isfile(filepath)
+        exists = os.path.isfile(filepath)
+        self.logger.info(f"[INVVZD] Checking file existence: {filepath} -> {exists}")
+        if not exists:
+            # Additional debug info
+            self.logger.info(f"[INVVZD] Current directory: {os.getcwd()}")
+            self.logger.info(f"[INVVZD] Path is absolute: {os.path.isabs(filepath)}")
+            if os.path.exists(filepath):
+                self.logger.info(f"[INVVZD] Path exists but is not a file (maybe directory?)")
+            else:
+                self.logger.info(f"[INVVZD] Path does not exist at all")
+        return exists

@@ -1,5 +1,10 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Backend recovery event listener
+ipcRenderer.on('backend-failed', (event, data) => {
+    window.dispatchEvent(new CustomEvent('backend-failed', { detail: data }));
+});
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -116,5 +121,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
             console.error('Upload error:', error);
             throw error;
         }
+    },
+    
+    // Backend management
+    getBackendStatus: () => ipcRenderer.invoke('backend:getStatus'),
+    restartBackend: () => ipcRenderer.invoke('backend:restart'),
+    
+    // Listen for backend failures
+    onBackendFailed: (callback) => {
+        window.addEventListener('backend-failed', (event) => {
+            callback(event.detail);
+        });
     }
 });

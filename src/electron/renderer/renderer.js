@@ -63,6 +63,10 @@ function init() {
     // Setup file selection buttons
     elements.invSelectBtn.addEventListener('click', () => selectFiles('inv-vzd'));
     elements.invFolderBtn.addEventListener('click', selectInvFolder);
+    
+    // Initially disable file selection buttons until template is selected
+    elements.invSelectBtn.disabled = true;
+    elements.invFolderBtn.disabled = true;
     elements.zorSelectBtn.addEventListener('click', () => selectFiles('zor-spec'));
     elements.zorFolderBtn.addEventListener('click', selectZorFolder);
     elements.invTemplateBtn.addEventListener('click', selectInvTemplate);
@@ -184,20 +188,63 @@ async function selectFiles(tool) {
                 } else {
                     showMessage('Žádný z vybraných souborů neobsahuje požadovaný list', 'error');
                 }
+            } else if (tool === 'inv-vzd') {
+                // For InvVzd, check compatibility with selected template
+                if (!state.detectedTemplateVersion) {
+                    showMessage('Nejprve vyberte platnou šablonu', 'error');
+                    return;
+                }
+                
+                const validFiles = [];
+                const incompatibleFiles = [];
+                
+                for (const filePath of filePaths) {
+                    try {
+                        // Check if file is compatible with template
+                        const compatible = await isFileCompatibleWithTemplate(filePath);
+                        if (compatible) {
+                            validFiles.push(filePath);
+                        } else {
+                            incompatibleFiles.push(filePath);
+                        }
+                    } catch (error) {
+                        console.error(`Error checking file ${filePath}:`, error);
+                        incompatibleFiles.push(filePath);
+                    }
+                }
+                
+                // Show messages for incompatible files
+                incompatibleFiles.forEach(file => {
+                    const displayPath = wslToWindowsPath(file);
+                    showMessage(`Soubor ${displayPath} neodpovídá vybrané šabloně`, 'warning');
+                });
+                
+                if (validFiles.length > 0) {
+                    state.selectedFiles[tool] = validFiles;
+                    updateFilesList(tool);
+                    checkInvVzdReady();
+                    showMessage(`Vybráno ${validFiles.length} vhodných souborů`, 'success');
+                } else {
+                    showMessage('Žádný z vybraných souborů neodpovídá vybrané šabloně', 'error');
+                }
             } else {
                 state.selectedFiles[tool] = filePaths;
                 updateFilesList(tool);
-                
-                // Enable process button
-                if (tool === 'inv-vzd') {
-                    checkInvVzdReady();
-                }
             }
         }
     } catch (error) {
         console.error('File selection error:', error);
         showMessage('Chyba při výběru souborů', 'error');
     }
+}
+
+// Convert WSL path to Windows path for display
+function wslToWindowsPath(path) {
+    if (path.startsWith('/mnt/')) {
+        const driveLetter = path[5].toUpperCase();
+        return `${driveLetter}:${path.substring(6).replace(/\//g, '\\')}`;
+    }
+    return path;
 }
 
 // Update files list display
@@ -219,7 +266,7 @@ function updateFilesList(tool) {
                 fileDiv.innerHTML = `
                     <div class="file-item-content">
                         <div class="file-path">
-                            <strong>Cesta:</strong> ${file}
+                            <strong>Cesta:</strong> ${wslToWindowsPath(file)}
                             <br><strong>Verze:</strong> ${state.zorFileVersions[file]}
                         </div>
                         <button class="btn-remove" onclick="removeFile('${tool}', '${file.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')">✕</button>
@@ -229,7 +276,7 @@ function updateFilesList(tool) {
                 fileDiv.innerHTML = `
                     <div class="file-item-content">
                         <div class="file-path">
-                            <strong>Cesta:</strong> ${file}
+                            <strong>Cesta:</strong> ${wslToWindowsPath(file)}
                         </div>
                         <button class="btn-remove" onclick="removeFile('${tool}', '${file.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')">✕</button>
                     </div>
@@ -275,14 +322,14 @@ async function selectInvTemplate() {
             state.selectedTemplate['inv-vzd'] = filePaths[0];
             elements.invTemplateName.innerHTML = `
                 <div class="template-path">
-                    <strong>Cesta:</strong> ${filePaths[0]}
+                    <strong>Cesta:</strong> ${wslToWindowsPath(filePaths[0])}
                 </div>
             `;
             
             // Detect template version
             await detectTemplateVersion(filePaths[0]);
             
-            // Enable process button if both template and files are selected
+            // Update button states
             checkInvVzdReady();
         }
     } catch (error) {
@@ -321,43 +368,19 @@ async function selectInvFolder() {
 // Scan folder for suitable attendance files
 async function scanFolderForAttendanceFiles(folderPath) {
     try {
-        // Use Node.js fs to read directory
-        const result = await window.electronAPI.scanFolder(folderPath);
-        
-        // Filter for Excel files that look like attendance files
-        const excelFiles = result.files.filter(file => {
-            const extension = file.toLowerCase().split('.').pop();
-            return ['xlsx', 'xls'].includes(extension);
+        // Call backend API to scan folder
+        const response = await window.electronAPI.apiCall('select-folder', 'POST', {
+            folderPath: folderPath,
+            toolType: 'inv-vzd'
         });
         
-        // Filter out result files (files that look like processed outputs)
-        const resultKeywords = [
-            'inv_', '_inv', 'hodin_inovativniho', 'vzdelavani_', 'msmt', 'result', 'output'
-        ];
-        
-        const potentialFiles = excelFiles.filter(file => {
-            const fileName = file.toLowerCase();
-            // Exclude files that look like processed results
-            return !resultKeywords.some(keyword => fileName.includes(keyword));
-        });
-        
-        // If we have a detected template version, verify files match that version
-        const suitableFiles = [];
-        for (const file of potentialFiles) {
-            const filePath = `${folderPath}${folderPath.includes('\\') ? '\\' : '/'}${file}`;
-            
-            // Check if file is compatible with template version
-            if (await isFileCompatibleWithTemplate(filePath)) {
-                suitableFiles.push(file);
-            }
+        if (response.success && response.files) {
+            // Return full paths from the API response
+            return response.files.map(file => file.path);
+        } else {
+            console.warn('No files found:', response.message);
+            return [];
         }
-        
-        // Return full paths (use cross-platform path separator)
-        return suitableFiles.map(file => {
-            // Normalize path separators for cross-platform compatibility
-            const separator = folderPath.includes('\\') ? '\\' : '/';
-            return `${folderPath}${separator}${file}`;
-        });
         
     } catch (error) {
         console.error('Error scanning folder:', error);
@@ -454,6 +477,12 @@ function checkInvVzdReady() {
     const hasTemplate = state.selectedTemplate['inv-vzd'] !== null;
     const hasFiles = state.selectedFiles['inv-vzd'].length > 0;
     const hasValidVersion = state.detectedTemplateVersion !== null;
+    
+    // Enable/disable file selection buttons based on template validity
+    elements.invSelectBtn.disabled = !hasValidVersion;
+    elements.invFolderBtn.disabled = !hasValidVersion;
+    
+    // Enable process button only if everything is ready
     elements.invProcessBtn.disabled = !(hasTemplate && hasFiles && hasValidVersion);
 }
 
@@ -479,16 +508,22 @@ async function processInvVzd() {
         
         showLoading(false);
         
-        if (result.status === 'success') {
-            // Display results with improved formatting
-            let resultHtml = `<h3>Zpracování dokončeno ✅</h3>`;
+        if (result.status === 'success' || result.status === 'partial' || (result.data && result.data.info)) {
+            // Display results - could be full success or partial success with errors
+            const hasErrors = result.data && result.data.errors && result.data.errors.length > 0;
+            const title = hasErrors ? 
+                '<h3>Zpracování dokončeno s chybami ⚠️</h3>' : 
+                '<h3>Zpracování dokončeno ✅</h3>';
             
-            if (result.data && result.data.files) {
-                // Group messages by source file
+            let resultHtml = title;
+            
+            // Skip general messages - all information is now shown in per-file blocks
+            
+            // Show file blocks if available
+            if (result.data && result.data.files && result.data.files.length > 0) {
                 const fileBlocks = result.data.files.map(file => {
-                    return formatFileProcessingBlock(file, result.info, result.warnings, result.errors);
+                    return formatFileProcessingBlock(file);
                 });
-                
                 resultHtml += fileBlocks.join('');
             }
             
@@ -1007,60 +1042,101 @@ async function saveFilesAutomatically(files, targetFolder) {
     return results;
 }
 
+// Toggle collapsible section
+function toggleCollapsible(blockId) {
+    const content = document.getElementById(blockId);
+    const icon = document.getElementById(`icon-${blockId}`);
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.textContent = '▼';
+    } else {
+        content.style.display = 'none';
+        icon.textContent = '▶';
+    }
+}
+
 // Format file processing block with steps
-function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMessages) {
+function formatFileProcessingBlock(file) {
     const sourceBasename = file.source.split(/[/\\]/).pop();
+    const blockId = `file-block-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Get messages directly from file object if available
+    const fileInfo = file.info || [];
+    const fileWarnings = file.warnings || [];
+    const fileErrors = file.errors || [];
+    
+    // Determine status based on file status or errors
+    let statusText, statusIcon, statusClass;
+    
+    if (file.status === 'error' || fileErrors.length > 0) {
+        if (file.output === null) {
+            statusText = 'zpracování selhalo';
+            statusIcon = '❌';
+            statusClass = 'status-error';
+        } else {
+            statusText = 'zpracováno s chybami';
+            statusIcon = '⚠️';
+            statusClass = 'status-warning';
+        }
+    } else if (file.status === 'warning' || fileWarnings.length > 0) {
+        statusText = 'zpracováno s upozorněními';
+        statusIcon = '⚠️';
+        statusClass = 'status-warning';
+    } else {
+        // Check for SDP errors in info messages
+        const hasSDPError = fileInfo.some(msg => 
+            msg.includes('NESOUHLASÍ') || msg.includes('❌')
+        );
+        if (hasSDPError) {
+            statusText = 'nesouhlasí součty';
+            statusIcon = '❌';
+            statusClass = 'status-error';
+        } else {
+            statusText = 'zpracováno bez chyb';
+            statusIcon = '✅';
+            statusClass = 'status-success';
+        }
+    }
+    
+    // Build the header with proper filename display
+    const outputFilename = file.output ? file.output.split(/[/\\]/).pop() : 'nedokončeno';
     
     let blockHtml = `
-        <div class="file-processing-block">
-            <div class="file-header">
-                📄 <strong>${sourceBasename} → ${file.filename} (${file.hours} hodin)</strong>
+        <div class="file-processing-block collapsible">
+            <div class="file-header collapsible-header" onclick="toggleCollapsible('${blockId}')">
+                <span class="collapse-icon" id="icon-${blockId}">▶</span>
+                📄 <strong>${sourceBasename} → ${outputFilename}</strong>
+                <span class="file-status ${statusClass}">${statusIcon} ${statusText}</span>
             </div>
-            <div class="processing-steps">
+            <div class="processing-steps collapsible-content" id="${blockId}" style="display: none;">
     `;
     
-    // Filter messages for this file (more inclusive filtering)
-    const fileNameWithoutExt = sourceBasename.replace(/\.[^.]+$/, ''); // Remove extension
-    const fileMessages = (infoMessages || []).filter(msg => 
-        msg.includes(sourceBasename) || 
-        msg.includes(fileNameWithoutExt) ||
-        msg.includes(file.filename.replace('.xlsx', '')) ||
-        // Also check for general processing messages if no specific file match
-        (!msg.includes('.xlsx') && !msg.includes('soubor'))
-    );
-    
-    
-    // Add processing steps
-    const steps = [
-        { pattern: /Načteno (\d+) jmen žáků/, icon: '👥', label: 'Načítání žáků' },
-        { pattern: /Zapisuji (\d+) aktivit do Seznam aktivit/, icon: '📋', label: 'Zapisování aktivit' },
-        { pattern: /Zapisuji (\d+) záznamů do Přehled/, icon: '📊', label: 'Vytváření přehledu' },
-        { pattern: /Všechny součty souhlasí/, icon: '✅', label: 'Kontrola SDP', success: true },
-        { pattern: /NESOUHLASÍ součty/, icon: '❌', label: 'Kontrola SDP', error: true }
-    ];
-    
-    steps.forEach((step, index) => {
-        const matchingMsg = fileMessages.find(msg => step.pattern.test(msg));
-        if (matchingMsg) {
-            const isSuccess = step.success || (!step.error);
-            const icon = step.error ? '❌' : (step.success ? '✅' : '✅');
+    // Add info messages for this file
+    if (fileInfo.length > 0) {
+        fileInfo.forEach(msg => {
+            // Determine if this is a success or error message
+            const isError = msg.includes('NESOUHLASÍ') || msg.includes('❌');
+            const isSuccess = msg.includes('✅') || msg.includes('souhlasí');
+            const cssClass = isError ? 'error' : (isSuccess ? 'success' : '');
+            
+            // Clean up repeated "Chyba" text in SDP messages
+            let cleanMsg = msg;
+            if (msg.includes('NESOUHLASÍ součty v SDP')) {
+                // Remove multiple "Chyba:" prefixes and clean up formatting
+                cleanMsg = msg.replace(/Chyba: /g, '').replace(/\s+Chyba/g, '');
+                cleanMsg = cleanMsg.replace('NESOUHLASÍ součty v SDP!', '❌ NESOUHLASÍ součty v SDP');
+            }
+            
             blockHtml += `
-                <div class="processing-step ${isSuccess ? 'success' : 'error'}">
-                    ${icon} <strong>Krok ${index + 1}:</strong> ${matchingMsg}
+                <div class="processing-step ${cssClass}">
+                    ${cleanMsg}
                 </div>
             `;
-        }
-    });
+        });
+    }
     
-    // Add any warnings or errors for this file
-    const fileWarnings = (warningMessages || []).filter(msg => 
-        msg.includes(sourceBasename) || msg.includes(file.filename.replace('.xlsx', ''))
-    );
-    
-    const fileErrors = (errorMessages || []).filter(msg => 
-        msg.includes(sourceBasename) || msg.includes(file.filename.replace('.xlsx', ''))
-    );
-    
+    // Add warnings for this file
     if (fileWarnings.length > 0) {
         fileWarnings.forEach(warning => {
             blockHtml += `
@@ -1071,14 +1147,49 @@ function formatFileProcessingBlock(file, infoMessages, warningMessages, errorMes
         });
     }
     
+    // Add errors for this file
     if (fileErrors.length > 0) {
-        fileErrors.forEach(error => {
+        // Check if we have SDP error sequence
+        let sdpErrorIndex = fileErrors.findIndex(err => err.includes('NESOUHLASÍ součty v SDP'));
+        
+        if (sdpErrorIndex !== -1 && sdpErrorIndex + 3 < fileErrors.length) {
+            // Process errors before SDP error normally
+            for (let i = 0; i < sdpErrorIndex; i++) {
+                blockHtml += `
+                    <div class="processing-step error">
+                        ❌ <strong>Chyba:</strong> ${fileErrors[i]}
+                    </div>
+                `;
+            }
+            
+            // Combine SDP errors into one block
             blockHtml += `
                 <div class="processing-step error">
-                    ❌ <strong>Chyba:</strong> ${error}
+                    <strong>❌ NESOUHLASÍ součty v SDP!</strong><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;Aktivity: ${fileErrors[sdpErrorIndex + 1].replace('Aktivity: ', '')}<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;SDP forma: ${fileErrors[sdpErrorIndex + 2].replace('SDP forma: ', '')}<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;SDP téma: ${fileErrors[sdpErrorIndex + 3].replace('SDP téma: ', '')}
                 </div>
             `;
-        });
+            
+            // Process remaining errors after SDP block
+            for (let i = sdpErrorIndex + 4; i < fileErrors.length; i++) {
+                blockHtml += `
+                    <div class="processing-step error">
+                        ❌ <strong>Chyba:</strong> ${fileErrors[i]}
+                    </div>
+                `;
+            }
+        } else {
+            // No SDP error sequence, process normally
+            fileErrors.forEach(error => {
+                blockHtml += `
+                    <div class="processing-step error">
+                        ❌ <strong>Chyba:</strong> ${error}
+                    </div>
+                `;
+            });
+        }
     }
     
     blockHtml += `
@@ -1131,16 +1242,28 @@ async function detectTemplateVersion(templatePath) {
             
             // Store detected version
             state.detectedTemplateVersion = version;
+            
+            // Enable file selection buttons when template is valid
+            checkInvVzdReady();
         } else {
             elements.invTemplateVersion.innerHTML = `<strong>Neplatná šablona:</strong> ${result.message || 'Nepodařilo se detekovat verzi'}`;
             elements.invTemplateVersion.className = 'template-version invalid';
             state.detectedTemplateVersion = null;
+            
+            // Clear selected files when template is invalid
+            state.selectedFiles['inv-vzd'] = [];
+            updateFilesList('inv-vzd');
         }
     } catch (error) {
         console.error('Template version detection error:', error);
         elements.invTemplateVersion.innerHTML = '<strong>Chyba:</strong> Nepodařilo se detekovat verzi šablony';
         elements.invTemplateVersion.className = 'template-version invalid';
         state.detectedTemplateVersion = null;
+        
+        // Clear selected files and update buttons
+        state.selectedFiles['inv-vzd'] = [];
+        updateFilesList('inv-vzd');
+        checkInvVzdReady();
     }
 }
 

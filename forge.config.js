@@ -3,42 +3,63 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 module.exports = {
   packagerConfig: {
-    name: 'Nástroje pro ŠI a ŠII OP JAK',
+    name: 'ElektronApp',
+    productName: 'ElektronApp - Nástroje OP JAK',
     icon: './src/electron/assets/icon',
-    asar: true,
+    asar: {
+      unpack: '{*.{node,dll,exe,so,dylib},src/python/**/*,src/launcher.js}'
+    },
     extraResource: [
       './src/python',
-      './venv'
+      './requirements.txt',
+      './python-backend-install.bat'
+    ],
+    ignore: [
+      /electron-app-env/,
+      /venv/,
+      /logs/,
+      /out/,
+      /\.git/,
+      /\.pytest_cache/,
+      /test_/,
+      /legacy_code/,
+      /_context_notes\.md/,
+      /PLAKAT_PROGRESS\.md/,
+      /PROGRESS\.md/,
+      /PROJECT_PLAN\.md/,
+      /TESTING_PLAN\.md/,
+      /debug_/,
+      /inspect_/,
+      /simple_test\.py/,
+      /test_complete/,
+      /ui_preview/,
+      /\.sh$/,
+      /template_.*\.xlsx$/,
+      /standalone-backend\.py$/,
+      /start-.*\.bat$/,
+      /test-.*\.bat$/,
+      /quick-fix-.*\.bat$/,
+      /debug-.*\.bat$/,
+      /build-.*\.bat$/,
+      /next-tag\.sh$/,
+      /install_mcp_servers\.sh$/
     ]
   },
   rebuildConfig: {},
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
+      platforms: ['win32'],
       config: {
-        name: 'ProjektovaDokumentace',
+        name: 'ElektronApp',
         authors: 'Max Parez',
-        description: 'Desktop application for processing school project documentation',
-        setupIcon: './src/electron/assets/icon.ico',
-        setupExe: 'ProjektovaDokumentace-Setup.exe'
+        description: 'ElektronApp - Nástroje pro zpracování projektové dokumentace OP JAK',
+        setupExe: 'ElektronApp-Setup.exe',
+        noMsi: true,
+        remoteReleases: false,
+        createDesktopShortcut: true,
+        createStartMenuShortcut: true
       },
-    },
-    {
-      name: '@electron-forge/maker-zip',
-      platforms: ['darwin', 'linux'],
-    },
-    {
-      name: '@electron-forge/maker-deb',
-      config: {
-        options: {
-          maintainer: 'Max Parez',
-          homepage: 'https://github.com/maxparez/electron_app'
-        }
-      },
-    },
-    {
-      name: '@electron-forge/maker-rpm',
-      config: {},
     },
   ],
   plugins: [
