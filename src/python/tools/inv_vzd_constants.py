@@ -6,6 +6,7 @@ Constants for InvVzd processor
 VERSIONS = {
     "16": {
         "hours": 16,
+        "hours_per_session": 2,  # Hours per session/date
         "template_markers": ["16 hodin"],
         "data_start_row": 12,  # Row where student data starts (0-indexed)
         "data_start_col": 2,   # Column B
@@ -19,6 +20,7 @@ VERSIONS = {
     },
     "32": {
         "hours": 32,
+        "hours_per_session": 4,  # Hours per session/date
         "template_markers": ["32 hodin"],
         "data_start_row": 11,  # Row where student data starts (0-indexed)
         "data_start_col": 2,   # Column B
@@ -78,7 +80,14 @@ ERROR_MESSAGES = {
     "file_not_found": "Soubor nenalezen: {file}",
     "read_error": "Chyba při čtení souboru: {error}",
     "write_error": "Chyba při zápisu souboru: {error}",
-    "xlwings_required": "Tato funkce vyžaduje Windows s nainstalovaným MS Excel"
+    "xlwings_required": "Tato funkce vyžaduje Windows s nainstalovaným MS Excel",
+    "hours_mismatch": "Nesouhlasí celkový počet hodin. Očekáváno: {expected}, Skutečnost: {actual}",
+    "processing_error": "Chyba při zpracování dat: {error}",
+    "invalid_excel": "Neplatný Excel soubor: {error}",
+    "invalid_data": "Neplatná struktura dat: {error}",
+    "no_activities": "Nenalezena žádná data aktivit: {error}",
+    "no_data": "Žádná data k zápisu: {error}",
+    "no_dates": "Nenalezeny žádné datumy: {error}"
 }
 
 # Info messages  
@@ -87,5 +96,6 @@ INFO_MESSAGES = {
     "processing_file": "Zpracovávám soubor: {file}",
     "file_complete": "Soubor zpracován: {file}",
     "dates_fixed": "Upozornění: {count} datumů se nepodařilo převést\nProblematické řádky: {rows}",
-    "sum_warning": "ZKONTROLUJTE výsledný soubor - aktivity na listu 'Seznam aktivit'"
+    "sum_warning": "ZKONTROLUJTE výsledný soubor - aktivity na listu 'Seznam aktivit'",
+    "date_fixed": "Opraven datum v buňce {cell}: {original} → {fixed}"
 }
