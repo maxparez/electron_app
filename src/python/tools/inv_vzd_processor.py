@@ -1311,12 +1311,17 @@ class InvVzdProcessor(BaseTool):
     def _verify_sdp_sums(self, wb):
         """Verify SDP sums match total hours - following original control logic"""
         try:
-            # Calculate activities total (Seznam aktivit D3 to end)
+            # Calculate activities total (Seznam aktivit column depends on version)
             aktivit_sheet = wb.sheets['Seznam aktivit']
             activities_total = 0
             row = 3
+            
+            # For 16h version, hours are in column E (includes time column)
+            # For 32h version, hours are in column D  
+            hours_column = "E" if self.version == "16" else "D"
+            
             while True:
-                cell_value = aktivit_sheet.range(f"D{row}").value
+                cell_value = aktivit_sheet.range(f"{hours_column}{row}").value
                 if cell_value is None or str(cell_value).strip() == '':
                     break
                 try:
