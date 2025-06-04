@@ -91,7 +91,7 @@ ERROR_MESSAGES = {
     "processing_error": "Chyba při zpracování dat: {error}",
     "invalid_excel": "Neplatný Excel soubor: {error}",
     "invalid_data": "Neplatná struktura dat: {error}",
-    "no_activities": "Nenalezena žádná data aktivit: {error}",
+    "no_activities": "Nenalezena žádná data aktivit",
     "no_data": "Žádná data k zápisu: {error}",
     "no_dates": "Nenalezeny žádné datumy: {error}"
 }

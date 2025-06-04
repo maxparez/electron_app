@@ -20,6 +20,7 @@ from .validation_utils import FileValidator, ExcelValidator, DataValidator
 from .logger_utils import ToolLogger, log_execution_time
 from datetime import datetime
 import re
+from openpyxl import load_workbook
 
 # Check xlwings availability
 try:
@@ -183,7 +184,12 @@ class InvVzdProcessor(BaseTool):
                 df, min_rows=5, min_cols=10
             )
             if not valid:
-                self._add_error('invalid_data', error=msg)
+                # Check if this is an attendance file at all
+                if len(df.columns) < 5:
+                    self.add_error(f"Soubor neobsahuje žádné platné aktivity")
+                else:
+                    # More user-friendly message for structure issues
+                    self.add_error(f"Soubor neobsahuje očekávanou strukturu docházky")
                 return None
             
             # Get configuration
@@ -226,7 +232,12 @@ class InvVzdProcessor(BaseTool):
                 df, min_rows=5, min_cols=10
             )
             if not valid:
-                self._add_error('invalid_data', error=msg)
+                # Check if this is an attendance file at all
+                if len(df.columns) < 5:
+                    self.add_error(f"Soubor neobsahuje žádné platné aktivity")
+                else:
+                    # More user-friendly message for structure issues
+                    self.add_error(f"Soubor neobsahuje očekávanou strukturu docházky")
                 return None
             
             # Get configuration
@@ -331,8 +342,21 @@ class InvVzdProcessor(BaseTool):
         
     def _validate_version_match(self, source_file: str, template_file: str) -> bool:
         """Validate that source file matches template version"""
-        # Implementation would check if source file structure matches template
-        # For now, return True
+        source_version = self._detect_source_version(source_file)
+        
+        if source_version is None:
+            self.add_error(f"Nepodařilo se detekovat verzi souboru: {os.path.basename(source_file)}")
+            return False
+            
+        if source_version != self.version:
+            source_hours = VERSIONS[source_version]["hours"]
+            template_hours = self.config["hours"]
+            self.add_error(
+                f"Nesoulad verzí: zdrojový soubor má {source_hours} hodin, "
+                f"ale šablona je pro {template_hours} hodin"
+            )
+            return False
+            
         return True
         
     def _generate_output_filename(self, source_file: str, output_dir: str) -> str:
@@ -458,7 +482,7 @@ class InvVzdProcessor(BaseTool):
                 self._add_info('file_complete', file=f"{len(activities)} aktivit, {self.hours_total} hodin")
                 return {'activities': activities_df}
             else:
-                self._add_error('no_activities', error="Nenalezena žádná data aktivit")
+                self._add_error('no_activities')
                 return {}
                 
         except Exception as e:
@@ -495,7 +519,7 @@ class InvVzdProcessor(BaseTool):
                 self._add_info('file_complete', file=f"{len(activities)} aktivit, {self.hours_total} hodin")
                 return {'activities': activities_df}
             else:
-                self._add_error('no_activities', error="Nenalezena žádná data aktivit")
+                self._add_error('no_activities')
                 return {}
                 
         except Exception as e:
@@ -646,6 +670,58 @@ class InvVzdProcessor(BaseTool):
         self.warnings = []
         self.info_messages = [version_msg] if version_msg else []
         
+    def _detect_source_version(self, source_file: str) -> Optional[str]:
+        """Detect version from source content"""
+        try:
+            wb = load_workbook(source_file, read_only=True)
+            sheet_names = wb.sheetnames
+            
+            # Priority 1: Check for "zdroj-dochazka" sheet (preferred format)
+            if "zdroj-dochazka" in sheet_names:
+                sheet = wb["zdroj-dochazka"]
+                b7_value = sheet["B7"].value
+                
+                # If B7 contains "čas zahájení" then it's 16h version
+                if b7_value and "čas zahájení" in str(b7_value).lower():
+                    wb.close()
+                    return "16"
+                else:
+                    # If zdroj-dochazka exists but no "čas zahájení" in B7, it's 32h
+                    wb.close()
+                    return "32"
+            
+            # Priority 2: If no "zdroj-dochazka", use first sheet and check B6/B7
+            if sheet_names:
+                sheet = wb[sheet_names[0]]  # Take first sheet regardless of name
+                b6_value = sheet["B6"].value
+                b7_value = sheet["B7"].value
+                
+                # Check if B6 contains "datum aktivity"
+                if b6_value and "datum aktivity" in str(b6_value).lower():
+                    # If B7 contains "čas zahájení" then 16h, otherwise 32h
+                    if b7_value and "čas zahájení" in str(b7_value).lower():
+                        wb.close()
+                        return "16"
+                    else:
+                        wb.close()
+                        return "32"
+            
+            # Fallback: Check legacy formats
+            # Check for 16 hour version (complex sheet structure)
+            if "Seznam aktivit" in sheet_names:
+                sheet = wb["Seznam aktivit"]
+                b2_value = sheet["B2"].value
+                
+                if b2_value and "pořadové číslo aktivity" in str(b2_value).lower():
+                    wb.close()
+                    return "16"
+                    
+            wb.close()
+            return None
+        except Exception as e:
+            self.logger.error(f"[INVVZD] Error detecting source version: {str(e)}")
+            return None
+            
     def _fix_incomplete_dates(self, dates: List, start_row: int = 6) -> List:
         """Fix incomplete dates by inferring missing years"""
         fixed_dates = []
@@ -707,3 +783,66 @@ class InvVzdProcessor(BaseTool):
                         
         # Default to current year
         return current_year
+        
+    def _verify_sdp_sums_xlwings(self, wb):
+        """Verify SDP sums match total hours - following original control logic"""
+        try:
+            # Calculate activities total (Seznam aktivit column depends on version)
+            aktivit_sheet = wb.sheets['Seznam aktivit']
+            activities_total = 0
+            row = 3
+            
+            # For 16h version, hours are in column E (includes time column)
+            # For 32h version, hours are in column D  
+            hours_column = "E" if self.version == "16" else "D"
+            
+            while True:
+                cell_value = aktivit_sheet.range(f"{hours_column}{row}").value
+                if cell_value is None or str(cell_value).strip() == '':
+                    break
+                try:
+                    activities_total += int(float(str(cell_value)))
+                except:
+                    pass
+                row += 1
+            
+            # Check SDP sheet sums
+            sdp_sheet = wb.sheets['SDP']
+            
+            # Sum C4:C10 (forma range)
+            sdp_forma_total = 0
+            for row in range(4, 11):  # C4 to C10
+                cell_value = sdp_sheet.range(f"C{row}").value
+                if cell_value is not None:
+                    try:
+                        sdp_forma_total += int(float(str(cell_value)))
+                    except:
+                        pass
+            
+            # Sum C12:C28 (tema range) 
+            sdp_tema_total = 0
+            for row in range(12, 29):  # C12 to C28
+                cell_value = sdp_sheet.range(f"C{row}").value
+                if cell_value is not None:
+                    try:
+                        sdp_tema_total += int(float(str(cell_value)))
+                    except:
+                        pass
+            
+            # Compare and report
+            self.add_info(f"Kontrola součtů:")
+            self.add_info(f"  Aktivity: {activities_total}h")
+            self.add_info(f"  SDP forma: {sdp_forma_total}h")
+            self.add_info(f"  SDP téma: {sdp_tema_total}h")
+            
+            if activities_total == sdp_forma_total == sdp_tema_total:
+                self.add_info(f"✅ Všechny součty souhlasí")
+            else:
+                self.add_error(f"❌ NESOUHLASÍ součty v SDP!")
+                self.add_error(f"Aktivity: {activities_total}h")
+                self.add_error(f"SDP forma: {sdp_forma_total}h")
+                self.add_error(f"SDP téma: {sdp_tema_total}h")
+                self.add_warning("ZKONTROLUJTE výsledný soubor - aktivity na listu 'Seznam aktivit'")
+                
+        except Exception as e:
+            self.add_error(f"Chyba při kontrole SDP součtů: {str(e)}")
