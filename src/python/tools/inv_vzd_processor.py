@@ -926,3 +926,75 @@ class InvVzdProcessor(BaseTool):
         except Exception as e:
             self.logger.error(f"[INVVZD] Error verifying SDP sums: {str(e)}")
             self._add_error('verification_error', error=f"Chyba při kontrole SDP součtů: {str(e)}")
+            
+    def select_folder(self, folder_path: str) -> Dict[str, Any]:
+        """Scan folder for attendance files and filter them"""
+        self.logger.info(f"[INVVZD] === SELECT FOLDER START ===")
+        self.logger.info(f"[INVVZD] Folder path: {folder_path}")
+        
+        result = {"success": False, "files": [], "message": ""}
+        
+        try:
+            # Check if folder exists
+            if not os.path.exists(folder_path):
+                self.logger.error(f"[INVVZD] Folder does not exist: {folder_path}")
+                result["message"] = f"Složka neexistuje: {folder_path}"
+                return result
+                
+            # List all files in folder
+            all_files = os.listdir(folder_path)
+            self.logger.info(f"[INVVZD] All files in folder: {all_files}")
+            
+            attendance_files = []
+            
+            # Scan for Excel files
+            for file in all_files:
+                if file.endswith(('.xlsx', '.xls')) and not file.startswith('~$'):
+                    full_path = os.path.join(folder_path, file)
+                    self.logger.info(f"[INVVZD] Checking Excel file: {file}")
+                    
+                    # Skip output files (already processed)
+                    if file.startswith(('32h_inv_', '16h_inv_', '32_hodin_inovativniho_vzdelavani_', '16_hodin_inovativniho_vzdelavani_')):
+                        self.logger.info(f"[INVVZD] Skipping output file: {file}")
+                        continue
+                    
+                    # Skip template files
+                    if 'sablona' in file.lower() or 'template' in file.lower():
+                        self.logger.info(f"[INVVZD] Skipping template file: {file}")
+                        continue
+                    
+                    # Try to detect version from content
+                    self.logger.info(f"[INVVZD] Detecting version for: {full_path}")
+                    version = self._detect_source_version(full_path)
+                    self.logger.info(f"[INVVZD] Detected version: {version}")
+                    
+                    if version:
+                        self.logger.info(f"[INVVZD] Valid attendance file found: {file} (version {version}h)")
+                        attendance_files.append({
+                            "path": full_path,
+                            "name": file,
+                            "version": f"{version} hodin"
+                        })
+                    else:
+                        self.logger.info(f"[INVVZD] Not an attendance file: {file}")
+                        
+            self.logger.info(f"[INVVZD] Total attendance files found: {len(attendance_files)}")
+            
+            if attendance_files:
+                result["success"] = True
+                result["files"] = attendance_files
+                result["message"] = f"Nalezeno {len(attendance_files)} souborů s docházkou"
+                self.logger.info(f"[INVVZD] SUCCESS: {result['message']}")
+            else:
+                result["message"] = "Ve složce nebyly nalezeny žádné soubory s docházkou"
+                self.logger.warning(f"[INVVZD] WARNING: {result['message']}")
+                
+        except Exception as e:
+            result["message"] = f"Chyba při procházení složky: {str(e)}"
+            self.logger.error(f"[INVVZD] ERROR: {result['message']}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
+            
+        self.logger.info(f"[INVVZD] === SELECT FOLDER END ===")
+        self.logger.info(f"[INVVZD] Result: {result}")
+        return result
