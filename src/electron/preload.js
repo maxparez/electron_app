@@ -132,5 +132,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         window.addEventListener('backend-failed', (event) => {
             callback(event.detail);
         });
-    }
+    },
+    
+    // App info
+    getVersion: () => ipcRenderer.invoke('app:getVersion')
 });

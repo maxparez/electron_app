@@ -936,3 +936,42 @@ h3.error {
     background: none;
     border: none;
 }
+
+/* Status Bar */
+.status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 24px;
+    background-color: #f5f5f5;
+    border-top: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    font-size: 12px;
+    color: #666;
+    z-index: 1000;
+}
+
+.status-bar-left {
+    display: flex;
+    align-items: center;
+}
+
+.status-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+#version-info {
+    font-family: monospace;
+    color: #999;
+}
+
+/* Adjust app container to make room for status bar */
+.app-container {
+    height: calc(100vh - 24px);
+}

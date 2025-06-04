@@ -79,6 +79,31 @@ function stopPythonServer() {
     backendManager.stop();
 }
 
+// IPC handler for version info
+ipcMain.handle('app:getVersion', async () => {
+    const packageJson = require('../../package.json');
+    const version = packageJson.version;
+    
+    // Try to get git commit info
+    let gitInfo = '';
+    try {
+        const { execSync } = require('child_process');
+        const commit = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+        const branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+        const date = execSync('git log -1 --format=%cd --date=short', { encoding: 'utf8' }).trim();
+        gitInfo = ` (${branch}:${commit} - ${date})`;
+    } catch (e) {
+        // Git not available or not a git repo
+        console.log('Git info not available:', e.message);
+    }
+    
+    return {
+        version,
+        gitInfo,
+        full: `v${version}${gitInfo}`
+    };
+});
+
 // IPC handlers for communication with renderer
 ipcMain.handle('dialog:openFile', async (event, options = {}) => {
     const defaultOptions = {
