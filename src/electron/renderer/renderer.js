@@ -41,8 +41,28 @@ const elements = {
     plakatResults: document.getElementById('plakat-results')
 };
 
+// Status bar functions
+function setStatusMessage(message, duration = 0) {
+    const statusElement = document.getElementById('status-message');
+    statusElement.textContent = message;
+    
+    if (duration > 0) {
+        setTimeout(() => {
+            statusElement.textContent = 'Připraveno';
+        }, duration);
+    }
+}
+
 // Initialize app
-function init() {
+async function init() {
+    // Load version info
+    try {
+        const versionInfo = await window.electronAPI.getVersion();
+        document.getElementById('version-info').textContent = `Verze: ${versionInfo.full}`;
+    } catch (error) {
+        console.error('Failed to get version info:', error);
+    }
+    
     // Setup navigation
     elements.navItems.forEach(item => {
         item.addEventListener('click', () => {
@@ -490,6 +510,7 @@ function checkInvVzdReady() {
 async function processInvVzd() {
     try {
         showLoading(true);
+        setStatusMessage('Zpracovávám inovativní vzdělávání...');
         
         // Get course type from detected template version
         const courseType = state.detectedTemplateVersion || '32'; // Default to 32 if not detected
