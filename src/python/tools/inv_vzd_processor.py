@@ -321,6 +321,80 @@ class InvVzdProcessor(BaseTool):
         """Detect template version using excel helper"""
         return self.excel_helper.detect_version_from_template(template_path)
         
+    def _detect_source_version(self, source_file: str) -> Optional[str]:
+        """Detect version from source content"""
+        self.logger.info(f"[INVVZD] === DETECT SOURCE VERSION START ===")
+        self.logger.info(f"[INVVZD] Source file: {source_file}")
+        
+        try:
+            from openpyxl import load_workbook
+            wb = load_workbook(source_file, read_only=True)
+            sheet_names = wb.sheetnames
+            self.logger.info(f"[INVVZD] Sheet names in file: {sheet_names}")
+            
+            # Priority 1: Check for "zdroj-dochazka" sheet (preferred format)
+            if "zdroj-dochazka" in sheet_names:
+                self.logger.info(f"[INVVZD] Found 'zdroj-dochazka' sheet")
+                sheet = wb["zdroj-dochazka"]
+                b7_value = sheet["B7"].value
+                self.logger.info(f"[INVVZD] B7 value in zdroj-dochazka: '{b7_value}'")
+                
+                # If B7 contains "čas zahájení" then it's 16h version
+                if b7_value and "čas zahájení" in str(b7_value).lower():
+                    wb.close()
+                    self.logger.info(f"[INVVZD] Detected version: 16h (found 'čas zahájení' in B7)")
+                    return "16"
+                else:
+                    # If zdroj-dochazka exists but no "čas zahájení" in B7, it's 32h
+                    wb.close()
+                    self.logger.info(f"[INVVZD] Detected version: 32h (zdroj-dochazka exists but no 'čas zahájení')") 
+                    return "32"
+            
+            # Priority 2: If no "zdroj-dochazka", use first sheet and check B6/B7
+            if sheet_names:
+                self.logger.info(f"[INVVZD] No 'zdroj-dochazka' sheet, checking first sheet: {sheet_names[0]}")
+                sheet = wb[sheet_names[0]]  # Take first sheet regardless of name
+                b6_value = sheet["B6"].value
+                b7_value = sheet["B7"].value
+                self.logger.info(f"[INVVZD] B6 value: '{b6_value}'")
+                self.logger.info(f"[INVVZD] B7 value: '{b7_value}'")
+                
+                # Check if B6 contains "datum aktivity"
+                if b6_value and "datum aktivity" in str(b6_value).lower():
+                    self.logger.info(f"[INVVZD] Found 'datum aktivity' in B6")
+                    # If B7 contains "čas zahájení" then 16h, otherwise 32h
+                    if b7_value and "čas zahájení" in str(b7_value).lower():
+                        wb.close()
+                        self.logger.info(f"[INVVZD] Detected version: 16h (found 'čas zahájení' in B7)")
+                        return "16"
+                    else:
+                        wb.close()
+                        self.logger.info(f"[INVVZD] Detected version: 32h (B6 has 'datum aktivity' but no 'čas zahájení' in B7)")
+                        return "32"
+            
+            # Fallback: Check legacy formats
+            self.logger.info(f"[INVVZD] Checking legacy formats...")
+            # Check for 16 hour version (complex sheet structure)
+            if "Seznam aktivit" in sheet_names:
+                self.logger.info(f"[INVVZD] Found 'Seznam aktivit' sheet")
+                sheet = wb["Seznam aktivit"]
+                b2_value = sheet["B2"].value
+                self.logger.info(f"[INVVZD] B2 value in Seznam aktivit: '{b2_value}'")
+                
+                if b2_value and "pořadové číslo aktivity" in str(b2_value).lower():
+                    wb.close()
+                    self.logger.info(f"[INVVZD] Detected version: 16h (found 'pořadové číslo aktivity' in Seznam aktivit B2)")
+                    return "16"
+                    
+            wb.close()
+            self.logger.warning(f"[INVVZD] Could not detect version - no matching patterns found")
+            return None
+        except Exception as e:
+            self.logger.error(f"[INVVZD] Exception in _detect_source_version: {str(e)}")
+            import traceback
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
+            return None
+        
     def _validate_version_match(self, source_file: str, template_file: str) -> bool:
         """Validate that source file matches template version"""
         # Implementation would check if source file structure matches template
