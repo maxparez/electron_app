@@ -1278,24 +1278,40 @@ class InvVzdProcessor(BaseTool):
                     self.logger.info(f"[INVVZD] Detected version: {version}")
                     
                     if version:
+                        # Check if version matches current template
+                        if self.version and version != self.version:
+                            self.logger.info(f"[INVVZD] Skipping file {file} - version mismatch (file: {version}h, template: {self.version}h)")
+                            continue
+                            
                         self.logger.info(f"[INVVZD] Valid attendance file found: {file} (version {version}h)")
                         attendance_files.append({
                             "path": full_path,
                             "name": file,
-                            "version": f"{version} hodin"
+                            "version": f"{version} hodin",
+                            "compatible": True
                         })
                     else:
                         self.logger.info(f"[INVVZD] Not an attendance file: {file}")
                         
-            self.logger.info(f"[INVVZD] Total attendance files found: {len(attendance_files)}")
+            # Log summary
+            self.logger.info(f"[INVVZD] Total compatible files found: {len(attendance_files)}")
+            
+            # Include info about template version in message
+            template_hours = self.config["hours"] if self.version else "?"
             
             if attendance_files:
                 result["success"] = True
                 result["files"] = attendance_files
-                result["message"] = f"Nalezeno {len(attendance_files)} souborů s docházkou"
+                if self.version:
+                    result["message"] = f"Nalezeno {len(attendance_files)} souborů kompatibilních se šablonou {template_hours} hodin"
+                else:
+                    result["message"] = f"Nalezeno {len(attendance_files)} souborů s docházkou"
                 self.logger.info(f"[INVVZD] SUCCESS: {result['message']}")
             else:
-                result["message"] = "Ve složce nebyly nalezeny žádné soubory s docházkou"
+                if self.version:
+                    result["message"] = f"Ve složce nebyly nalezeny žádné soubory kompatibilní se šablonou {template_hours} hodin"
+                else:
+                    result["message"] = "Ve složce nebyly nalezeny žádné soubory s docházkou"
                 self.logger.warning(f"[INVVZD] WARNING: {result['message']}")
                 
         except Exception as e:
