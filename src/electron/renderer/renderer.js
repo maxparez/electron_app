@@ -391,7 +391,8 @@ async function scanFolderForAttendanceFiles(folderPath) {
         // Call backend API to scan folder
         const response = await window.electronAPI.apiCall('select-folder', 'POST', {
             folderPath: folderPath,
-            toolType: 'inv-vzd'
+            toolType: 'inv-vzd',
+            templatePath: state.selectedTemplate['inv-vzd']
         });
         
         if (response.success && response.files) {

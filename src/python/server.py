@@ -198,6 +198,7 @@ def select_folder():
         data = request.get_json()
         folder_path = data.get('folderPath')
         tool_type = data.get('toolType', 'inv-vzd')
+        template_path = data.get('templatePath')
         
         server_logger.info(f"[SELECT-FOLDER] Request received for tool: {tool_type}")
         server_logger.info(f"[SELECT-FOLDER] Folder path: {folder_path}")
@@ -217,8 +218,29 @@ def select_folder():
             server_logger.info(f"[SELECT-FOLDER] Converted to WSL path: {folder_path}")
         
         if tool_type == 'inv-vzd':
-            # Create InvVzdProcessor without version for scanning
+            # Create InvVzdProcessor and detect template version if provided
             processor = InvVzdProcessor(logger=tool_logger)
+            
+            # If template is provided, detect its version first
+            if template_path:
+                server_logger.info(f"[SELECT-FOLDER] Template path: {template_path}")
+                # Convert Windows template path to WSL if needed
+                if platform.system() == 'Linux' and len(template_path) >= 3 and template_path[1:3] == ':\\':
+                    drive_letter = template_path[0].lower()
+                    remaining_path = template_path[3:].replace('\\', '/')
+                    template_path = f'/mnt/{drive_letter}/{remaining_path}'
+                    server_logger.info(f"[SELECT-FOLDER] Converted template to WSL path: {template_path}")
+                
+                template_version = processor._detect_template_version(template_path)
+                server_logger.info(f"[SELECT-FOLDER] Detected template version: {template_version}")
+                if template_version:
+                    processor.version = template_version
+                    processor.config = processor.__class__.__dict__.get('VERSIONS', {}).get(template_version)
+                    if not processor.config:
+                        # Access VERSIONS from module level
+                        from tools.inv_vzd_processor import VERSIONS
+                        processor.config = VERSIONS.get(template_version)
+            
             result = processor.select_folder(folder_path)
             server_logger.info(f"[SELECT-FOLDER] InvVzd scan result: {result}")
             return jsonify(result)
