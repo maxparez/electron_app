@@ -11,12 +11,12 @@ VERSIONS = {
         "data_start_row": 12,  # Row where student data starts (0-indexed)
         "data_start_col": 2,   # Column C (0-based index, so C = 2)
         "hours_row": 10,       # Row with hours (Excel row 11)
-        "dates_row": 5,        # Row with dates (Excel row 6)
-        "time_row": 6,         # Row with times (Excel row 7)
-        "form_row": 7,         # Row with forms (Excel row 8)
-        "topic_row": 8,        # Row with topics (Excel row 9)
-        "teacher_row": 9,      # Row with teachers (Excel row 10)
-        "activity_row": 4,     # Row with activity numbers (Excel row 5)
+        "dates_row": 4,        # Row with dates (Excel row 5) - FIXED!
+        "time_row": 5,         # Row with times (Excel row 6) - FIXED!
+        "form_row": 6,         # Row with forms (Excel row 7) - FIXED!
+        "topic_row": 7,        # Row with topics (Excel row 8) - FIXED!
+        "teacher_row": 8,      # Row with teachers (Excel row 9) - FIXED!
+        "activity_row": 3,     # Row with activity numbers (Excel row 4) - FIXED!
         "name_col": 1,         # Column B - student names
         "sdp_hours_col": 4,    # Column E - SDP hours for 16h
         "output_prefix": "16_hodin_inovativniho_vzdelavani",

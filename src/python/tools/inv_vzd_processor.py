@@ -370,22 +370,22 @@ class InvVzdProcessor(BaseTool):
             if sheet_names:
                 self.logger.info(f"[INVVZD] No 'zdroj-dochazka' sheet, checking first sheet: {sheet_names[0]}")
                 sheet = wb[sheet_names[0]]  # Take first sheet regardless of name
+                b5_value = sheet["B5"].value
                 b6_value = sheet["B6"].value
-                b7_value = sheet["B7"].value
+                self.logger.info(f"[INVVZD] B5 value: '{b5_value}'")
                 self.logger.info(f"[INVVZD] B6 value: '{b6_value}'")
-                self.logger.info(f"[INVVZD] B7 value: '{b7_value}'")
                 
-                # Check if B6 contains "datum aktivity"
-                if b6_value and "datum aktivity" in str(b6_value).lower():
-                    self.logger.info(f"[INVVZD] Found 'datum aktivity' in B6")
-                    # If B7 contains "čas zahájení" then 16h, otherwise 32h
-                    if b7_value and "čas zahájení" in str(b7_value).lower():
+                # Check if B5 contains "datum aktivity"
+                if b5_value and "datum aktivity" in str(b5_value).lower():
+                    self.logger.info(f"[INVVZD] Found 'datum aktivity' in B5")
+                    # If B6 contains "čas zahájení" then 16h, otherwise 32h
+                    if b6_value and "čas zahájení" in str(b6_value).lower():
                         wb.close()
-                        self.logger.info(f"[INVVZD] Detected version: 16h (found 'čas zahájení' in B7)")
+                        self.logger.info(f"[INVVZD] Detected version: 16h (found 'čas zahájení' in B6)")
                         return "16"
                     else:
                         wb.close()
-                        self.logger.info(f"[INVVZD] Detected version: 32h (B6 has 'datum aktivity' but no 'čas zahájení' in B7)")
+                        self.logger.info(f"[INVVZD] Detected version: 32h (B5 has 'datum aktivity' but no 'čas zahájení' in B6)")
                         return "32"
             
             # Fallback: Check legacy formats
