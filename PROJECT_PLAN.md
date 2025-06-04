@@ -149,9 +149,52 @@ Projekt bude považován za úspěšný když:
 - Původní skripty zůstanou k dispozici jako záloha
 - Průběžné testování s reálnými daty
 
-## Aktuální stav (2025-06-04)
-- **Branch**: refactor/code-cleanup (debugging)
-- **Připravenost**: 100% deployment + aktivní refaktoring
-- **InvVzd nástroj**: Refaktorovaná verze se debuguje
-- **UI/UX**: Plně funkční, připraveno pro produkci
-- **Poslední úpravy**: Oprava row indexů v refaktorovaném kódu
+## Aktualizovaný stav (2025-06-04) - Post-Refactoring Review
+
+### ✅ Dokončené fáze
+- **Fáze 1-3**: Kompletně hotovo ✅
+- **Refaktoring**: Dokončen s kritickou analýzou ✅
+- **Bug fixing**: Všechny funkce pracují ✅
+
+### 🎯 Aktuální fáze: Architektonické vyčištění
+
+**Branch**: refactor/code-cleanup  
+**Stav**: Funkční s architektonickými výhradami
+
+#### Zjištěné problémy refaktoringu:
+- ❌ Přílišná složitost (7 modulů pro jednoduchou funkcionalitu)
+- ❌ Ztráta některých chytrých algoritmů
+- ❌ Předčasná abstrakce bez jasného důvodu
+- ❌ Horší testovatelnost
+
+#### Co funguje dobře:
+- ✅ Všechny funkce pracují správně
+- ✅ UI validace a error handling
+- ✅ Windows i Linux kompatibilita
+- ✅ České chybové hlášky
+
+### 📋 Následující kroky
+
+#### Fáze 4A: Architektonické vyčištění (1-2 týdny)
+1. **Zjednodušit InvVzdProcessor** - vrátit k monolitickému designu
+2. **Zachovat jen užitečné utility** - ExcelService, progress handling  
+3. **Zlepšit skutečné problémy** - progress reporting, batch preview
+4. **Optimalizovat pro údržbu** - KISS princip
+
+#### Fáze 4B: Rozšíření funkcionality (2-3 týdny)
+1. **ZorSpec tool** - implementovat zbývající nástroj
+2. **Plakat generator** - dokončit Python rewrite
+3. **Batch preview** - ukázat co se stane před zpracováním
+4. **Async operations** - lepší UX pro dlouhé operace
+
+#### Fáze 5: Finální polish & deploy (1 týden)
+1. **Windows installer** - vytvoření distribučního balíčku
+2. **Uživatelská dokumentace** - český návod
+3. **Team distribution** - nasazení pro 10 kolegů
+4. **Support & maintenance** - připravenost na feedback
+
+### 💡 Lessons learned
+- Refaktoring by měl řešit konkrétní problémy, ne vytvářet abstrakce "do zásoby"
+- KISS princip je klíčový pro maintainability
+- Funkční kód > "čistý" kód v enterprise prostředí
+- Kritická analýza je nezbytná po větších změnách
