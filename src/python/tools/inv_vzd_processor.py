@@ -20,6 +20,7 @@ from .validation_utils import FileValidator, ExcelValidator, DataValidator
 from .logger_utils import ToolLogger, log_execution_time
 from datetime import datetime
 import re
+import traceback
 
 # Check xlwings availability
 try:
@@ -133,6 +134,9 @@ class InvVzdProcessor(BaseTool):
                            output_dir: str) -> Dict[str, Any]:
         """Process a single attendance file"""
         try:
+            # Store source file for xlwings to use
+            self._current_source_file = source_file
+            
             # Validate version match
             if not self._validate_version_match(source_file, template_file):
                 return self._create_file_result(source_file, None, "error")
@@ -462,7 +466,7 @@ class InvVzdProcessor(BaseTool):
             
     def _copy_with_xlwings_invvzd(self, template_file: str, output_file: str,
                                  activities_df: pd.DataFrame) -> bool:
-        """Special xlwings copy for InvVzd format"""
+        """Special xlwings copy for InvVzd format - writes to 3 sheets"""
         try:
             import xlwings as xw
             import shutil
@@ -471,43 +475,95 @@ class InvVzdProcessor(BaseTool):
             os.makedirs(os.path.dirname(output_file), exist_ok=True)
             shutil.copy2(template_file, output_file)
             
-            # Open with xlwings
-            app = xw.App(visible=False)
+            self.logger.info(f"[INVVZD] Opening Excel application...")
+            # Open with xlwings - visible=True like original
+            app = xw.App(visible=True)
             try:
+                self.logger.info(f"[INVVZD] Loading template workbook...")
                 wb = app.books.open(output_file)
                 
-                # Write to appropriate sheet - usually 'Seznam aktivit'
-                target_sheet = None
-                for sheet_name in ['Seznam aktivit', 'List1', 'Sheet1']:
-                    if sheet_name in [s.name for s in wb.sheets]:
-                        target_sheet = wb.sheets[sheet_name]
-                        break
-                        
-                if target_sheet:
-                    # Clear existing data (keep headers)
-                    # InvVzd templates have specific structure
-                    # Activities data typically starts at row 3
-                    last_row = 100  # Safe limit
-                    target_sheet.range('A3:Z100').clear_contents()
+                # Get source file path from activities data metadata
+                source_file = getattr(activities_df, '_source_file', None)
+                if not source_file:
+                    # Try to get from processing context
+                    source_file = getattr(self, '_current_source_file', None)
+                
+                # STEP 1: Write student names to "Seznam účastníků" sheet at B4
+                self.logger.info(f"[INVVZD] STEP 1: Writing student names...")
+                if 'Seznam účastníků' in [s.name for s in wb.sheets]:
+                    sheet = wb.sheets['Seznam účastníků']
                     
-                    # Write activities data starting at row 3
+                    # Extract student names from source file
+                    student_names = self._extract_student_names(source_file) if source_file else []
+                    self.logger.info(f"[INVVZD] Extracted {len(student_names)} student names")
+                    
+                    # Write student names exactly like original
+                    if len(student_names) > 0:
+                        sheet.range("B4").options(ndim="expand", transpose=True).value = student_names
+                
+                # STEP 2: Write activities to "Seznam aktivit" sheet at C3
+                self.logger.info(f"[INVVZD] STEP 2: Writing activities...")
+                if 'Seznam aktivit' in [s.name for s in wb.sheets]:
+                    sheet = wb.sheets['Seznam aktivit']
+                    
+                    # Prepare activities data for export
                     if not activities_df.empty:
-                        # Write headers at row 2 if needed
-                        headers = ['Datum', 'Čas', 'Počet hodin', 'Forma', 'Téma', 'Učitel']
-                        target_sheet.range('A2').value = headers
+                        # For 16h version include time column, for 32h version exclude it
+                        if self.version == "16":
+                            export_columns = ["datum", "cas", "hodin", "forma", "tema", "ucitel"]
+                        else:
+                            export_columns = ["datum", "hodin", "forma", "tema", "ucitel"]
                         
-                        # Write data
-                        target_sheet.range('A3').value = activities_df.values
-                        
+                        # Select only needed columns in correct order
+                        if all(col in activities_df.columns for col in export_columns):
+                            activities_data = activities_df[export_columns]
+                        else:
+                            activities_data = activities_df
+                            
+                        self.add_info(f"Zapisuji {len(activities_data)} aktivit do Seznam aktivit")
+                        sheet.range("C3").options(ndim="expand").value = activities_data.values
+                
+                # STEP 3: Write overview to "Přehled" sheet at C3
+                self.logger.info(f"[INVVZD] STEP 3: Writing overview...")
+                if 'Přehled' in [s.name for s in wb.sheets]:
+                    sheet = wb.sheets['Přehled']
+                    
+                    # Create overview data (student-activity combinations)
+                    overview_data = self._create_overview(student_names, activities_df)
+                    if len(overview_data) > 0:
+                        self.add_info(f"Zapisuji {len(overview_data)} záznamů do Přehled")
+                        sheet.range("C3").options(ndim="expand").value = overview_data
+                else:
+                    self.logger.warning(f"[INVVZD] Sheet 'Přehled' not found in template")
+                
+                # STEP 4: Control check - verify SDP sums match activities total
+                self.logger.info(f"[INVVZD] STEP 4: Verifying SDP sums...")
+                self._verify_sdp_sums(wb)
+                
+                # Save and close
+                self.logger.info(f"[INVVZD] Saving output file: {output_file}")
                 wb.save()
+                self.logger.info(f"[INVVZD] Closing workbook...")
                 wb.close()
+                self.logger.info(f"[INVVZD] === COPY TEMPLATE SUCCESS ===")
                 return True
                 
             finally:
+                self.logger.info(f"[INVVZD] Quitting Excel application...")
                 app.quit()
                 
         except Exception as e:
             self.logger.error(f"[INVVZD] xlwings error: {str(e)}")
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
+            self._add_error('write_error', error=str(e))
+            # Try to close Excel if still open
+            try:
+                if 'wb' in locals():
+                    wb.close()
+                if 'app' in locals():
+                    app.quit()
+            except:
+                pass
             return False
             
     def _process_attendance_16h(self, df: pd.DataFrame, dates: List) -> Dict[str, pd.DataFrame]:
@@ -734,3 +790,128 @@ class InvVzdProcessor(BaseTool):
                         
         # Default to current year
         return current_year
+        
+    def _extract_student_names(self, source_file: str) -> List[str]:
+        """Extract student names from source file column B"""
+        try:
+            from openpyxl import load_workbook
+            
+            wb = load_workbook(source_file, read_only=True)
+            sheet_name = "zdroj-dochazka" if "zdroj-dochazka" in wb.sheetnames else wb.sheetnames[0]
+            sheet = wb[sheet_name]
+            
+            student_names = []
+            empty_count = 0
+            
+            # Start from row 11 for 16h version, row 10 for 32h version (0-indexed)
+            start_row = 11 if self.version == "16" else 10  # 0-indexed
+            for row in range(start_row, sheet.max_row):
+                cell_value = sheet.cell(row=row+1, column=2).value  # Column B
+                
+                if cell_value is None or str(cell_value).strip() == "":
+                    empty_count += 1
+                    if empty_count >= 2:  # Two consecutive empty rows
+                        break
+                else:
+                    empty_count = 0
+                    student_names.append(str(cell_value).strip())
+            
+            wb.close()
+            self.add_info(f"Načteno {len(student_names)} jmen žáků")
+            return student_names
+            
+        except Exception as e:
+            self.logger.error(f"[INVVZD] Error extracting student names: {str(e)}")
+            self._add_error('read_error', error=f"Chyba při načítání jmen žáků: {str(e)}")
+            return []
+            
+    def _create_overview(self, student_names: List[str], activities_df: pd.DataFrame) -> List[List]:
+        """Create overview data combining students with activity numbers"""
+        try:
+            # Following original logic from create_orginal_file
+            overview_result = []
+            
+            # For each activity (numbered 1, 2, 3...)
+            for activity_num, (_, activity) in enumerate(activities_df.iterrows(), 1):
+                # Add all students for this activity
+                for student_name in student_names:
+                    overview_result.append([activity_num, student_name])
+            
+            self.add_info(f"Vytvořen přehled: {len(activities_df)} aktivit × {len(student_names)} žáků = {len(overview_result)} záznamů")
+            return overview_result
+            
+        except Exception as e:
+            self.logger.error(f"[INVVZD] Error creating overview: {str(e)}")
+            self._add_error('processing_error', error=f"Chyba při vytváření přehledu: {str(e)}")
+            return []
+            
+    def _verify_sdp_sums(self, wb):
+        """Verify SDP sums match total hours - following original control logic"""
+        try:
+            # Calculate activities total (Seznam aktivit column depends on version)
+            aktivit_sheet = wb.sheets['Seznam aktivit']
+            activities_total = 0
+            row = 3
+            
+            # For 16h version, hours are in column E (includes time column)
+            # For 32h version, hours are in column D  
+            hours_column = "E" if self.version == "16" else "D"
+            
+            while True:
+                cell_value = aktivit_sheet.range(f"{hours_column}{row}").value
+                if cell_value is None or str(cell_value).strip() == '':
+                    break
+                try:
+                    activities_total += int(float(str(cell_value)))
+                except:
+                    pass
+                row += 1
+            
+            # Check SDP sheet sums
+            sdp_sheet = wb.sheets['SDP']
+            
+            # Sum C4:C10 (forma range)
+            sdp_forma_total = 0
+            for row in range(4, 11):  # C4 to C10
+                cell_value = sdp_sheet.range(f"C{row}").value
+                if cell_value is not None:
+                    try:
+                        sdp_forma_total += int(float(str(cell_value)))
+                    except:
+                        pass
+            
+            # Sum C12:C28 (tema range) 
+            sdp_tema_total = 0
+            for row in range(12, 29):  # C12 to C28
+                cell_value = sdp_sheet.range(f"C{row}").value
+                if cell_value is not None:
+                    try:
+                        sdp_tema_total += int(float(str(cell_value)))
+                    except:
+                        pass
+            
+            # Compare and report with detailed logging
+            self.logger.info(f"[INVVZD] === SDP VERIFICATION ===")
+            self.logger.info(f"[INVVZD] Activities total: {activities_total} hours")
+            self.logger.info(f"[INVVZD] SDP forma total (C4-C10): {sdp_forma_total} hours")
+            self.logger.info(f"[INVVZD] SDP tema total (C12-C28): {sdp_tema_total} hours")
+            
+            self.add_info(f"Kontrola součtů:")
+            self.add_info(f"  Aktivity: {activities_total}h")
+            self.add_info(f"  SDP forma: {sdp_forma_total}h")
+            self.add_info(f"  SDP téma: {sdp_tema_total}h")
+            
+            if activities_total == sdp_forma_total == sdp_tema_total:
+                self.logger.info(f"[INVVZD] All sums match!")
+                self.add_info(f"✅ Všechny součty souhlasí")
+            else:
+                self.logger.error(f"[INVVZD] ❌ SUMS DO NOT MATCH!")
+                self.logger.error(f"[INVVZD] Activities: {activities_total}, Forma: {sdp_forma_total}, Tema: {sdp_tema_total}")
+                
+                self._add_error('sum_mismatch', error=f"❌ NESOUHLASÍ součty v SDP!")
+                self._add_error('sum_details', error=f"Aktivity: {activities_total}h, SDP forma: {sdp_forma_total}h, SDP téma: {sdp_tema_total}h")
+                self.add_warning("ZKONTROLUJTE výsledný soubor - aktivity na listu 'Seznam aktivit'")
+                
+        except Exception as e:
+            self.logger.error(f"[INVVZD] Error verifying SDP sums: {str(e)}")
+            self._add_error('verification_error', error=f"Chyba při kontrole SDP součtů: {str(e)}")
