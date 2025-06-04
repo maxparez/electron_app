@@ -583,13 +583,13 @@ class InvVzdProcessor(BaseTool):
         config = self.config
         
         try:
-            # 16h structure:
-            # Row 6: dates
-            # Row 7: times (čas zahájení)
-            # Row 8: forms (forma výuky)
-            # Row 9: topics (téma výuky)
-            # Row 10: teachers (jméno pedagoga)
-            # Row 11: hours (počet hodin)
+            # 16h structure (0-based indices):
+            # Row 5: dates (Excel row 6)
+            # Row 6: times (Excel row 7 - čas zahájení)
+            # Row 7: forms (Excel row 8 - forma výuky)
+            # Row 8: topics (Excel row 9 - téma výuky)
+            # Row 9: teachers (Excel row 10 - jméno pedagoga)
+            # Row 10: hours (Excel row 11 - počet hodin)
             
             # Get hours first to check if column has data
             hours_val = df.iloc[config['hours_row'], col_idx]
@@ -609,17 +609,17 @@ class InvVzdProcessor(BaseTool):
             else:
                 datum = str(date_value).strip()
                 
-            # Get other fields
-            time_val = df.iloc[7, col_idx]  # Row 7 for time
+            # Get other fields using correct indices
+            time_val = df.iloc[6, col_idx]  # Row 6 for time (Excel row 7)
             cas = str(time_val) if not pd.isna(time_val) else ''
             
-            forma_val = df.iloc[8, col_idx]  # Row 8 for form
+            forma_val = df.iloc[7, col_idx]  # Row 7 for form (Excel row 8)
             forma = str(forma_val) if not pd.isna(forma_val) else 'Neurčeno'
             
-            tema_val = df.iloc[9, col_idx]  # Row 9 for topic
+            tema_val = df.iloc[8, col_idx]  # Row 8 for topic (Excel row 9)
             tema = str(tema_val) if not pd.isna(tema_val) else 'Neurčeno'
             
-            ucitel_val = df.iloc[10, col_idx]  # Row 10 for teacher
+            ucitel_val = df.iloc[9, col_idx]  # Row 9 for teacher (Excel row 10)
             ucitel = str(ucitel_val) if not pd.isna(ucitel_val) else 'Neurčeno'
             
             return {

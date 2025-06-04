@@ -10,9 +10,9 @@ VERSIONS = {
         "template_markers": ["16 hodin"],
         "data_start_row": 12,  # Row where student data starts (0-indexed)
         "data_start_col": 2,   # Column B
-        "hours_row": 11,       # Row with hours
-        "dates_row": 6,        # Row with dates
-        "activity_row": 5,     # Row with activity numbers
+        "hours_row": 10,       # Row with hours (Excel row 11)
+        "dates_row": 5,        # Row with dates (Excel row 6)
+        "activity_row": 4,     # Row with activity numbers (Excel row 5)
         "name_col": 2,         # Column B - student names
         "sdp_hours_col": 4,    # Column E - SDP hours for 16h
         "output_prefix": "16_hodin_inovativniho_vzdelavani",
