@@ -974,10 +974,11 @@ class InvVzdProcessor(BaseTool):
             self.logger.error(f"[INVVZD] Basic copy error: {str(e)}")
             return False
             
-    def select_folder(self, folder_path: str) -> Dict[str, Any]:
-        """Scan folder for attendance files and filter them"""
+    def select_folder(self, folder_path: str, template_path: str = None) -> Dict[str, Any]:
+        """Scan folder for attendance files and filter them by template version"""
         self.logger.info(f"[INVVZD] === SELECT FOLDER START ===")
         self.logger.info(f"[INVVZD] Folder path: {folder_path}")
+        self.logger.info(f"[INVVZD] Template path: {template_path}")
         
         result = {"success": False, "files": [], "message": ""}
         
@@ -987,6 +988,12 @@ class InvVzdProcessor(BaseTool):
                 self.logger.error(f"[INVVZD] Folder does not exist: {folder_path}")
                 result["message"] = f"Složka neexistuje: {folder_path}"
                 return result
+            
+            # Detect template version if provided
+            template_version = None
+            if template_path and os.path.exists(template_path):
+                template_version = self._detect_template_version(template_path)
+                self.logger.info(f"[INVVZD] Template version detected: {template_version}h")
                 
             # List all files in folder
             all_files = os.listdir(folder_path)
@@ -1016,9 +1023,9 @@ class InvVzdProcessor(BaseTool):
                     self.logger.info(f"[INVVZD] Detected version: {version}")
                     
                     if version:
-                        # Check if version matches current template
-                        if self.version and version != self.version:
-                            self.logger.info(f"[INVVZD] Skipping file {file} - version mismatch (file: {version}h, template: {self.version}h)")
+                        # Apply template version filtering if template is provided
+                        if template_version and version != template_version:
+                            self.logger.info(f"[INVVZD] Skipping file {file} - version mismatch (file: {version}h, template: {template_version}h)")
                             continue
                             
                         self.logger.info(f"[INVVZD] Valid attendance file found: {file} (version {version}h)")
@@ -1026,7 +1033,7 @@ class InvVzdProcessor(BaseTool):
                             "path": full_path,
                             "name": file,
                             "version": f"{version} hodin",
-                            "compatible": True
+                            "compatible": template_version is None or version == template_version
                         })
                     else:
                         self.logger.info(f"[INVVZD] Not an attendance file: {file}")
@@ -1035,18 +1042,18 @@ class InvVzdProcessor(BaseTool):
             self.logger.info(f"[INVVZD] Total compatible files found: {len(attendance_files)}")
             
             # Include info about template version in message
-            template_hours = self.config["hours"] if self.version else "?"
+            template_hours = template_version if template_version else "?"
             
             if attendance_files:
                 result["success"] = True
                 result["files"] = attendance_files
-                if self.version:
+                if template_version:
                     result["message"] = f"Nalezeno {len(attendance_files)} souborů kompatibilních se šablonou {template_hours} hodin"
                 else:
                     result["message"] = f"Nalezeno {len(attendance_files)} souborů s docházkou"
                 self.logger.info(f"[INVVZD] SUCCESS: {result['message']}")
             else:
-                if self.version:
+                if template_version:
                     result["message"] = f"Ve složce nebyly nalezeny žádné soubory kompatibilní se šablonou {template_hours} hodin"
                 else:
                     result["message"] = "Ve složce nebyly nalezeny žádné soubory s docházkou"

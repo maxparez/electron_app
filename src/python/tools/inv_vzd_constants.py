@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Constants for InvVzd processor
 """
@@ -74,7 +75,7 @@ VALIDATION_THRESHOLDS = {
     "header_match_percent": 0.7  # Percentage of headers that must match
 }
 
-# Error messages
+# Error messages - ensuring proper UTF-8 encoding
 ERROR_MESSAGES = {
     "no_template": "Šablona nebyla poskytnuta",
     "no_files": "Žádné soubory k zpracování",
@@ -96,7 +97,7 @@ ERROR_MESSAGES = {
     "no_dates": "Nenalezeny žádné datumy: {error}"
 }
 
-# Info messages  
+# Info messages - ensuring proper UTF-8 encoding
 INFO_MESSAGES = {
     "version_detected": "Detekována verze: {version}h šablona",
     "processing_file": "Zpracovávám soubor: {file}",

@@ -44,8 +44,8 @@ class AppLogger:
         error_handler = logging.FileHandler(error_file, encoding='utf-8')
         error_handler.setLevel(logging.ERROR)
         
-        # Console handler
-        console_handler = logging.StreamHandler(sys.stdout)
+        # Console handler - use stderr to avoid buffer issues in production
+        console_handler = logging.StreamHandler(sys.stderr)
         console_handler.setLevel(logging.INFO)
         
         # Formatter
@@ -63,10 +63,16 @@ class AppLogger:
         error_handler.setFormatter(detailed_formatter)
         console_handler.setFormatter(simple_formatter)
         
-        # Add handlers
+        # Add handlers - be careful with threading
         self.logger.addHandler(file_handler)
         self.logger.addHandler(error_handler)
-        self.logger.addHandler(console_handler)
+        
+        # Only add console handler in development or when stdout is available
+        if hasattr(sys.stdout, 'isatty') and (sys.stdout.isatty() or not getattr(sys, 'frozen', False)):
+            self.logger.addHandler(console_handler)
+        else:
+            # In production/frozen mode, skip console logging to avoid buffer issues
+            self.logger.debug("Skipping console handler - running in production/frozen mode")
         
         # Log startup
         self.logger.info(f"Logger initialized for {name}")
