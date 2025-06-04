@@ -10,13 +10,13 @@ VERSIONS = {
         "template_markers": ["16 hodin"],
         "data_start_row": 12,  # Row where student data starts (0-indexed)
         "data_start_col": 2,   # Column C (0-based index, so C = 2)
-        "hours_row": 10,       # Row with hours (Excel row 11)
-        "dates_row": 4,        # Row with dates (Excel row 5) - FIXED!
-        "time_row": 5,         # Row with times (Excel row 6) - FIXED!
-        "form_row": 6,         # Row with forms (Excel row 7) - FIXED!
-        "topic_row": 7,        # Row with topics (Excel row 8) - FIXED!
-        "teacher_row": 8,      # Row with teachers (Excel row 9) - FIXED!
-        "activity_row": 3,     # Row with activity numbers (Excel row 4) - FIXED!
+        "hours_row": 9,        # Row with hours (pandas index 9 = Excel row 11)
+        "dates_row": 4,        # Row with dates (pandas index 4 = Excel row 6)
+        "time_row": 5,         # Row with times (pandas index 5 = Excel row 7)
+        "form_row": 6,         # Row with forms (pandas index 6 = Excel row 8)
+        "topic_row": 7,        # Row with topics (pandas index 7 = Excel row 9)
+        "teacher_row": 8,      # Row with teachers (pandas index 8 = Excel row 10)
+        "activity_row": 3,     # Row with activity numbers (pandas index 3 = Excel row 5)
         "name_col": 1,         # Column B - student names
         "sdp_hours_col": 4,    # Column E - SDP hours for 16h
         "output_prefix": "16_hodin_inovativniho_vzdelavani",
@@ -26,12 +26,14 @@ VERSIONS = {
         "hours": 32,
         "hours_per_session": 4,  # Hours per session/date
         "template_markers": ["32 hodin"],
-        "data_start_row": 11,  # Row where student data starts (0-indexed)
-        "data_start_col": 2,   # Column B
-        "hours_row": 10,       # Row with hours
-        "dates_row": 7,        # Row with dates  
-        "activity_row": 6,     # Row with activity numbers
-        "name_col": 2,         # Column B - student names
+        "data_start_row": 9,   # Row where student data starts (pandas index 9 = Excel row 11)
+        "data_start_col": 2,   # Column C (0-based index)
+        "hours_row": 8,        # Row with hours (pandas index 8 = Excel row 10)
+        "dates_row": 4,        # Row with dates (pandas index 4 = Excel row 6)
+        "form_row": 5,         # Row with forms (pandas index 5 = Excel row 7)
+        "topic_row": 6,        # Row with topics (pandas index 6 = Excel row 8)
+        "teacher_row": 7,      # Row with teachers (pandas index 7 = Excel row 9)
+        "name_col": 1,         # Column B - student names
         "sdp_hours_col": 3,    # Column D - SDP hours for 32h
         "output_prefix": "32_hodin_inovativniho_vzdelavani",
         "short_prefix": "32_inv"

@@ -170,8 +170,13 @@ class InvVzdProcessor(BaseTool):
                 self._add_error('invalid_excel', error=msg)
                 return None
                 
-            # Read source data
-            df = pd.read_excel(source_file, sheet_name='zdroj-dochazka')
+            # Read source data - try different sheet names
+            sheet_name = self._find_data_sheet(source_file)
+            if not sheet_name:
+                self._add_error('invalid_excel', error="Nenalezen datový list")
+                return None
+                
+            df = pd.read_excel(source_file, sheet_name=sheet_name)
             
             # Validate DataFrame structure
             valid, msg = self.data_validator.validate_dataframe(
@@ -208,8 +213,13 @@ class InvVzdProcessor(BaseTool):
                 self._add_error('invalid_excel', error=msg)
                 return None
                 
-            # Read source data
-            df = pd.read_excel(source_file, sheet_name='zdroj-dochazka')
+            # Read source data - try different sheet names
+            sheet_name = self._find_data_sheet(source_file)
+            if not sheet_name:
+                self._add_error('invalid_excel', error="Nenalezen datový list")
+                return None
+                
+            df = pd.read_excel(source_file, sheet_name=sheet_name)
             
             # Validate DataFrame structure
             valid, msg = self.data_validator.validate_dataframe(
@@ -501,20 +511,36 @@ class InvVzdProcessor(BaseTool):
                 return i
         return len(df)
         
+    def _find_data_sheet(self, file_path: str) -> Optional[str]:
+        """Find the sheet containing attendance data"""
+        try:
+            # Get all sheet names
+            xl_file = pd.ExcelFile(file_path)
+            sheet_names = xl_file.sheet_names
+            
+            # Preferred sheet names in order
+            preferred_names = ['zdroj-dochazka', 'List1', 'Sheet1']
+            
+            # Try preferred names first
+            for name in preferred_names:
+                if name in sheet_names:
+                    return name
+                    
+            # If no preferred name found, use first sheet
+            if sheet_names:
+                return sheet_names[0]
+                
+            return None
+        except Exception as e:
+            self.logger.error(f"[INVVZD] Error finding data sheet: {str(e)}")
+            return None
+        
     def _extract_activity_16h(self, df: pd.DataFrame, col_idx: int, 
                             date_value: Any) -> Optional[Dict[str, Any]]:
         """Extract activity data for 16h version from a column"""
         config = self.config
         
         try:
-            # 16h structure:
-            # Row 6: dates
-            # Row 7: times (čas zahájení)
-            # Row 8: forms (forma výuky)
-            # Row 9: topics (téma výuky)
-            # Row 10: teachers (jméno pedagoga)
-            # Row 11: hours (počet hodin)
-            
             # Get hours first to check if column has data
             hours_val = df.iloc[config['hours_row'], col_idx]
             if pd.isna(hours_val) or str(hours_val).strip() == '':
@@ -533,17 +559,17 @@ class InvVzdProcessor(BaseTool):
             else:
                 datum = str(date_value).strip()
                 
-            # Get other fields
-            time_val = df.iloc[7, col_idx]  # Row 7 for time
+            # Get other fields using config indices
+            time_val = df.iloc[config['time_row'], col_idx]
             cas = str(time_val) if not pd.isna(time_val) else ''
             
-            forma_val = df.iloc[8, col_idx]  # Row 8 for form
+            forma_val = df.iloc[config['form_row'], col_idx]
             forma = str(forma_val) if not pd.isna(forma_val) else 'Neurčeno'
             
-            tema_val = df.iloc[9, col_idx]  # Row 9 for topic
+            tema_val = df.iloc[config['topic_row'], col_idx]
             tema = str(tema_val) if not pd.isna(tema_val) else 'Neurčeno'
             
-            ucitel_val = df.iloc[10, col_idx]  # Row 10 for teacher
+            ucitel_val = df.iloc[config['teacher_row'], col_idx]
             ucitel = str(ucitel_val) if not pd.isna(ucitel_val) else 'Neurčeno'
             
             return {
@@ -562,9 +588,50 @@ class InvVzdProcessor(BaseTool):
     def _extract_activity_32h(self, df: pd.DataFrame, col_idx: int, 
                             date_value: Any) -> Optional[Dict[str, Any]]:
         """Extract activity data for 32h version from a column"""
-        # 32h has similar structure but different row indices
-        # Reuse 16h logic with adjusted config
-        return self._extract_activity_16h(df, col_idx, date_value)
+        config = self.config
+        
+        try:
+            # Get hours first to check if column has data
+            hours_val = df.iloc[config['hours_row'], col_idx]
+            if pd.isna(hours_val) or str(hours_val).strip() == '':
+                return None
+                
+            try:
+                hours = int(float(str(hours_val)))
+                if hours <= 0:
+                    return None
+            except:
+                return None
+                
+            # Format date
+            if hasattr(date_value, 'strftime'):
+                datum = date_value.strftime('%d.%m.%Y')
+            else:
+                datum = str(date_value).strip()
+                
+            # Get other fields using config indices
+            # Note: 32h format doesn't have time field
+            forma_val = df.iloc[config['form_row'], col_idx]
+            forma = str(forma_val) if not pd.isna(forma_val) else 'Neurčeno'
+            
+            tema_val = df.iloc[config['topic_row'], col_idx]
+            tema = str(tema_val) if not pd.isna(tema_val) else 'Neurčeno'
+            
+            ucitel_val = df.iloc[config['teacher_row'], col_idx]
+            ucitel = str(ucitel_val) if not pd.isna(ucitel_val) else 'Neurčeno'
+            
+            return {
+                'datum': datum,
+                'cas': '',  # 32h format doesn't have time
+                'hodin': hours,
+                'forma': forma,
+                'tema': tema,
+                'ucitel': ucitel
+            }
+            
+        except Exception as e:
+            self.logger.error(f"[INVVZD] Activity extraction error: {str(e)}")
+            return None
         
     def clear_file_messages(self):
         """Clear messages but keep version info"""
