@@ -428,32 +428,36 @@ def process_inv_vzd_paths():
         server_logger.info(f"Full result: {result}")
         
         # Check if we have ANY data or messages
-        has_data = result.get('data') and result.get('data', {}).get('processed_files')
+        # Refactored processor returns 'results' instead of 'data'
+        has_results = result.get('results', [])
         has_info = result.get('info', [])
         has_errors = result.get('errors', [])
         has_warnings = result.get('warnings', [])
         
         # Prepare output files list - keep per-file structure for UI
         output_files = []
-        if has_data:
-            for processed in result['data']['processed_files']:
-                # Convert numpy/pandas types to native Python types for JSON serialization
-                hours_value = processed['hours']
+        if has_results:
+            for processed in has_results:
+                # Extract values from file result
+                hours_value = processed.get('hours', 0)
+                
+                # Convert numpy/pandas types if present
                 if hasattr(hours_value, 'item'):
                     hours_value = hours_value.item()  # Convert numpy/pandas scalar to Python type
                 elif hasattr(hours_value, 'tolist'):
                     hours_value = hours_value.tolist()  # Convert numpy array to list
                 
-                # Preserve per-file structure with output filename properly set
-                output_files.append({
-                    'source': processed['source'],
-                    'output': processed['output'] if processed['output'] else None,
-                    'hours': int(hours_value) if hours_value is not None else 0,
-                    'status': processed.get('status', 'unknown'),
-                    'errors': processed.get('errors', []),
-                    'warnings': processed.get('warnings', []),
-                    'info': processed.get('info', [])
-                })
+                # Only add successfully processed files to output
+                if processed.get('status') == 'success' and processed.get('output'):
+                    output_files.append({
+                        'source': processed['source'],
+                        'output': processed['output'],
+                        'hours': int(hours_value) if hours_value is not None else 0,
+                        'status': processed.get('status', 'unknown'),
+                        'errors': processed.get('errors', []),
+                        'warnings': processed.get('warnings', []),
+                        'info': processed.get('info', [])
+                    })
         
         # Enhanced error message for path issues
         enhanced_errors = []
@@ -464,9 +468,10 @@ def process_inv_vzd_paths():
                 enhanced_errors.append(error)
         
         # Always return info/errors/warnings in the data field so UI can display them
-        # Use "success" status even if result['success'] is False to ensure UI displays the detailed report
+        # Use "success" status even if result['status'] is 'success' to ensure UI displays the detailed report
+        # Note: refactored processor returns 'status' not 'success'
         return jsonify({
-            "status": "success" if result['success'] else "partial",
+            "status": "success" if result.get('status') == 'success' else "partial",
             "message": f"Úspěšně zpracováno {len(output_files)} souborů" if output_files else "Zpracování dokončeno s chybami",
             "data": {
                 "processed": len(output_files),
