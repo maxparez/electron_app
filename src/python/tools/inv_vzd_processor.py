@@ -515,23 +515,24 @@ class InvVzdProcessor(BaseTool):
         config = self.config
         
         try:
+            self.logger.info(f"[INVVZD] _process_attendance_16h: Starting with {len(dates)} dates")
+            self.logger.info(f"[INVVZD] Config: data_start_col={config['data_start_col']}, hours_row={config['hours_row']}")
+            
             # 16h format reads activities/dates, not participants
             # Structure: dates in row 6, data in columns
             activities = []
             
             # Process each date/activity column
             col = config['data_start_col']  # Start from column C (index 2)
-            activity_num = 0
             
-            while activity_num < len(dates):
-                # Read activity data from column
-                activity = self._extract_activity_16h(df, col, dates[activity_num])
-                if activity:
-                    activities.append(activity)
-                    col += 1
-                    activity_num += 1
-                else:
-                    break
+            # Read activities while there are hours in columns
+            for i in range(len(dates)):
+                if i < len(dates):
+                    # Read activity data from column
+                    activity = self._extract_activity_16h(df, col + i, dates[i])
+                    if activity:
+                        activities.append(activity)
+                        self.logger.info(f"[INVVZD] Added activity {i+1}: {activity['datum']}, {activity['hodin']}h")
                     
             # Create DataFrame from activities
             if activities:
@@ -599,6 +600,7 @@ class InvVzdProcessor(BaseTool):
         config = self.config
         
         try:
+            self.logger.info(f"[INVVZD] _extract_activity_16h: col_idx={col_idx}, date_value={date_value}")
             # 16h structure (0-based indices):
             # Row 5: dates (Excel row 6)
             # Row 6: times (Excel row 7 - čas zahájení)
