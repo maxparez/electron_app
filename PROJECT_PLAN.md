@@ -149,9 +149,9 @@ Projekt bude považován za úspěšný když:
 - Původní skripty zůstanou k dispozici jako záloha
 - Průběžné testování s reálnými daty
 
-## Aktuální stav (2025-01-06)
-- **Branch**: deployment-windows
-- **Připravenost**: 98% - čeká se pouze na Windows deployment
-- **InvVzd nástroj**: Plně funkční s vylepšeným error handlingem
-- **UI/UX**: Modernizováno, intuitivní ovládání
-- **Poslední úpravy**: Per-file error isolation, specifické validační chyby
+## Aktuální stav (2025-06-04)
+- **Branch**: refactor/code-cleanup (debugging)
+- **Připravenost**: 100% deployment + aktivní refaktoring
+- **InvVzd nástroj**: Refaktorovaná verze se debuguje
+- **UI/UX**: Plně funkční, připraveno pro produkci
+- **Poslední úpravy**: Oprava row indexů v refaktorovaném kódu
