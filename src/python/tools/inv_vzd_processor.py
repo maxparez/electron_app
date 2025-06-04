@@ -172,8 +172,16 @@ class InvVzdProcessor(BaseTool):
                 self._add_error('invalid_excel', error=msg)
                 return None
                 
-            # Read source data
-            df = pd.read_excel(source_file, sheet_name='zdroj-dochazka')
+            # Read source data - try zdroj-dochazka first, then fall back to first sheet
+            try:
+                df = pd.read_excel(source_file, sheet_name='zdroj-dochazka')
+                self.logger.info(f"[INVVZD] Using sheet: zdroj-dochazka")
+            except ValueError:
+                # Fall back to first sheet
+                df = pd.read_excel(source_file, sheet_name=0)
+                excel_file = pd.ExcelFile(source_file)
+                sheet_name = excel_file.sheet_names[0]
+                self.logger.info(f"[INVVZD] Using first sheet: {sheet_name}")
             
             # Validate DataFrame structure
             valid, msg = self.data_validator.validate_dataframe(
@@ -210,8 +218,16 @@ class InvVzdProcessor(BaseTool):
                 self._add_error('invalid_excel', error=msg)
                 return None
                 
-            # Read source data
-            df = pd.read_excel(source_file, sheet_name='zdroj-dochazka')
+            # Read source data - try zdroj-dochazka first, then fall back to first sheet
+            try:
+                df = pd.read_excel(source_file, sheet_name='zdroj-dochazka')
+                self.logger.info(f"[INVVZD] Using sheet: zdroj-dochazka")
+            except ValueError:
+                # Fall back to first sheet
+                df = pd.read_excel(source_file, sheet_name=0)
+                excel_file = pd.ExcelFile(source_file)
+                sheet_name = excel_file.sheet_names[0]
+                self.logger.info(f"[INVVZD] Using first sheet: {sheet_name}")
             
             # Validate DataFrame structure
             valid, msg = self.data_validator.validate_dataframe(
@@ -609,17 +625,17 @@ class InvVzdProcessor(BaseTool):
             else:
                 datum = str(date_value).strip()
                 
-            # Get other fields using correct indices
-            time_val = df.iloc[6, col_idx]  # Row 6 for time (Excel row 7)
+            # Get other fields using correct indices from config
+            time_val = df.iloc[config.get('time_row', 6), col_idx]
             cas = str(time_val) if not pd.isna(time_val) else ''
             
-            forma_val = df.iloc[7, col_idx]  # Row 7 for form (Excel row 8)
+            forma_val = df.iloc[config.get('form_row', 7), col_idx]
             forma = str(forma_val) if not pd.isna(forma_val) else 'Neurčeno'
             
-            tema_val = df.iloc[8, col_idx]  # Row 8 for topic (Excel row 9)
+            tema_val = df.iloc[config.get('topic_row', 8), col_idx]
             tema = str(tema_val) if not pd.isna(tema_val) else 'Neurčeno'
             
-            ucitel_val = df.iloc[9, col_idx]  # Row 9 for teacher (Excel row 10)
+            ucitel_val = df.iloc[config.get('teacher_row', 9), col_idx]
             ucitel = str(ucitel_val) if not pd.isna(ucitel_val) else 'Neurčeno'
             
             return {
