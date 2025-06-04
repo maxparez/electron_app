@@ -217,9 +217,19 @@ def select_folder():
             server_logger.info(f"[SELECT-FOLDER] Converted to WSL path: {folder_path}")
         
         if tool_type == 'inv-vzd':
-            # Create InvVzdProcessor without version for scanning
+            # Get template path from request data if provided
+            template_path = data.get('templatePath') if data else None
+            
+            # Create InvVzdProcessor
             processor = InvVzdProcessor(logger=tool_logger)
-            result = processor.select_folder(folder_path)
+            
+            # If template is provided, detect its version for filtering
+            template_version = None
+            if template_path and os.path.exists(template_path):
+                template_version = processor._detect_template_version(template_path)
+                server_logger.info(f"[SELECT-FOLDER] Template version detected: {template_version}")
+            
+            result = processor.select_folder(folder_path, template_path)
             server_logger.info(f"[SELECT-FOLDER] InvVzd scan result: {result}")
             return jsonify(result)
         else:
