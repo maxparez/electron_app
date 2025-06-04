@@ -370,16 +370,18 @@ class InvVzdProcessor(BaseTool):
                     self.logger.info(f"[INVVZD] Detected version: 32h (zdroj-dochazka exists but no 'čas zahájení')") 
                     return "32"
             
-            # Priority 2: If no "zdroj-dochazka", use first sheet and check B6/B7
+            # Priority 2: If no "zdroj-dochazka", use first sheet and check B5/B6/B7
             if sheet_names:
                 self.logger.info(f"[INVVZD] No 'zdroj-dochazka' sheet, checking first sheet: {sheet_names[0]}")
                 sheet = wb[sheet_names[0]]  # Take first sheet regardless of name
                 b5_value = sheet["B5"].value
                 b6_value = sheet["B6"].value
+                b7_value = sheet["B7"].value
                 self.logger.info(f"[INVVZD] B5 value: '{b5_value}'")
                 self.logger.info(f"[INVVZD] B6 value: '{b6_value}'")
+                self.logger.info(f"[INVVZD] B7 value: '{b7_value}'")
                 
-                # Check if B5 contains "datum aktivity"
+                # Check if B5 contains "datum aktivity" (16h format)
                 if b5_value and "datum aktivity" in str(b5_value).lower():
                     self.logger.info(f"[INVVZD] Found 'datum aktivity' in B5")
                     # If B6 contains "čas zahájení" then 16h, otherwise 32h
@@ -390,6 +392,15 @@ class InvVzdProcessor(BaseTool):
                     else:
                         wb.close()
                         self.logger.info(f"[INVVZD] Detected version: 32h (B5 has 'datum aktivity' but no 'čas zahájení' in B6)")
+                        return "32"
+                
+                # Check if B6 contains "datum aktivity" (32h format)
+                elif b6_value and "datum aktivity" in str(b6_value).lower():
+                    self.logger.info(f"[INVVZD] Found 'datum aktivity' in B6")
+                    # Check B7 for "Forma výuky" to confirm 32h
+                    if b7_value and "forma výuky" in str(b7_value).lower():
+                        wb.close()
+                        self.logger.info(f"[INVVZD] Detected version: 32h (found 'datum aktivity' in B6 and 'Forma výuky' in B7)")
                         return "32"
             
             # Fallback: Check legacy formats
