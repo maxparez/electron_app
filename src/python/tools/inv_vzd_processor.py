@@ -560,20 +560,23 @@ class InvVzdProcessor(BaseTool):
             # Format dates properly - ensure they include full date (DD.MM.YYYY)
             if 'datum' in df.columns:
                 # First try to fix incomplete dates if they exist
-                # For 16h template, data starts at row 6 (C6)
-                df['datum'] = self._fix_incomplete_dates(df['datum'], start_row=6)
+                # For 16h template, data starts at row 6, column C (3)
+                df['datum'] = self._fix_incomplete_dates(df['datum'], start_row=6, start_col=3)
                 # Then convert to datetime and format - SPECIFY dayfirst=True for DD.MM.YYYY format!
                 df['datum'] = pd.to_datetime(df['datum'], format='%d.%m.%Y', dayfirst=True, errors='coerce')
                 
                 # Check for any failed date conversions
                 nan_count = df['datum'].isna().sum()
                 if nan_count > 0:
-                    # Find which rows have invalid dates and report specific cells
+                    # Find which activities have invalid dates and report specific cells
                     failed_indices = df[df['datum'].isna()].index.tolist()
                     for idx in failed_indices:
-                        # Row number in Excel is idx + 3 (header at 1, data starts at 3, 0-based index)
-                        excel_row = idx + 3
-                        self.add_error(f"Chybí nebo neplatné datum v řádku {excel_row}")
+                        # For 16h format, dates are in row 6, columns start at C (3)
+                        # idx 0 = column C, idx 1 = column D, etc.
+                        from openpyxl.utils import get_column_letter
+                        col_letter = get_column_letter(3 + idx)  # C=3, D=4, E=5, etc.
+                        cell_ref = f"{col_letter}6"  # Row 6 for dates in 16h format
+                        self.add_error(f"Chybí nebo neplatné datum v buňce {cell_ref}")
                     
                     self.add_info("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
                     return None
@@ -771,11 +774,18 @@ class InvVzdProcessor(BaseTool):
                 # Check for any failed conversions
                 nan_count = df['datum'].isna().sum()
                 if nan_count > 0:
-                    self.add_warning(f"Upozornění: {nan_count} datumů se nepodařilo převést")
-                    # Try to show which dates failed
+                    # Find which activities have invalid dates and report specific cells
                     failed_indices = df[df['datum'].isna()].index.tolist()
-                    if failed_indices:
-                        self.add_warning(f"Problematické řádky: {failed_indices[:5]}...")  # Show first 5
+                    for idx in failed_indices:
+                        # For 32h format, dates are in row 6, columns start at C (3)
+                        from openpyxl.utils import get_column_letter
+                        col_letter = get_column_letter(3 + idx)  # C=3, D=4, E=5, etc.
+                        cell_ref = f"{col_letter}6"  # Row 6 for dates
+                        self.add_error(f"Chybí nebo neplatné datum v buňce {cell_ref}")
+                    
+                    self.add_info("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
+                    wb.close()
+                    return None
                 
                 # Format as DD.MM.YYYY
                 df['datum'] = df['datum'].dt.strftime('%d.%m.%Y')
