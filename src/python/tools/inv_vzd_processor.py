@@ -1241,9 +1241,12 @@ class InvVzdProcessor(BaseTool):
                     attendance = sheet.cell(row=student_row, column=activity_col).value
                     
                     # Only add to overview if student attended (has "ano" or similar)
-                    if attendance and str(attendance).strip().lower() in ['ano', 'yes', '1', 'true']:
-                        overview_result.append([activity_num, student_name])
-                        self.logger.info(f"[INVVZD] Student {student_name} attended activity {activity_num}")
+                    # Accept various formats: ANO, Ano, ano, with spaces, x, X, 1, etc.
+                    if attendance:
+                        attendance_str = str(attendance).strip().lower()
+                        if attendance_str in ['ano', 'yes', '1', 'true', 'x', '+', 'ok', 'a']:
+                            overview_result.append([activity_num, student_name])
+                            self.logger.info(f"[INVVZD] Student {student_name} attended activity {activity_num}")
             
             wb.close()
             
