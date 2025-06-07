@@ -547,6 +547,12 @@ class InvVzdProcessor(BaseTool):
             
             self.logger.info(f"[INVVZD] 16h Debug - Total data collected: {len(data)} activities")
             
+            # Check if we have any errors about missing dates
+            missing_date_errors = [err for err in self.errors if "Chybí datum aktivity" in err]
+            if missing_date_errors:
+                self.add_info("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
+                return None
+            
             if not data:
                 self.add_error("Nenalezena žádná data aktivit")
                 return None
