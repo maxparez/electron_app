@@ -1,22 +1,29 @@
 @echo off
-echo Starting Electron App - Backend and Frontend
-echo ===========================================
+chcp 65001 >nul
+title Nástroje pro ŠI a ŠII OP JAK
 
-REM Start backend in new window
-start "Flask Backend" cmd /k start-backend.bat
+REM Kontrola, zda je venv vytvořen
+if not exist venv (
+    echo ❌ CHYBA: Aplikace není nainstalována!
+    echo Nejprve spusťte: install-windows.bat
+    pause
+    exit /b 1
+)
 
-REM Wait a bit for backend to start
-echo Waiting for backend to start...
-timeout /t 5
+REM Aktivace venv a spuštění
+echo Spouštím aplikaci...
+call venv\Scripts\activate.bat
 
-REM Start frontend in new window
-start "Electron Frontend" cmd /k start-frontend.bat
+REM Spuštění Python backendu na pozadí
+start /B python src\python\server.py
 
-echo.
-echo Both backend and frontend should be starting in separate windows.
-echo.
-echo Backend: http://localhost:5000
-echo Frontend: Electron window should open automatically
-echo.
-echo Press any key to exit this window...
-pause > nul
+REM Počkej 2 sekundy než se server nastartuje
+timeout /t 2 /nobreak >nul
+
+REM Spuštění Electron aplikace
+npm start
+
+REM Po ukončení Electronu zabij Python server
+taskkill /F /IM python.exe >nul 2>&1
+
+exit

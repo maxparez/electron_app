@@ -17,9 +17,9 @@ python-dateutil>=2.8.0
 # PDF generation
 reportlab==4.4.1
 
-# Data processing - staršíverze pro kompatibilitu
-pandas==2.1.4
-numpy==1.24.4
+# Data processing - nejnovější verze pro Python 3.13
+pandas>=2.2.0
+numpy>=1.26.0
 
 # Timezone support
 pytz>=2023.3
