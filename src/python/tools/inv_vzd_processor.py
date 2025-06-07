@@ -1151,8 +1151,8 @@ class InvVzdProcessor(BaseTool):
             self.logger.info(f"[INVVZD] STEP 3: Writing overview...")
             sheet = wb.sheets['Přehled']
             
-            # Create overview data (student-activity combinations)
-            overview_data = self._create_overview_data(student_names, data)
+            # Create overview data (student-activity combinations based on actual attendance)
+            overview_data = self._create_overview_data(student_names, data, source_file)
             if len(overview_data) > 0:
                 self.add_info(f"Zapisuji {len(overview_data)} záznamů do Přehled")
                 sheet.range("C3").options(ndim="expand").value = overview_data
@@ -1217,19 +1217,37 @@ class InvVzdProcessor(BaseTool):
             self.add_error(f"Chyba při načítání jmen žáků: {str(e)}")
             return []
     
-    def _create_overview_data(self, student_names: List[str], activities_data: pd.DataFrame) -> List[List]:
-        """Create overview data combining students with activity numbers"""
+    def _create_overview_data(self, student_names: List[str], activities_data: pd.DataFrame, source_file: str) -> List[List]:
+        """Create overview data combining students with activity numbers based on actual attendance"""
         try:
-            # Following original logic from create_orginal_file
+            # Read actual attendance from source file
+            wb = load_workbook(source_file, read_only=True)
+            sheet_name = "zdroj-dochazka" if "zdroj-dochazka" in wb.sheetnames else wb.sheetnames[0]
+            sheet = wb[sheet_name]
+            
             overview_result = []
             
-            # For each activity (numbered 1, 2, 3...)
-            for activity_num, (_, activity) in enumerate(activities_data.iterrows(), 1):
-                # Add all students for this activity
-                for student_name in student_names:
-                    overview_result.append([activity_num, student_name])
+            # Starting row for student data depends on version
+            start_row = 12 if self.version == "16" else 11
             
-            self.add_info(f"Vytvořen přehled: {len(activities_data)} aktivit × {len(student_names)} žáků = {len(overview_result)} záznamů")
+            # For each activity (numbered 1, 2, 3...)
+            for activity_num, (idx, activity) in enumerate(activities_data.iterrows(), 1):
+                # Activity column in source file (starts at column C = 3)
+                activity_col = 3 + idx
+                
+                # Check each student's attendance for this activity
+                for student_idx, student_name in enumerate(student_names):
+                    student_row = start_row + student_idx
+                    attendance = sheet.cell(row=student_row, column=activity_col).value
+                    
+                    # Only add to overview if student attended (has "ano" or similar)
+                    if attendance and str(attendance).strip().lower() in ['ano', 'yes', '1', 'true']:
+                        overview_result.append([activity_num, student_name])
+                        self.logger.info(f"[INVVZD] Student {student_name} attended activity {activity_num}")
+            
+            wb.close()
+            
+            self.add_info(f"Vytvořen přehled: {len(overview_result)} záznamů skutečné účasti")
             return overview_result
             
         except Exception as e:
