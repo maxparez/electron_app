@@ -1,5 +1,9 @@
 # CLAUDE.md - Project Context for Electron App
 
+## 🔄 Pro pokračování v práci
+Pokud se vracíte k projektu po delší době, přečtěte si:
+@CLAUDE_CONTEXT_GUIDE.md @STARTUP_PROMPT.md
+
 ## Project Overview
 
 **Name:** Electron App - Zpracování projektové dokumentace  
