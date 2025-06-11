@@ -21,9 +21,14 @@ Stáhněte a nainstalujte:
 
 #### Varianta A - S Gitem (doporučeno):
 ```cmd
-git clone https://github.com/maxparez/electron_app.git
+git clone -b feature/next-phase https://github.com/maxparez/electron_app.git
 cd electron_app
 install-windows.bat
+```
+
+**Poznámka:** Po dokončení testování bude vše v hlavní větvi a použijete:
+```cmd
+git clone https://github.com/maxparez/electron_app.git
 ```
 
 #### Varianta B - Bez Gitu:
