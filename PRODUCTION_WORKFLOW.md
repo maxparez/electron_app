@@ -10,6 +10,8 @@
 1. **CMD window fix** - oprava start-app.bat (commit [fix-062])
 2. **Backend lifecycle** - Electron správně ukončuje Python (commit [fix-062]) 
 3. **Production detection** - použití app.isPackaged (commit [fix-063])
+4. **Admin rights removal** - instalace do %LOCALAPPDATA% (commit [fix-070])
+5. **Icon rename** - icon.ico místo dlouhého názvu (commit [rename-069])
 
 ## 📋 Postup: Dev → Prod
 
@@ -141,6 +143,11 @@ echo Production build complete!
 ## 🔧 Poslední kritické opravy
 - **[fix-062]**: CMD okno zůstávalo otevřené → Electron správně řídí Python lifecycle
 - **[fix-063]**: Špatná detekce prostředí → app.isPackaged místo --dev flag
+- **[fix-066]**: Python CMD okno skryto → windowsHide: true pro Windows
+- **[fix-067]**: Robustní ukončování → taskkill místo SIGTERM na Windows
+- **[fix-068]**: Permission fallback → Node.js kill pokud taskkill selže
+- **[fix-070]**: Admin práva odstraněna → %LOCALAPPDATA% místo %PROGRAMFILES%
+- **[rename-069]**: Ikona přejmenována → icon.ico pro jednoduchost
 
 ## 📝 Rychlý checklist před aktualizací production:
 - [ ] Všechny opravy v dev branch commitnuty a otestovány
@@ -153,4 +160,4 @@ echo Production build complete!
 
 ---
 *Návod vytvořen: 2025-06-07*
-*Poslední aktualizace: 2025-06-07 - přidány CMD/backend opravy*
+*Poslední aktualizace: 2025-06-13 - přidány admin práva fix + ikona rename*
