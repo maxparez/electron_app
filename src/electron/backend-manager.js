@@ -22,7 +22,8 @@ class BackendManager {
         this.lastStartTime = Date.now();
         
         try {
-            const isProd = !process.argv.includes('--dev');
+            // Better production detection - check if we're in packaged app
+            const isProd = app.isPackaged;
             const appPath = isProd ? process.resourcesPath : app.getAppPath();
             
             // Determine Python executable path
@@ -97,6 +98,14 @@ class BackendManager {
                 }
             } else {
                 scriptPath = path.join(appPath, 'src', 'python', 'server.py');
+                
+                // Check if script exists in development
+                if (!fs.existsSync(scriptPath)) {
+                    console.error(`[BackendManager] Development script not found: ${scriptPath}`);
+                    console.error(`[BackendManager] App path: ${appPath}`);
+                    console.error(`[BackendManager] Current working directory: ${process.cwd()}`);
+                    throw new Error(`Python script not found at: ${scriptPath}`);
+                }
             }
             
             console.log('[BackendManager] Python path:', pythonPath);
@@ -114,10 +123,19 @@ class BackendManager {
                 FLASK_PORT: config.get('python.port', 5000)
             };
             
-            this.pythonProcess = spawn(pythonPath, [scriptPath], {
+            // Windows-specific options to hide CMD window
+            const spawnOptions = {
                 cwd: appPath,
                 env: env
-            });
+            };
+            
+            // Hide console window on Windows
+            if (process.platform === 'win32') {
+                spawnOptions.windowsHide = true;
+                spawnOptions.stdio = ['ignore', 'pipe', 'pipe'];
+            }
+            
+            this.pythonProcess = spawn(pythonPath, [scriptPath], spawnOptions);
             
             this.pythonProcess.stdout.on('data', (data) => {
                 console.log(`[Python] ${data.toString().trim()}`);
@@ -219,17 +237,57 @@ class BackendManager {
         
         if (this.pythonProcess) {
             console.log('[BackendManager] Stopping Python backend...');
+            const pid = this.pythonProcess.pid;
             
-            // Try graceful shutdown first
-            this.pythonProcess.kill('SIGTERM');
+            if (process.platform === 'win32') {
+                // On Windows, use taskkill for reliable termination
+                const { exec } = require('child_process');
+                
+                // First try graceful termination
+                exec(`taskkill /PID ${pid}`, (error) => {
+                    if (error) {
+                        console.log('[BackendManager] Taskkill graceful failed, trying force taskkill');
+                        // Force kill if graceful fails
+                        exec(`taskkill /F /PID ${pid}`, (forceError) => {
+                            if (forceError) {
+                                console.log('[BackendManager] Taskkill force failed (permissions?), using Node.js kill');
+                                // Final fallback to Node.js kill
+                                try {
+                                    this.pythonProcess.kill('SIGKILL');
+                                } catch (nodeError) {
+                                    console.log('[BackendManager] All kill methods failed:', nodeError.message);
+                                }
+                            } else {
+                                console.log('[BackendManager] Python process forcefully terminated');
+                            }
+                        });
+                    } else {
+                        console.log('[BackendManager] Python process gracefully terminated');
+                    }
+                });
+                
+                // Also try Node.js kill as backup
+                setTimeout(() => {
+                    if (this.pythonProcess && !this.pythonProcess.killed) {
+                        try {
+                            this.pythonProcess.kill('SIGKILL');
+                        } catch (error) {
+                            console.log('[BackendManager] Node kill backup failed:', error.message);
+                        }
+                    }
+                }, 2000);
+            } else {
+                // On Linux/Mac use standard approach
+                this.pythonProcess.kill('SIGTERM');
+                setTimeout(() => {
+                    if (this.pythonProcess && !this.pythonProcess.killed) {
+                        this.pythonProcess.kill('SIGKILL');
+                    }
+                }, 3000);
+            }
             
-            // Force kill after 5 seconds if still running
-            setTimeout(() => {
-                if (this.pythonProcess) {
-                    console.log('[BackendManager] Force killing Python process...');
-                    this.pythonProcess.kill('SIGKILL');
-                }
-            }, 5000);
+            // Clean up reference
+            this.pythonProcess = null;
         }
     }
     

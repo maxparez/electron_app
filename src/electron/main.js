@@ -293,8 +293,22 @@ app.on('activate', () => {
 });
 
 app.on('will-quit', () => {
-    // Clean up Python process
-    stopPythonServer();
+    console.log('[App] Shutting down, stopping backend...');
+    if (backendManager) {
+        backendManager.stop();
+    }
+});
+
+// Emergency cleanup for unexpected shutdowns
+app.on('before-quit', () => {
+    console.log('[App] Before quit - emergency Python cleanup...');
+    if (process.platform === 'win32') {
+        // Kill all python.exe processes that might be our server
+        const { exec } = require('child_process');
+        exec('taskkill /F /IM python.exe /FI "WINDOWTITLE eq *server.py*"', () => {
+            // Silent cleanup - don't care about errors
+        });
+    }
 });
 
 // IPC handler for backend status
