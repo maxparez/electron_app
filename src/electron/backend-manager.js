@@ -123,10 +123,19 @@ class BackendManager {
                 FLASK_PORT: config.get('python.port', 5000)
             };
             
-            this.pythonProcess = spawn(pythonPath, [scriptPath], {
+            // Windows-specific options to hide CMD window
+            const spawnOptions = {
                 cwd: appPath,
                 env: env
-            });
+            };
+            
+            // Hide console window on Windows
+            if (process.platform === 'win32') {
+                spawnOptions.windowsHide = true;
+                spawnOptions.stdio = ['ignore', 'pipe', 'pipe'];
+            }
+            
+            this.pythonProcess = spawn(pythonPath, [scriptPath], spawnOptions);
             
             this.pythonProcess.stdout.on('data', (data) => {
                 console.log(`[Python] ${data.toString().trim()}`);
