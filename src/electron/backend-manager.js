@@ -246,11 +246,17 @@ class BackendManager {
                 // First try graceful termination
                 exec(`taskkill /PID ${pid}`, (error) => {
                     if (error) {
-                        console.log('[BackendManager] Graceful kill failed, trying force kill');
+                        console.log('[BackendManager] Taskkill graceful failed, trying force taskkill');
                         // Force kill if graceful fails
                         exec(`taskkill /F /PID ${pid}`, (forceError) => {
                             if (forceError) {
-                                console.log('[BackendManager] Force kill failed:', forceError.message);
+                                console.log('[BackendManager] Taskkill force failed (permissions?), using Node.js kill');
+                                // Final fallback to Node.js kill
+                                try {
+                                    this.pythonProcess.kill('SIGKILL');
+                                } catch (nodeError) {
+                                    console.log('[BackendManager] All kill methods failed:', nodeError.message);
+                                }
                             } else {
                                 console.log('[BackendManager] Python process forcefully terminated');
                             }
