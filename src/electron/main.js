@@ -299,6 +299,18 @@ app.on('will-quit', () => {
     }
 });
 
+// Emergency cleanup for unexpected shutdowns
+app.on('before-quit', () => {
+    console.log('[App] Before quit - emergency Python cleanup...');
+    if (process.platform === 'win32') {
+        // Kill all python.exe processes that might be our server
+        const { exec } = require('child_process');
+        exec('taskkill /F /IM python.exe /FI "WINDOWTITLE eq *server.py*"', () => {
+            // Silent cleanup - don't care about errors
+        });
+    }
+});
+
 // IPC handler for backend status
 ipcMain.handle('backend:getStatus', () => {
     return {

@@ -237,37 +237,51 @@ class BackendManager {
         
         if (this.pythonProcess) {
             console.log('[BackendManager] Stopping Python backend...');
+            const pid = this.pythonProcess.pid;
             
-            // On Windows, try to kill gracefully first
             if (process.platform === 'win32') {
-                try {
-                    // Try graceful termination
-                    process.kill(this.pythonProcess.pid, 'SIGTERM');
-                } catch (error) {
-                    console.log('[BackendManager] SIGTERM failed, trying force kill');
-                    this.pythonProcess.kill('SIGKILL');
-                }
+                // On Windows, use taskkill for reliable termination
+                const { exec } = require('child_process');
                 
-                // Force kill after 3 seconds if still running
+                // First try graceful termination
+                exec(`taskkill /PID ${pid}`, (error) => {
+                    if (error) {
+                        console.log('[BackendManager] Graceful kill failed, trying force kill');
+                        // Force kill if graceful fails
+                        exec(`taskkill /F /PID ${pid}`, (forceError) => {
+                            if (forceError) {
+                                console.log('[BackendManager] Force kill failed:', forceError.message);
+                            } else {
+                                console.log('[BackendManager] Python process forcefully terminated');
+                            }
+                        });
+                    } else {
+                        console.log('[BackendManager] Python process gracefully terminated');
+                    }
+                });
+                
+                // Also try Node.js kill as backup
                 setTimeout(() => {
-                    if (this.pythonProcess) {
-                        console.log('[BackendManager] Force killing Python process...');
+                    if (this.pythonProcess && !this.pythonProcess.killed) {
                         try {
                             this.pythonProcess.kill('SIGKILL');
                         } catch (error) {
-                            console.log('[BackendManager] Force kill failed:', error.message);
+                            console.log('[BackendManager] Node kill backup failed:', error.message);
                         }
                     }
-                }, 3000);
+                }, 2000);
             } else {
                 // On Linux/Mac use standard approach
                 this.pythonProcess.kill('SIGTERM');
                 setTimeout(() => {
-                    if (this.pythonProcess) {
+                    if (this.pythonProcess && !this.pythonProcess.killed) {
                         this.pythonProcess.kill('SIGKILL');
                     }
-                }, 5000);
+                }, 3000);
             }
+            
+            // Clean up reference
+            this.pythonProcess = null;
         }
     }
     
