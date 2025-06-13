@@ -306,14 +306,14 @@ app.on('before-quit', () => {
         // Multiple cleanup strategies for stubborn Python processes
         const { exec } = require('child_process');
         
-        // Strategy 1: Kill our specific Python process
-        exec('taskkill /F /IM python.exe', () => {});
+        // Strategy 1: Kill our specific Python process (minimized)
+        exec('taskkill /F /IM python.exe', { windowsHide: true }, () => {});
         
-        // Strategy 2: Kill any Python running Flask
-        exec('wmic process where "commandline like \'%server.py%\'" delete', () => {});
+        // Strategy 2: Kill any Python running Flask (minimized)
+        exec('wmic process where "commandline like \'%server.py%\'" delete', { windowsHide: true }, () => {});
         
-        // Strategy 3: Kill Python processes on port 5000
-        exec('netstat -ano | findstr :5000 | for /f "tokens=5" %a in (\'more\') do taskkill /F /PID %a', () => {});
+        // Strategy 3: Kill Python processes on port 5000 (minimized)
+        exec('netstat -ano | findstr :5000 | for /f "tokens=5" %a in (\'more\') do taskkill /F /PID %a', { windowsHide: true }, () => {});
     }
 });
 

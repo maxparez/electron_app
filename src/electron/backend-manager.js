@@ -133,6 +133,7 @@ class BackendManager {
             if (process.platform === 'win32') {
                 spawnOptions.windowsHide = true;
                 spawnOptions.stdio = ['ignore', 'pipe', 'pipe'];
+                spawnOptions.shell = false; // Disable shell to prevent CMD window
             }
             
             this.pythonProcess = spawn(pythonPath, [scriptPath], spawnOptions);
