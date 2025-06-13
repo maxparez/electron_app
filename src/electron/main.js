@@ -293,8 +293,10 @@ app.on('activate', () => {
 });
 
 app.on('will-quit', () => {
-    // Clean up Python process
-    stopPythonServer();
+    console.log('[App] Shutting down, stopping backend...');
+    if (backendManager) {
+        backendManager.stop();
+    }
 });
 
 // IPC handler for backend status

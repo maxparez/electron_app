@@ -1,6 +1,5 @@
 @echo off
 chcp 65001 >nul
-title Nástroje pro ŠI a ŠII OP JAK
 
 REM Kontrola, zda je venv vytvořen
 if not exist venv (
@@ -10,20 +9,8 @@ if not exist venv (
     exit /b 1
 )
 
-REM Aktivace venv a spuštění
-echo Spouštím aplikaci...
-call venv\Scripts\activate.bat
+REM Nastavení cesty k Python prostředí pro Electron
+set ELECTRON_APP_PYTHON_ENV=%cd%\venv
 
-REM Spuštění Python backendu na pozadí
-start /B python src\python\server.py
-
-REM Počkej 2 sekundy než se server nastartuje
-timeout /t 2 /nobreak >nul
-
-REM Spuštění Electron aplikace
+REM Spuštění Electron aplikace (ta si sama spustí a ukončí Python backend)
 npm start
-
-REM Po ukončení Electronu zabij Python server
-taskkill /F /IM python.exe >nul 2>&1
-
-exit

@@ -220,16 +220,36 @@ class BackendManager {
         if (this.pythonProcess) {
             console.log('[BackendManager] Stopping Python backend...');
             
-            // Try graceful shutdown first
-            this.pythonProcess.kill('SIGTERM');
-            
-            // Force kill after 5 seconds if still running
-            setTimeout(() => {
-                if (this.pythonProcess) {
-                    console.log('[BackendManager] Force killing Python process...');
+            // On Windows, try to kill gracefully first
+            if (process.platform === 'win32') {
+                try {
+                    // Try graceful termination
+                    process.kill(this.pythonProcess.pid, 'SIGTERM');
+                } catch (error) {
+                    console.log('[BackendManager] SIGTERM failed, trying force kill');
                     this.pythonProcess.kill('SIGKILL');
                 }
-            }, 5000);
+                
+                // Force kill after 3 seconds if still running
+                setTimeout(() => {
+                    if (this.pythonProcess) {
+                        console.log('[BackendManager] Force killing Python process...');
+                        try {
+                            this.pythonProcess.kill('SIGKILL');
+                        } catch (error) {
+                            console.log('[BackendManager] Force kill failed:', error.message);
+                        }
+                    }
+                }, 3000);
+            } else {
+                // On Linux/Mac use standard approach
+                this.pythonProcess.kill('SIGTERM');
+                setTimeout(() => {
+                    if (this.pythonProcess) {
+                        this.pythonProcess.kill('SIGKILL');
+                    }
+                }, 5000);
+            }
         }
     }
     
