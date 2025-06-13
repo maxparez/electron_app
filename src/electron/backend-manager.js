@@ -22,7 +22,8 @@ class BackendManager {
         this.lastStartTime = Date.now();
         
         try {
-            const isProd = !process.argv.includes('--dev');
+            // Better production detection - check if we're in packaged app
+            const isProd = app.isPackaged;
             const appPath = isProd ? process.resourcesPath : app.getAppPath();
             
             // Determine Python executable path
@@ -97,6 +98,14 @@ class BackendManager {
                 }
             } else {
                 scriptPath = path.join(appPath, 'src', 'python', 'server.py');
+                
+                // Check if script exists in development
+                if (!fs.existsSync(scriptPath)) {
+                    console.error(`[BackendManager] Development script not found: ${scriptPath}`);
+                    console.error(`[BackendManager] App path: ${appPath}`);
+                    console.error(`[BackendManager] Current working directory: ${process.cwd()}`);
+                    throw new Error(`Python script not found at: ${scriptPath}`);
+                }
             }
             
             console.log('[BackendManager] Python path:', pythonPath);
