@@ -81,7 +81,7 @@ REM Git clone z správné větve
 echo.
 echo [5/6] Stahuji aplikaci z GitHubu...
 cd /d "%INSTALL_DIR%"
-git clone -b feature/next-phase https://github.com/maxparez/electron_app.git .
+git clone -b production https://github.com/maxparez/electron_app.git .
 if errorlevel 1 (
     echo ❌ CHYBA: Nepodařilo se stáhnout aplikaci z GitHubu!
     echo Zkontrolujte připojení k internetu.

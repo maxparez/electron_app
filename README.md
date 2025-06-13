@@ -1,65 +1,32 @@
-# Projektová dokumentace - Electron App
+# Nástroje pro ŠI a ŠII OP JAK
 
-Desktop aplikace pro zpracování školní projektové dokumentace (OP JAK).
+Desktop aplikace pro zpracování projektové dokumentace.
 
-## Požadavky
+## 🚀 Instalace
 
-- Windows 10/11
-- MS Office (Excel)
-- Node.js 18+
-- Python 3.9+
+1. **Nainstalujte závislosti:**
+   - Python 3.13: https://www.python.org/downloads/
+   - Node.js LTS: https://nodejs.org/
+   - Git: https://git-scm.com/download/win
 
-## Instalace pro vývoj
+2. **Spusťte instalaci:**
+   - Stáhněte `install-windows-standalone.bat`
+   - Klikněte pravým tlačítkem → "Spustit jako správce"
+   - Čekejte na dokončení instalace
 
-```bash
-# Klonování repozitáře
-git clone git@github.com:maxparez/electron_app.git
-cd electron_app
+3. **Spuštění aplikace:**
+   - Dvojklik na zástupce "Nástroje OP JAK" na ploše
+   - Nebo spusťte `start-app.bat` ze složky aplikace
 
-# Instalace Node.js závislostí
-npm install
+## 🛠️ Nástroje
 
-# Vytvoření Python virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# nebo
-venv\Scripts\activate  # Windows
+- **InvVzd Copy**: Zpracování docházky inovativního vzdělávání (16/32h)
+- **ZorSpec Dat**: Zpracování docházky z různých tříd + HTML reporty
+- **Plakát Generator**: Generování PDF plakátů z Excel seznamů
 
-# Instalace Python závislostí
-pip install -r requirements.txt
-```
+## 📞 Podpora
 
-## Spuštění
+V případě problémů kontaktujte vývojáře.
 
-```bash
-# Spuštění v development módu
-npm run dev
-```
-
-## Build
-
-```bash
-# Vytvoření instalátoru pro Windows
-npm run make
-```
-
-## Struktura projektu
-
-```
-electron_app/
-├── src/
-│   ├── electron/      # Electron frontend
-│   │   ├── main.js    # Hlavní proces
-│   │   ├── preload.js # Preload script
-│   │   └── renderer/  # UI komponenty
-│   └── python/        # Python backend
-│       ├── server.py  # Flask server
-│       └── tools/     # Nástroje pro zpracování
-├── docs/              # Dokumentace
-├── tests/             # Testy
-└── legacy_code/       # Původní Python skripty
-```
-
-## Licence
-
-MIT
+---
+*Verze: Production 1.0*

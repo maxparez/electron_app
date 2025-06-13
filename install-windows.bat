@@ -83,6 +83,7 @@ echo ✅ Python knihovny nainstalovány
 REM Node.js moduly
 echo.
 echo [5/5] Instaluji Node.js moduly...
+echo POZNÁMKA: Používáte lokální kopii. Pro čistou instalaci použijte install-windows-standalone.bat
 call npm install
 if errorlevel 1 (
     echo ❌ CHYBA: Nepodařilo se nainstalovat Node.js moduly!
