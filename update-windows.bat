@@ -21,39 +21,39 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/4] Stahuji nejnovější verzi z GitHubu...
-git pull origin main
+echo [1/3] Stahuji nejnovější verzi z GitHubu...
+git pull origin production
 if errorlevel 1 (
-    echo ⚠️  Pokus o aktualizaci z hlavní větve...
-    git pull origin deployment-windows
-    if errorlevel 1 (
-        echo ❌ CHYBA: Nepodařilo se stáhnout aktualizace!
-        echo Možné příčiny:
-        echo - Nemáte připojení k internetu
-        echo - Máte lokální změny v souborech
-        echo.
-        echo Zkuste: git status
-        pause
-        exit /b 1
-    )
+    echo ❌ CHYBA: Nepodařilo se stáhnout aktualizace!
+    echo Možné příčiny:
+    echo - Nemáte připojení k internetu
+    echo - Máte lokální změny v souborech
+    echo.
+    echo Zkuste: git status
+    pause
+    exit /b 1
 )
 echo ✅ Kód aktualizován
 
 echo.
-echo [2/4] Aktivuji virtuální prostředí...
+echo [2/3] Kontroluji Python závislosti...
 call venv\Scripts\activate.bat
-
-echo [3/4] Aktualizuji Python knihovny...
-pip install -r requirements-windows.txt --upgrade
+pip check >nul 2>&1
 if errorlevel 1 (
-    echo ⚠️  VAROVÁNÍ: Některé knihovny se nepodařilo aktualizovat
+    echo ⚠️  Nalezeny chybějící závislosti, aktualizuji...
+    pip install -r requirements-windows.txt --upgrade
+) else (
+    echo ✅ Python knihovny jsou aktuální
 )
 
 echo.
-echo [4/4] Aktualizuji Node.js moduly...
-call npm update
+echo [3/3] Kontroluji Node.js závislosti...
+npm outdated >nul 2>&1
 if errorlevel 1 (
-    echo ⚠️  VAROVÁNÍ: Některé Node.js moduly se nepodařilo aktualizovat
+    echo ⚠️  Nalezeny zastaralé moduly, aktualizuji...
+    call npm update
+) else (
+    echo ✅ Node.js moduly jsou aktuální
 )
 
 echo.
