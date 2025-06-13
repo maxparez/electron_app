@@ -93,7 +93,7 @@ git push origin production
 ├── install-windows.bat          # Lokální instalátor
 ├── start-app.bat                # Spuštění aplikace
 ├── update-windows.bat           # Aktualizace
-├── 4691206_electron_icon.png    # Ikona pro shortcuts
+├── icon.ico                     # Ikona pro shortcuts
 └── src/
     ├── electron/                # Frontend (10 souborů)
     │   ├── main.js, preload.js, backend-manager.js, config.js
