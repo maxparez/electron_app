@@ -5,6 +5,12 @@
 - **Production branch**: `production` (25 čistých souborů, jen aplikace)
 - **Uživatelé**: Stahují z production branch přes `install-windows-standalone.bat`
 
+## ⚠️ Důležité opravy (2025-06-07)
+**Před aktualizací production je třeba:**
+1. **CMD window fix** - oprava start-app.bat (commit [fix-062])
+2. **Backend lifecycle** - Electron správně ukončuje Python (commit [fix-062]) 
+3. **Production detection** - použití app.isPackaged (commit [fix-063])
+
 ## 📋 Postup: Dev → Prod
 
 ### 1. Dokončení vývoje na dev branch
@@ -16,10 +22,13 @@ git add -A && git commit -m "[fix-XXX] Popis opravy"
 git push origin feature/next-phase
 ```
 
-### 2. Přepnutí na production branch
+### 2. Přepnutí na production branch a merge
 ```bash
 git checkout production
 git merge feature/next-phase
+
+# POZOR: Po merge budou opět všechny dev soubory!
+# Nutné vyčistit podle bodu 3.
 ```
 
 ### 3. Vyčištění nepotřebných souborů
@@ -127,7 +136,21 @@ echo Production build complete!
 2. **install-windows-standalone.bat stahuje z production branch**
 3. **Vždy testovat production build před pushnutím**
 4. **README.md aktualizovat pro uživatele, ne vývojáře**
+5. **Po merge dev→prod vždy vyčistit nepotřebné soubory!**
+
+## 🔧 Poslední kritické opravy
+- **[fix-062]**: CMD okno zůstávalo otevřené → Electron správně řídí Python lifecycle
+- **[fix-063]**: Špatná detekce prostředí → app.isPackaged místo --dev flag
+
+## 📝 Rychlý checklist před aktualizací production:
+- [ ] Všechny opravy v dev branch commitnuty a otestovány
+- [ ] Přepnutí na production branch
+- [ ] Merge z feature/next-phase
+- [ ] Spuštění clean-up skriptů (bod 3)
+- [ ] Kontrola počtu souborů (~25)
+- [ ] Test spuštění aplikace
+- [ ] Commit a push production
 
 ---
 *Návod vytvořen: 2025-06-07*
-*Při změnách aktualizovat tento postup*
+*Poslední aktualizace: 2025-06-07 - přidány CMD/backend opravy*
