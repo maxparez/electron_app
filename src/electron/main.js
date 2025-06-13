@@ -303,11 +303,17 @@ app.on('will-quit', () => {
 app.on('before-quit', () => {
     console.log('[App] Before quit - emergency Python cleanup...');
     if (process.platform === 'win32') {
-        // Kill all python.exe processes that might be our server
+        // Multiple cleanup strategies for stubborn Python processes
         const { exec } = require('child_process');
-        exec('taskkill /F /IM python.exe /FI "WINDOWTITLE eq *server.py*"', () => {
-            // Silent cleanup - don't care about errors
-        });
+        
+        // Strategy 1: Kill our specific Python process
+        exec('taskkill /F /IM python.exe', () => {});
+        
+        // Strategy 2: Kill any Python running Flask
+        exec('wmic process where "commandline like \'%server.py%\'" delete', () => {});
+        
+        // Strategy 3: Kill Python processes on port 5000
+        exec('netstat -ano | findstr :5000 | for /f "tokens=5" %a in (\'more\') do taskkill /F /PID %a', () => {});
     }
 });
 
