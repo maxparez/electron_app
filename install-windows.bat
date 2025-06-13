@@ -94,7 +94,11 @@ echo ✅ Node.js moduly nainstalovány
 REM Vytvoření zástupce na ploše
 echo.
 echo Vytvářím zástupce na ploše...
-powershell -ExecutionPolicy Bypass -File create-desktop-shortcut.ps1
+powershell -ExecutionPolicy Bypass -Command "& {$WshShell = New-Object -comObject WScript.Shell; $Desktop = [System.Environment]::GetFolderPath('Desktop'); $ShortcutPath = '$Desktop\Nástroje OP JAK.lnk'; $Shortcut = $WshShell.CreateShortcut($ShortcutPath); $Shortcut.TargetPath = '%CD%\start-app.bat'; $Shortcut.WorkingDirectory = '%CD%'; $Shortcut.IconLocation = '%CD%\src\electron\assets\icon.ico'; $Shortcut.Description = 'Nástroje pro zpracování dokumentace OP JAK'; $Shortcut.Save(); Write-Host '✅ Zástupce vytvořen na ploše' -ForegroundColor Green}"
+if errorlevel 1 (
+    echo ⚠️  Nepodařilo se vytvořit zástupce automaticky
+    echo Můžete vytvořit zástupce ručně - ukázat na start-app.bat
+)
 
 echo.
 echo ╔════════════════════════════════════════════════════════════════╗
