@@ -7,20 +7,10 @@ echo ║                    Samostatný instalátor                       ║
 echo ╚════════════════════════════════════════════════════════════════╝
 echo.
 echo Tento instalátor stáhne a nainstaluje aplikaci do:
-echo %PROGRAMFILES%\zor_nastroje
+echo %LOCALAPPDATA%\zor_nastroje
 echo.
 
-REM Kontrola administrátorských práv
-net session >nul 2>&1
-if errorlevel 1 (
-    echo ❌ CHYBA: Tento skript vyžaduje administrátorská práva!
-    echo.
-    echo Klikněte pravým tlačítkem na tento soubor a vyberte:
-    echo "Spustit jako správce"
-    echo.
-    pause
-    exit /b 1
-)
+REM Instalace do uživatelské složky - není potřeba admin práva
 
 REM Kontrola Python 3.13
 echo [1/6] Kontroluji Python 3.13...
@@ -69,7 +59,7 @@ echo ✅ Git nalezen
 REM Vytvoření instalační složky
 echo.
 echo [4/6] Vytvářím instalační složku...
-set "INSTALL_DIR=%PROGRAMFILES%\zor_nastroje"
+set "INSTALL_DIR=%LOCALAPPDATA%\zor_nastroje"
 if exist "%INSTALL_DIR%" (
     echo Odstraňujem starou instalaci...
     rmdir /s /q "%INSTALL_DIR%"
