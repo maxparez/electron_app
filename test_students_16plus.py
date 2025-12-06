@@ -20,11 +20,11 @@ def test_students_16plus_calculation():
 
     # Create test data
     # Scenario:
-    # - Student A in ZŠ: 20 hours total (should count)
-    # - Student B in ZŠ: 10 hours (should NOT count)
-    # - Student C in MŠ: 18 hours (should count)
-    # - Student D in ŠD: 8 hours (should NOT count)
-    # - Student A in MŠ: 16 hours (should count - same student, different school!)
+    # - Student A in ZŠ První: 20 hours total (should count)
+    # - Student B in ZŠ První: 10 hours (should NOT count)
+    # - Student C in MŠ Sluníčko: 18 hours (should count)
+    # - Student D in ŠD Radost: 8 hours (should NOT count)
+    # - Student A in MŠ Pohádka: 16 hours (should count - same student, different school!)
     # Total expected: MŠ=2, ZŠ=1, ŠD=0
 
     test_data = pd.DataFrame({
@@ -43,9 +43,9 @@ def test_students_16plus_calculation():
     test_data['hash_jmena'] = test_data['jmena'].apply(processor._custom_hash)
 
     print("📊 Test Data:")
-    print("\nStudent hours by school (ca + jmena):")
-    student_hours = test_data.groupby(['ca', 'jmena', 'sablona'])['pocet_hodin'].sum()
-    for (ca, student, school), hours in student_hours.items():
+    print("\nStudent hours by school (jmena + sablona):")
+    student_hours = test_data.groupby(['jmena', 'sablona'])['pocet_hodin'].sum()
+    for (student, school), hours in student_hours.items():
         marker = "✅" if hours >= 16 else "❌"
         print(f"  {marker} {student} at {school}: {hours}h")
 

@@ -300,9 +300,6 @@ class ZorSpecDatProcessor(BaseTool):
         final_result = pd.concat([forma_result, tema_result], axis="rows")
         final_result.columns = self.result_cols_names
 
-        # Calculate school type statistics
-        school_type_stats = self._calculate_school_type_stats(concatenated)
-
         # Calculate student count with 16+ hours by school type
         students_16plus = self._calculate_students_16plus_by_type(concatenated)
 
@@ -314,13 +311,9 @@ class ZorSpecDatProcessor(BaseTool):
         html_parts.insert(0, f"<h3>Unikátní žáci v ZoR: {unique_count}</h3>")
         html_parts.insert(0, "<h2>Údaje do ZoR</h2>")
 
-        # Add student count table (below main table, above school stats)
+        # Add student count table (below main table)
         html_parts.insert(0, self._dataframe_to_html_table(students_16plus))
         html_parts.insert(0, "<h3>Počet žáků s více jak 16 h inovativního vzdělávání</h3>")
-
-        # Add school type statistics table
-        html_parts.insert(0, self._dataframe_to_html_table(school_type_stats))
-        html_parts.insert(0, "<h3>Počet škol podle typu (s více než 16 hodinami)</h3>")
 
         html_parts.insert(0, "<h1>Specifické datové položky pro ZoR</h1>")
         
@@ -460,17 +453,17 @@ class ZorSpecDatProcessor(BaseTool):
     def _calculate_students_16plus_by_type(self, df: pd.DataFrame) -> pd.DataFrame:
         """Calculate count of student records with >=16 hours by school type
 
-        Each student record (ca + jmena combination) is counted separately,
-        so the same student in different schools counts multiple times.
+        Each student in each school (sablona) is counted separately.
+        Same student in different schools counts multiple times.
 
         Args:
-            df: DataFrame with all processed data including 'ca', 'jmena', 'sablona', 'pocet_hodin'
+            df: DataFrame with all processed data including 'jmena', 'sablona', 'pocet_hodin'
 
         Returns:
             DataFrame with single row: MŠ, ZŠ, ŠD columns with student counts
         """
-        # Group by ca (unique activity/school) and student name, sum hours
-        student_hours = df.groupby(['ca', 'jmena', 'sablona'], as_index=False)['pocet_hodin'].sum()
+        # Group by student name and school (sablona), sum all hours
+        student_hours = df.groupby(['jmena', 'sablona'], as_index=False)['pocet_hodin'].sum()
 
         # Filter records with >= 16 hours
         students_16plus = student_hours[student_hours['pocet_hodin'] >= 16].copy()
