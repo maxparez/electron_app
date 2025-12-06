@@ -141,3 +141,86 @@ Počet škol podle typu (s více než 16 hodinami)
 - No breaking changes to existing functionality
 - Backward compatible with existing reports
 
+
+### 2025-12-06 – ZorSpecDat Student Count Enhancement (16+ Hours)
+- **Feature**: Added table showing count of students with ≥16 hours by school type
+- **Implementation Date**: 2025-12-06
+- **Developer**: Claude Sonnet 4.5
+
+#### Documentation Consulted
+- **Pandas docs** (from previous implementation): groupby, aggregation, filtering
+  - Key pattern: Group by (ca, jmena, sablona) to get per-student-per-school totals
+  - Filter by hours >= 16
+  - Count records by school type
+- **Project docs**: CLAUDE.md, PROGRESS.md
+
+#### Key Implementation Difference
+**Previous feature (feat-077)**: Count of SCHOOLS with ≥16 hours
+**This feature**: Count of STUDENT RECORDS with ≥16 hours
+
+Important: Same student in different schools counts multiple times (as per requirements)
+
+#### Implementation Details
+1. **New Method** (src/python/tools/zor_spec_dat_processor.py:453-492):
+   - `_calculate_students_16plus_by_type()`: Counts student records with ≥16h
+     - Groups by (ca, jmena, sablona) - unique student-school combination
+     - Sums hours for each combination
+     - Filters combinations with ≥16 hours
+     - Identifies school type from sablona
+     - Counts records by type (MŠ, ZŠ, ŠD)
+     - Returns single-row DataFrame with columns: MŠ, ZŠ, ŠD
+
+2. **HTML Report Position** (zor_spec_dat_processor.py:317-319):
+   - Table inserted AFTER main "Údaje do ZoR" table
+   - Title: "Počet žáků s více jak 16 h inovativního vzdělávání"
+   - Positioned ABOVE school type statistics table
+   - Uses same CSS styling (.blue_light class)
+
+#### Testing
+- ✅ Comprehensive unit tests created (test_students_16plus.py)
+- ✅ Main scenario verified:
+  - Student A in ZŠ (18h) → counted
+  - Student A in MŠ (16h) → counted separately (same student, different school)
+  - Student B in ZŠ (12h total) → not counted
+  - Student C in MŠ (18h) → counted
+  - Student D in ŠD (8h) → not counted
+  - Result: MŠ=2, ZŠ=1, ŠD=0 ✅
+
+- ✅ Edge cases passed:
+  - Empty DataFrame → all zeros
+  - Exactly 16 hours → counted (>=, not >)
+  - Multiple students in same school → all counted
+  - Same student in different schools → counted multiple times
+
+#### Output Format
+New table in HTML report (horizontal layout):
+```
+Počet žáků s více jak 16 h inovativního vzdělávání
+| MŠ | ZŠ | ŠD |
+|----|----|----|
+| X  | Y  | Z  |
+```
+
+#### Compliance Check
+- ✅ English-only code (variables, functions, docstrings)
+- ✅ Czech UI labels ("Počet žáků s více jak 16 h...")
+- ✅ KISS principle: Reused existing _identify_school_type()
+- ✅ DRY: Followed same pattern as school stats
+- ✅ No new dependencies
+- ✅ Backward compatible
+
+#### Report Structure (Top to Bottom)
+1. "Specifické datové položky pro ZoR" (H1)
+2. "Počet škol podle typu (s více než 16 hodinami)" (H3 + table)
+3. **"Počet žáků s více jak 16 h inovativního vzdělávání" (H3 + table)** ← NEW
+4. "Údaje do ZoR" (H2)
+5. "Unikátní žáci v ZoR: X" (H3)
+6. Main aggregated table (forma/téma)
+7. "SDP ZoR" (H2)
+8. Per-template tables
+
+#### Next Steps
+- Ready for commit with tag [feat-081]
+- All tests passing
+- No breaking changes
+
