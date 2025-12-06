@@ -107,15 +107,16 @@ class ZorSpecDatProcessor(BaseTool):
             self.add_info(f"Nalezeno {len(excel_files)} souborů ke zpracování")
             
             # Process files and generate report
-            html_report, unique_names_data = self._generate_report(excel_files)
-            
+            html_report, unique_names_data, students_16plus = self._generate_report(excel_files)
+
             # Save outputs
             html_file = self._save_html_report(output_dir, html_report)
             txt_file = self._save_unique_names(output_dir, unique_names_data)
-            
+
             processed_data = {
                 "files_processed": len(excel_files),
                 "unique_students": len(unique_names_data),
+                "students_16plus": students_16plus,  # Add student counts by type
                 "html_report": html_file,
                 "names_list": txt_file,
                 "output_files": [html_file, txt_file]
@@ -247,8 +248,15 @@ class ZorSpecDatProcessor(BaseTool):
         
         return result
         
-    def _generate_report(self, excel_files: List[str]) -> Tuple[str, List[List]]:
-        """Generate complete HTML report"""
+    def _generate_report(self, excel_files: List[str]) -> Tuple[str, List[List], Dict[str, int]]:
+        """Generate complete HTML report
+
+        Returns:
+            Tuple containing:
+            - HTML report content
+            - List of unique student names
+            - Dictionary with student counts by school type (MŠ, ZŠ, ŠD)
+        """
         concatenated = pd.DataFrame()
         html_parts = []
         
@@ -319,8 +327,15 @@ class ZorSpecDatProcessor(BaseTool):
         
         # Create complete HTML document
         html_content = self._create_html_document("".join(html_parts))
-        
-        return html_content, unique_names
+
+        # Convert students_16plus DataFrame to dict for easier access
+        students_16plus_dict = {
+            'MŠ': int(students_16plus['MŠ'].values[0]),
+            'ZŠ': int(students_16plus['ZŠ'].values[0]),
+            'ŠD': int(students_16plus['ŠD'].values[0])
+        }
+
+        return html_content, unique_names, students_16plus_dict
         
     def _aggregate_data_by_template(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         """Aggregate data by template with period analysis"""

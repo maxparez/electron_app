@@ -621,6 +621,32 @@ async function processZorSpec() {
                                 <div class="summary-value">${result.data.unique_students}</div>
                             </div>
                         </div>
+            `;
+
+            // Add student counts by school type if available
+            if (result.data.students_16plus) {
+                const students16 = result.data.students_16plus;
+                const types = [
+                    { key: 'MŠ', icon: '🏫', label: 'MŠ (≥16h)' },
+                    { key: 'ZŠ', icon: '📚', label: 'ZŠ (≥16h)' },
+                    { key: 'ŠD', icon: '🎒', label: 'ŠD (≥16h)' }
+                ];
+
+                types.forEach(type => {
+                    const count = students16[type.key] || 0;
+                    resultHtml += `
+                        <div class="summary-item">
+                            <span class="summary-icon">${type.icon}</span>
+                            <div>
+                                <div class="summary-label">${type.label}</div>
+                                <div class="summary-value">${count}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            resultHtml += `
                     </div>
                 </div>
             `;
