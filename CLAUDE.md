@@ -65,6 +65,32 @@ Pokud se vracíte k projektu po delší době, přečtěte si:
 - E2E tests for complete workflows
 - Manual testing on Windows 10/11 with MS Office
 
+## Consultant Agents (use sparingly)
+
+Two specialist subagents live in `.claude/agents` for second opinions:
+
+- **`chatgpt-consultant`** – Run only for risky backend/Electron/installer changes (e.g., `backend-manager.js`, `install-windows*.bat`, shared Flask endpoints). It reads `CLAUDE.md`, `PROGRESS.md`, `PROJECT_PLAN.md`, `PRODUCTION_WORKFLOW.md`, and logs results in `_context_notes.md`. Use it when a change could break Windows packaging or xlwings processing; skip it for routine refactors.
+- **`gemini-consultant`** – Use for deployment/test strategy, localization checks, or xlwings/data-validation sanity reviews (e.g., before syncing `production`, updating Czech UI text, or altering template processors). It also records to `_context_notes.md`.
+
+Guidelines:
+1. **One consultant per decision.** Do not chain or loop unless the first identifies blockers needing follow-up.
+2. **Always reference `_context_notes.md`** in the main reply so teammates see what was reviewed.
+3. **If the CLI call fails**, state it and proceed without external advice; never block work.
+
+## Documentation Agents (ALWAYS cite before coding)
+
+The `python-docs` and `js-docs` subagents are tied to the Context7 MCP service. Before implementing or refactoring any non-trivial logic:
+
+- **Use `python-docs`** for questions about Flask, pandas, xlwings, reportlab, Windows batch/Python integration, etc. It must pull fresh references from Context7 and summarize them with URLs.
+- **Use `js-docs`** for Electron/Node/renderer APIs, packaging behavior, IPC details, or Windows-specific options (`child_process`, dialogs, etc.).
+
+Rules:
+1. **No guessing.** If you are unsure about an API or flag, consult the relevant doc agent first and include its summary (with source links) in your reasoning.
+2. **Do not bypass Context7.** These agents must issue at least one lookup/search per consultation; if nothing is found, report that explicitly.
+3. **Still follow local docs.** After the external lookup, re-check `CORE_DEVELOPMENT_PRINCIPLES.md`, `DEVELOPMENT_GUIDE.md`, or other repo files if the change touches them.
+
+This keeps our responses grounded in real documentation and prevents hallucinated Electron/xlwings behavior.
+
 ## Commands & Scripts
 
 ```bash

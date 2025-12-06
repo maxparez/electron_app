@@ -296,17 +296,25 @@ class ZorSpecDatProcessor(BaseTool):
         # Generate final aggregated results
         forma_result = self._aggregate(concatenated, "forma", "forma")
         tema_result = self._aggregate(concatenated, "tema", "téma")
-        
+
         final_result = pd.concat([forma_result, tema_result], axis="rows")
         final_result.columns = self.result_cols_names
-        
+
+        # Calculate school type statistics
+        school_type_stats = self._calculate_school_type_stats(concatenated)
+
         # Get unique names
         unique_names, unique_count = self._get_unique_names(concatenated)
-        
+
         # Build final HTML
         html_parts.insert(0, self._dataframe_to_html_table(final_result))
         html_parts.insert(0, f"<h3>Unikátní žáci v ZoR: {unique_count}</h3>")
         html_parts.insert(0, "<h2>Údaje do ZoR</h2>")
+
+        # Add school type statistics table
+        html_parts.insert(0, self._dataframe_to_html_table(school_type_stats))
+        html_parts.insert(0, "<h3>Počet škol podle typu (s více než 16 hodinami)</h3>")
+
         html_parts.insert(0, "<h1>Specifické datové položky pro ZoR</h1>")
         
         # Create complete HTML document
@@ -389,12 +397,58 @@ class ZorSpecDatProcessor(BaseTool):
         """Extract unique student names"""
         if "jmena" not in df.columns:
             return [], 0
-            
+
         # Remove duplicates by hash
         unique_data = df.drop_duplicates(subset=["hash_jmena"]).sort_values(by=["jmena"])
         unique_count = df["hash_jmena"].nunique()
-        
+
         return unique_data[["jmena", "hash_jmena"]].values.tolist(), unique_count
+
+    def _identify_school_type(self, template_name: str) -> str:
+        """Identify school type from template name"""
+        template_lower = template_name.lower()
+
+        # Check for ŠD first (školní družina has priority over zš)
+        if 'šd' in template_lower or 'školní družina' in template_lower or 'družin' in template_lower:
+            return 'ŠD'
+        elif 'mš' in template_lower or 'mateřsk' in template_lower:
+            return 'MŠ'
+        elif 'zš' in template_lower or 'základní' in template_lower:
+            return 'ZŠ'
+        else:
+            return 'Jiné'
+
+    def _calculate_school_type_stats(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Calculate statistics of schools by type with >=16 hours
+
+        Args:
+            df: DataFrame with all processed data including 'sablona' and 'pocet_hodin' columns
+
+        Returns:
+            DataFrame with school type statistics
+        """
+        # Group by template (school) and sum hours
+        school_hours = df.groupby('sablona', as_index=False)['pocet_hodin'].sum()
+
+        # Filter schools with >= 16 hours
+        schools_16plus = school_hours[school_hours['pocet_hodin'] >= 16].copy()
+
+        # Identify school type for each school
+        schools_16plus['typ_skoly'] = schools_16plus['sablona'].apply(self._identify_school_type)
+
+        # Count schools by type
+        type_counts = schools_16plus.groupby('typ_skoly', as_index=False).size()
+        type_counts.columns = ['Typ školy', 'Počet škol (≥16h)']
+
+        # Ensure all types are present (even with 0 count)
+        all_types = pd.DataFrame({'Typ školy': ['MŠ', 'ZŠ', 'ŠD', 'Jiné']})
+        result = all_types.merge(type_counts, on='Typ školy', how='left').fillna(0)
+        result['Počet škol (≥16h)'] = result['Počet škol (≥16h)'].astype(int)
+
+        # Remove 'Jiné' if count is 0
+        result = result[~((result['Typ školy'] == 'Jiné') & (result['Počet škol (≥16h)'] == 0))]
+
+        return result
         
     def _load_exclude_names(self, file_path: str):
         """Load names to exclude from processing"""

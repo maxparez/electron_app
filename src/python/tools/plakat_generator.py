@@ -119,7 +119,7 @@ class PlakatGenerator(BaseTool):
         """Set poster format (orientation)"""
         self.logger.info("Step 2: Setting poster format")
         
-        format_value = "7" if orientation == "landscape" else "6"  # 6=A4 na výšku, 7=A4 na šířku
+        format_value = "7" if orientation == "landscape" else "6"  # 6=A3 na výšku, 7=A3 na šířku
         
         form_data = {
             'form[_token]': session_data['current_token'],
