@@ -7,7 +7,7 @@ echo ╚════════════════════════
 echo.
 
 REM Kontrola Python 3.13
-echo [1/5] Kontroluji Python 3.13...
+echo [1/6] Kontroluji Python 3.13...
 python --version 2>nul | findstr "3.13" >nul
 if errorlevel 1 (
     echo ❌ CHYBA: Python 3.13 není nainstalován!
@@ -23,7 +23,7 @@ if errorlevel 1 (
 echo ✅ Python 3.13 nalezen
 
 REM Kontrola Node.js
-echo [2/5] Kontroluji Node.js...
+echo [2/6] Kontroluji Node.js...
 node --version >nul 2>&1
 if errorlevel 1 (
     echo ❌ CHYBA: Node.js není nainstalován!
@@ -36,8 +36,23 @@ if errorlevel 1 (
 )
 echo ✅ Node.js nalezen
 
+REM Kontrola npm
+echo Kontroluji npm...
+npm --version >nul 2>&1
+if errorlevel 1 (
+    echo ❌ CHYBA: npm není dostupné!
+    echo.
+    echo Zkontrolujte instalaci Node.js nebo přidejte npm do PATH.
+    echo Pokud jste Node.js právě doinstalovali, zavřete a znovu otevřete okno příkazové řádky.
+    echo.
+    pause
+    exit /b 1
+)
+for /f "delims=" %%v in ('npm --version') do set NPM_VERSION=%%v
+echo ✅ npm nalezen (verze %NPM_VERSION%)
+
 REM Kontrola Git (volitelné)
-echo [3/5] Kontroluji Git...
+echo [3/6] Kontroluji Git...
 git --version >nul 2>&1
 if errorlevel 1 (
     echo ⚠️  UPOZORNĚNÍ: Git není nainstalován
@@ -52,7 +67,7 @@ if errorlevel 1 (
 
 REM Python virtual environment
 echo.
-echo [4/5] Vytvářím Python virtuální prostředí...
+echo [4/6] Vytvářím Python virtuální prostředí...
 if exist venv (
     echo Virtuální prostředí již existuje, mažu staré...
     rmdir /s /q venv
@@ -82,7 +97,7 @@ echo ✅ Python knihovny nainstalovány
 
 REM Node.js moduly
 echo.
-echo [5/5] Instaluji Node.js moduly...
+echo [5/6] Instaluji Node.js moduly...
 call npm install
 if errorlevel 1 (
     echo ❌ CHYBA: Nepodařilo se nainstalovat Node.js moduly!
@@ -101,6 +116,7 @@ if errorlevel 1 (
 )
 
 echo.
+echo [6/6] Dokončuji instalaci
 echo ╔════════════════════════════════════════════════════════════════╗
 echo ║                    ✅ INSTALACE DOKONČENA!                     ║
 echo ╚════════════════════════════════════════════════════════════════╝
