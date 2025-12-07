@@ -644,11 +644,11 @@ async function processZorSpec() {
             if (result.data.students_16plus) {
                 const students16 = result.data.students_16plus;
                 resultHtml += `
-                    <div class="section-header">ROZDĚLENÍ DLE TYPU</div>
+                    <div class="section-header">Počet dětí/žáků se splněnou docházkou 16h</div>
                     <div class="stats-grid school-stats">
                         <div class="stat-card school-card">
                             <div class="stat-content">
-                                <div class="stat-label">MATEŘSKÁ ŠKOLA (≥16H)</div>
+                                <div class="stat-label">MATEŘSKÁ ŠKOLA</div>
                                 <div class="stat-value">${students16['MŠ'] || 0}</div>
                             </div>
                             <div class="stat-icon school-icon">🏫</div>
@@ -656,7 +656,7 @@ async function processZorSpec() {
 
                         <div class="stat-card school-card">
                             <div class="stat-content">
-                                <div class="stat-label">ZÁKLADNÍ ŠKOLA (≥16H)</div>
+                                <div class="stat-label">ZÁKLADNÍ ŠKOLA</div>
                                 <div class="stat-value">${students16['ZŠ'] || 0}</div>
                             </div>
                             <div class="stat-icon school-icon">📚</div>
@@ -664,7 +664,7 @@ async function processZorSpec() {
 
                         <div class="stat-card school-card">
                             <div class="stat-content">
-                                <div class="stat-label">ŠKOLNÍ DRUŽINA (≥16H)</div>
+                                <div class="stat-label">ŠKOLNÍ DRUŽINA</div>
                                 <div class="stat-value">${students16['ŠD'] || 0}</div>
                             </div>
                             <div class="stat-icon school-icon">🎒</div>
