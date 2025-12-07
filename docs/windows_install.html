@@ -43,12 +43,11 @@
   <body>
     <h1>Instalace aplikace Nástroje OP JAK (Windows)</h1>
     <p>
-      Tento návod popisuje novou instalační proceduru, která využívá speciální
-      větev repozitáře <code>windows-install</code>. Větev obsahuje pouze soubory
-      potřebné pro běh klientské instalace a synchronizuje se ručně z hlavní
-      větve. Instalaci zjednodušuje skript
-      <code>install_windows.ps1</code>, který provede kontrolu prostředí a
-      připraví aplikaci včetně zástupce na ploše.
+      Uživateli doručujeme dva soubory: tento HTML návod a
+      <code>install_windows.ps1</code>. Skript po spuštění stáhne hotový obsah z
+      větve <code>windows-install</code>, zkontroluje potřebné programy a
+      nainstaluje aplikaci do zvolené složky včetně zástupce na ploše. Uživatel
+      tedy nepotřebuje žádné znalosti GitHubu ani příkazů Git.
     </p>
 
     <div class="callout">
@@ -57,7 +56,13 @@
       správné zpracování šablon.
     </div>
 
-    <h2>1. Předpoklady (instaluje uživatel ručně)</h2>
+    <h2>1. Co obdržíte</h2>
+    <ul>
+      <li><strong>Instalační skript</strong> <code>install_windows.ps1</code></li>
+      <li><strong>Tento návod</strong> s popisem kroků</li>
+    </ul>
+
+    <h2>2. Předpoklady (instaluje uživatel ručně)</h2>
     <p>Nainstalujte následující software (práva administrátora jsou doporučená):</p>
     <ul>
       <li>
@@ -88,27 +93,27 @@
       </li>
     </ul>
 
-    <h2>2. Stažení klientské větve</h2>
+    <h2>3. Příprava složky a spuštění skriptu</h2>
     <ol>
-      <li>Otevřete PowerShell.</li>
-      <li>Vyberte složku, ve které má být aplikace nainstalována
-        (např. <code>C:\OPJAK</code>).</li>
-      <li>
-        Spusťte:
-        <pre><code>git clone -b windows-install https://github.com/maxparez/electron_app.git</code></pre>
+      <li>Rozbalte doručený balíček do složky, kde chcete mít instalační skripty
+        (např. <code>C:\OPJAK\installer</code>).</li>
+      <li>Otevřete PowerShell jako správce (Start → napište „PowerShell“ → pravým
+        tlačítkem „Spustit jako správce“).</li>
+      <li>Přejděte do složky se skriptem, např.:
+        <pre><code>cd C:\OPJAK\installer</code></pre>
+      </li>
+      <li>Pokud spouštíte skripty poprvé, povolte je:
+        <pre><code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code></pre>
       </li>
       <li>
-        Přepněte do složky a připravte skript:
-        <pre><code>cd .\electron_app
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code></pre>
+        Spusťte instalaci (výchozí cesta <code>C:\OPJAK</code>):
+        <pre><code>.\install_windows.ps1</code></pre>
+        nebo zadejte vlastní umístění:
+        <pre><code>.\install_windows.ps1 -InstallRoot "D:\Aplikace\OPJAK"</code></pre>
       </li>
     </ol>
 
-    <h2>3. Automatická instalace (PowerShell)</h2>
-    <p>
-      Ze složky repozitáře spusťte:
-      <code>.\scripts\install_windows.ps1</code>
-    </p>
+    <h2>4. Co skript provede</h2>
     <p>Skript provede:</p>
     <ol>
       <li>Kontrolu dostupnosti Pythonu, pipu, Node.js, npm a Gitu.</li>
@@ -124,25 +129,28 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code></pre>
         <code>start-app.bat</code>).</li>
     </ol>
 
-    <h2>4. První spuštění</h2>
+    <h2>5. První spuštění</h2>
     <ul>
       <li>Dvojklik na zástupce nebo běh <code>start-app.bat</code>.</li>
       <li>Backend (Python) se spustí na pozadí automaticky.</li>
       <li>V prvním spuštění potvrďte oprávnění firewallu, pokud bude vyžádáno.</li>
     </ul>
 
-    <h2>5. Aktualizace aplikace</h2>
+    <h2>6. Aktualizace aplikace</h2>
+    <p>Po instalaci najdete ve složce aplikace adresář <code>scripts</code>.</p>
     <ol>
-      <li>Otevřete PowerShell a přejděte do instalační složky.</li>
-      <li>
-        Spusťte aktualizační skript (bude součástí větve):
-        <code>.\scripts\update_windows.ps1</code>
+      <li>Otevřete PowerShell a přejděte do složky s aplikací
+        (např. <code>C:\OPJAK\electron_app</code>).</li>
+      <li>Spusťte:
+        <pre><code>.\scripts\update_windows.ps1</code></pre>
+        (volitelně s <code>-InstallRoot</code>, pokud instalace není v
+        <code>C:\OPJAK</code>).
       </li>
-      <li>Skript stáhne aktuální revizi z <code>windows-install</code>,
-        obnoví závislosti a restartuje backend.</li>
+      <li>Skript stáhne aktuální verzi z větve <code>windows-install</code>,
+        obnoví Python/Node balíčky a spustí kontrolní test.</li>
     </ol>
 
-    <h2>6. Odinstalace</h2>
+    <h2>7. Odinstalace</h2>
     <ul>
       <li>Ukončete aplikaci.</li>
       <li>Smažte složku instalace a zástupce.</li>
