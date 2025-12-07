@@ -1,0 +1,22 @@
+# Lista souborů, které se kopírují do větve windows-install.
+# Upravujte opatrně – rozhoduje, co koncový uživatel stáhne.
+README.md
+LICENSE
+docs/windows_install.html
+scripts/install_windows.ps1
+scripts/update_windows.ps1
+start-app.bat
+start-backend.bat
+start-frontend.bat
+start-with-python.bat
+install-windows.bat
+install-windows-standalone.bat
+update-windows.bat
+requirements-windows.txt
+requirements.txt
+package.json
+package-lock.json
+icon.ico
+config
+src
+tests/test_students_16plus.py

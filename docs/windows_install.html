@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <title>Nástroje OP JAK – Instalace na Windows</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 2rem auto;
+        max-width: 960px;
+        line-height: 1.6;
+        color: #0f172a;
+      }
+      h1,
+      h2,
+      h3 {
+        color: #0b3b7e;
+      }
+      code {
+        background: #f4f4f5;
+        padding: 0.15rem 0.35rem;
+        border-radius: 4px;
+      }
+      .callout {
+        border-left: 4px solid #2563eb;
+        padding: 0.75rem 1rem;
+        background: #eff6ff;
+        margin: 1.5rem 0;
+      }
+      ol li {
+        margin-bottom: 0.5rem;
+      }
+      ul {
+        margin-top: 0.25rem;
+      }
+      footer {
+        margin-top: 3rem;
+        font-size: 0.9rem;
+        color: #475569;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Instalace aplikace Nástroje OP JAK (Windows)</h1>
+    <p>
+      Tento návod popisuje novou instalační proceduru, která využívá speciální
+      větev repozitáře <code>windows-install</code>. Větev obsahuje pouze soubory
+      potřebné pro běh klientské instalace a synchronizuje se ručně z hlavní
+      větve. Instalaci zjednodušuje skript
+      <code>install_windows.ps1</code>, který provede kontrolu prostředí a
+      připraví aplikaci včetně zástupce na ploše.
+    </p>
+
+    <div class="callout">
+      <strong>Tip:</strong> Celý proces běží lokálně na vašem počítači.
+      Žádná data se neodesílají mimo zařízení a aplikace vyžaduje MS Excel pro
+      správné zpracování šablon.
+    </div>
+
+    <h2>1. Předpoklady (instaluje uživatel ručně)</h2>
+    <p>Nainstalujte následující software (práva administrátora jsou doporučená):</p>
+    <ul>
+      <li>
+        <strong>Python 3.11 až 3.13 (64-bit)</strong> –
+        <a href="https://www.python.org/downloads/">python.org/downloads</a>
+        (při instalaci zaškrtněte <em>Add Python to PATH</em>)
+      </li>
+      <li>
+        <strong>Node.js 18 LTS</strong> –
+        <a href="https://nodejs.org/">nodejs.org</a> (nainstaluje i npm)
+      </li>
+      <li>
+        <strong>Git for Windows</strong> –
+        <a href="https://git-scm.com/download/win">git-scm.com</a>
+      </li>
+      <li>
+        <strong>Microsoft Office s Excelem</strong> – 2019+ nebo Microsoft 365,
+        povolte makra pro xlwings
+      </li>
+      <li>
+        <strong>Microsoft Visual C++ Redistributable 2015-2022</strong> –
+        <a href="https://aka.ms/vs/17/release/vc_redist.x64.exe">download</a>
+        (nutné pro některé Node moduly)
+      </li>
+      <li>
+        <strong>PowerShell 5.1+ / Windows 10+</strong> – součást systému,
+        doporučené spouštět skript v režimu „Spustit jako správce“
+      </li>
+    </ul>
+
+    <h2>2. Stažení klientské větve</h2>
+    <ol>
+      <li>Otevřete PowerShell.</li>
+      <li>Vyberte složku, ve které má být aplikace nainstalována
+        (např. <code>C:\OPJAK</code>).</li>
+      <li>
+        Spusťte:
+        <pre><code>git clone -b windows-install https://github.com/maxparez/electron_app.git</code></pre>
+      </li>
+      <li>
+        Přepněte do složky a připravte skript:
+        <pre><code>cd .\electron_app
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code></pre>
+      </li>
+    </ol>
+
+    <h2>3. Automatická instalace (PowerShell)</h2>
+    <p>
+      Ze složky repozitáře spusťte:
+      <code>.\scripts\install_windows.ps1</code>
+    </p>
+    <p>Skript provede:</p>
+    <ol>
+      <li>Kontrolu dostupnosti Pythonu, pipu, Node.js, npm a Gitu.</li>
+      <li>Zobrazení seznamu chybějících komponent (bez pokračování instalace).</li>
+      <li>Stažení/aktualizaci větve <code>windows-install</code> do
+        vybrané instalační složky.</li>
+      <li>Vytvoření a aktivaci virtuálního prostředí (<code>venv</code>), instalaci
+        Python balíčků z <code>requirements-windows.txt</code>.</li>
+      <li>Instalaci Node modulů v režimu <code>npm install --production</code>.</li>
+      <li>Vytvoření konfigurace (soubor <code>.env</code>, výstupní složky).</li>
+      <li>Kontrolní test (<code>python test_students_16plus.py</code>).</li>
+      <li>Vytvoření zástupce <em>Nástroje OP JAK</em> na ploše (odkaz na
+        <code>start-app.bat</code>).</li>
+    </ol>
+
+    <h2>4. První spuštění</h2>
+    <ul>
+      <li>Dvojklik na zástupce nebo běh <code>start-app.bat</code>.</li>
+      <li>Backend (Python) se spustí na pozadí automaticky.</li>
+      <li>V prvním spuštění potvrďte oprávnění firewallu, pokud bude vyžádáno.</li>
+    </ul>
+
+    <h2>5. Aktualizace aplikace</h2>
+    <ol>
+      <li>Otevřete PowerShell a přejděte do instalační složky.</li>
+      <li>
+        Spusťte aktualizační skript (bude součástí větve):
+        <code>.\scripts\update_windows.ps1</code>
+      </li>
+      <li>Skript stáhne aktuální revizi z <code>windows-install</code>,
+        obnoví závislosti a restartuje backend.</li>
+    </ol>
+
+    <h2>6. Odinstalace</h2>
+    <ul>
+      <li>Ukončete aplikaci.</li>
+      <li>Smažte složku instalace a zástupce.</li>
+      <li>Případně odstraňte virtuální prostředí <code>venv</code>.</li>
+    </ul>
+
+    <div class="callout">
+      <strong>Potíže?</strong> Otevřete složku <code>logs</code> a přiložte
+      soubory <code>backend.log</code> a <code>electron.log</code> kolegovi, který
+      poskytuje podporu. Do zprávy napište, ve kterém kroku se instalace
+      zastavila.
+    </div>
+
+    <footer>
+      Verze instrukcí: 2025-06-XX · Odpovědný: tým Electron App ·
+      Dotazy: #opjak-support (Teams)
+    </footer>
+  </body>
+</html>

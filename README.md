@@ -36,6 +36,12 @@ pip install -r requirements.txt
 npm run dev
 ```
 
+## Instalace pro Windows uživatele
+
+Pro jednoduchou instalaci klientské verze na Windows sledujte
+`docs/windows_install.html`, kde je popsána větev `windows-install`,
+požadované programy a skripty pro kontrolu závislostí a vytvoření zástupce.
+
 ## Build
 
 ```bash
