@@ -124,7 +124,7 @@ echo ╚════════════════════════
 echo.
 
 echo Instaluji/aktualizuji Node.js moduly...
-call npm install --production --loglevel=error
+call npm install --loglevel=error
 if errorlevel 1 (
     echo ❌ CHYBA: Nepodařilo se aktualizovat Node.js moduly!
     pause

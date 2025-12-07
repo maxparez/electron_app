@@ -24,7 +24,6 @@ echo ╚════════════════════════
 echo.
 
 set MISSING_DEPS=
-set "NPM_CMD="
 
 REM Kontrola Python
 echo [1/4] Kontroluji Python 3.11+...
@@ -62,42 +61,15 @@ if errorlevel 1 (
 
 REM Kontrola npm
 echo [3/4] Kontroluji npm...
-if not defined NPM_CMD (
-    for /f "delims=" %%i in ('where npm 2^>nul') do (
-        if not defined NPM_CMD set "NPM_CMD=%%~i"
-    )
-)
-if not defined NPM_CMD (
-    for %%i in ("%ProgramFiles%\nodejs\npm.cmd" "%ProgramFiles(x86)%\nodejs\npm.cmd" "%LOCALAPPDATA%\Programs\nodejs\npm.cmd" "%APPDATA%\npm\npm.cmd") do (
-        if not defined NPM_CMD (
-            if exist %%i set "NPM_CMD=%%~i"
-        )
-    )
-)
-
-if defined NPM_CMD (
-    for %%p in ("!NPM_CMD!") do (
-        if exist %%p set "NPM_CMD=%%~fsp"
-    )
-)
-
-if not defined NPM_CMD (
-    echo ❌ npm není nainstalován nebo není dostupný v PATH!
+call npm --version >nul 2>&1
+if errorlevel 1 (
+    echo ❌ npm není nainstalován!
     echo    ➜ npm se instaluje s Node.js z: https://nodejs.org/
     echo.
     set MISSING_DEPS=1
 ) else (
-    for /f "delims=" %%i in ('call "!NPM_CMD!" --version 2^>^&1') do set "NPM_VERSION=%%i"
-    if not defined NPM_VERSION (
-        echo ❌ npm se nepodařilo spustit (kontrola selhala).
-        echo    Cesta zjištěná skriptem: !NPM_CMD!
-        echo.
-        set MISSING_DEPS=1
-    ) else (
-        echo ✅ npm nalezen
-        echo    Verze: !NPM_VERSION!
-        echo    Umístění: !NPM_CMD!
-    )
+    echo ✅ npm nalezen
+    cmd /c npm --version
 )
 
 REM Kontrola Git
@@ -119,11 +91,11 @@ if defined MISSING_DEPS (
     echo ║ ❌ CHYBÍ POTŘEBNÝ SOFTWARE                                     ║
     echo ╚════════════════════════════════════════════════════════════════╝
     echo.
-    echo Prosím nainstalujte chybějící programy (viz odkazy výše) a poté
+    echo Prosím nainstalujte chybějící programy ^(viz odkazy výše^) a poté
     echo spusťte tento instalátor znovu.
     echo.
     echo Dodatečně budete potřebovat:
-    echo   • Microsoft Office s Excelem (2019+ nebo Microsoft 365)
+    echo   • Microsoft Office s Excelem ^(2019+ nebo Microsoft 365^)
     echo   • Microsoft Visual C++ Redistributable 2015-2022
     echo     ➜ https://aka.ms/vs/17/release/vc_redist.x64.exe
     echo.
@@ -161,7 +133,8 @@ if not exist "C:\OPJAK" (
 
 REM Klonování nebo aktualizace
 if not exist "%INSTALL_DIR%\.git" (
-    echo Stahují aplikaci (může trvat několik minut)...
+    REM ZDE BYLA CHYBA - pridany strisky ^ pred zavorky
+    echo Stahují aplikaci ^(může trvat několik minut^)...
     git clone -b %BRANCH% %REPO_URL% "%INSTALL_DIR%"
     if errorlevel 1 (
         echo ❌ CHYBA: Nepodařilo se stáhnout aplikaci z GitHubu!
@@ -211,7 +184,8 @@ call venv\Scripts\activate.bat
 echo Aktualizuji pip...
 python -m pip install --upgrade pip --quiet
 
-echo Instaluji Python knihovny (může trvat několik minut)...
+REM ZDE BYLA CHYBA - pridany strisky ^ pred zavorky
+echo Instaluji Python knihovny ^(může trvat několik minut^)...
 pip install -r requirements-windows.txt --quiet
 if errorlevel 1 (
     echo ❌ CHYBA: Nepodařilo se nainstalovat Python knihovny!
@@ -232,8 +206,9 @@ echo ║ FÁZE 4/5: Instalace Node.js modulů                            ║
 echo ╚════════════════════════════════════════════════════════════════╝
 echo.
 
-echo Instaluji Node.js moduly (může trvat několik minut)...
-call "!NPM_CMD!" install --production --loglevel=error
+REM ZDE BYLA CHYBA - pridany strisky ^ pred zavorky
+echo Instaluji Node.js moduly ^(může trvat několik minut^)...
+call npm install --loglevel=error
 if errorlevel 1 (
     echo ❌ CHYBA: Nepodařilo se nainstalovat Node.js moduly!
     pause
