@@ -20,12 +20,21 @@
         background: #f4f4f5;
         padding: 0.15rem 0.35rem;
         border-radius: 4px;
+        font-family: "Consolas", "Monaco", monospace;
       }
       .callout {
         border-left: 4px solid #2563eb;
         padding: 0.75rem 1rem;
         background: #eff6ff;
         margin: 1.5rem 0;
+      }
+      .callout.warning {
+        border-left-color: #f59e0b;
+        background: #fffbeb;
+      }
+      .callout.success {
+        border-left-color: #10b981;
+        background: #f0fdf4;
       }
       ol li {
         margin-bottom: 0.5rem;
@@ -37,193 +46,243 @@
         margin-top: 3rem;
         font-size: 0.9rem;
         color: #475569;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 1.5rem;
       }
-      .command-block {
-        position: relative;
-        background: #0f172a;
-        color: #f8fafc;
-        padding: 0.75rem;
+      .step-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
-        margin: 0.5rem 0 1rem;
+        padding: 1.5rem;
+        margin: 1rem 0;
       }
-      .command-block pre {
-        margin: 0;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-      .copy-btn {
-        position: absolute;
-        top: 0.35rem;
-        right: 0.35rem;
+      .step-number {
+        display: inline-block;
         background: #2563eb;
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        padding: 0.15rem 0.6rem;
-        font-size: 0.8rem;
-        cursor: pointer;
+        color: white;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 2rem;
+        font-weight: bold;
+        margin-right: 0.5rem;
       }
-      .copy-btn:active {
+      .download-btn {
+        display: inline-block;
+        background: #2563eb;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        margin: 0.5rem 0;
+      }
+      .download-btn:hover {
         background: #1d4ed8;
       }
-    </style>
-    <script>
-      function copyCommand(button) {
-        const text = button.getAttribute("data-command");
-        navigator.clipboard.writeText(text).then(() => {
-          const original = button.textContent;
-          button.textContent = "Zkopírováno";
-          button.disabled = true;
-          setTimeout(() => {
-            button.textContent = original;
-            button.disabled = false;
-          }, 1500);
-        });
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
       }
-    </script>
+      th, td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      th {
+        background: #f8fafc;
+        font-weight: 600;
+      }
+    </style>
   </head>
   <body>
-    <h1>Instalace aplikace Nástroje OP JAK (Windows)</h1>
+    <h1>📦 Instalace aplikace Nástroje OP JAK (Windows)</h1>
     <p>
-      Uživateli doručujeme dva soubory: tento HTML návod a
-      <code>install_windows.ps1</code>. Skript po spuštění stáhne hotový obsah z
-      větve <code>windows-install</code>, zkontroluje potřebné programy a
-      nainstaluje aplikaci do zvolené složky včetně zástupce na ploše. Uživatel
-      tedy nepotřebuje žádné znalosti GitHubu ani příkazů Git.
+      Jednoduchý návod pro instalaci aplikace na Windows PC.
+      Celý proces trvá cca <strong>10-15 minut</strong> a vše běží lokálně
+      na vašem počítači.
     </p>
 
-    <div class="callout">
-      <strong>Tip:</strong> Celý proces běží lokálně na vašem počítači.
-      Žádná data se neodesílají mimo zařízení a aplikace vyžaduje MS Excel pro
-      správné zpracování šablon.
+    <div class="callout success">
+      <strong>✅ Bezpečnost:</strong> Aplikace běží kompletně offline na vašem
+      počítači. Žádná data se neodesílají na internet.
     </div>
 
-    <h2>1. Co obdržíte</h2>
-    <ul>
-      <li><strong>Instalační skript</strong> <code>install_windows.ps1</code></li>
-      <li><strong>Tento návod</strong> s popisem kroků</li>
-    </ul>
+    <h2>1️⃣ Co budete potřebovat</h2>
 
-    <h2>2. Předpoklady (instaluje uživatel ručně)</h2>
-    <p>Nainstalujte následující software (práva administrátora jsou doporučená):</p>
-    <ul>
-      <li>
-        <strong>Python 3.11 až 3.13 (64-bit)</strong> –
-        <a href="https://www.python.org/downloads/">python.org/downloads</a>
-        (při instalaci zaškrtněte <em>Add Python to PATH</em>)
-      </li>
-      <li>
-        <strong>Node.js 18 LTS</strong> –
-        <a href="https://nodejs.org/">nodejs.org</a> (nainstaluje i npm)
-      </li>
-      <li>
-        <strong>Git for Windows</strong> –
-        <a href="https://git-scm.com/download/win">git-scm.com</a>
-      </li>
-      <li>
-        <strong>Microsoft Office s Excelem</strong> – 2019+ nebo Microsoft 365,
-        povolte makra pro xlwings
-      </li>
-      <li>
-        <strong>Microsoft Visual C++ Redistributable 2015-2022</strong> –
-        <a href="https://aka.ms/vs/17/release/vc_redist.x64.exe">download</a>
-        (nutné pro některé Node moduly)
-      </li>
-      <li>
-        <strong>PowerShell 5.1+ / Windows 10+</strong> – součást systému,
-        doporučené spouštět skript v režimu „Spustit jako správce“
-      </li>
-    </ul>
+    <p>Před instalací si připravte tyto programy:</p>
 
-    <h2>3. Příprava složky a spuštění skriptu</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Program</th>
+          <th>Verze</th>
+          <th>Odkaz ke stažení</th>
+          <th>Poznámka</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Python</strong></td>
+          <td>3.11 – 3.13 (64-bit)</td>
+          <td><a href="https://www.python.org/downloads/">python.org/downloads</a></td>
+          <td>⚠️ Zaškrtněte "Add Python to PATH"</td>
+        </tr>
+        <tr>
+          <td><strong>Node.js</strong></td>
+          <td>18 LTS nebo novější</td>
+          <td><a href="https://nodejs.org/">nodejs.org</a></td>
+          <td>Nainstaluje i npm</td>
+        </tr>
+        <tr>
+          <td><strong>Git for Windows</strong></td>
+          <td>Nejnovější</td>
+          <td><a href="https://git-scm.com/download/win">git-scm.com</a></td>
+          <td>Pro stažení a aktualizace</td>
+        </tr>
+        <tr>
+          <td><strong>Microsoft Office</strong></td>
+          <td>2019+ nebo Microsoft 365</td>
+          <td>Váš systém</td>
+          <td>Nutný Excel pro zpracování</td>
+        </tr>
+        <tr>
+          <td><strong>VC++ Redistributable</strong></td>
+          <td>2015-2022 (x64)</td>
+          <td><a href="https://aka.ms/vs/17/release/vc_redist.x64.exe">Stáhnout</a></td>
+          <td>Závislost pro Node moduly</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout warning">
+      <strong>⚠️ Důležité:</strong> Při instalaci Pythonu <strong>musíte</strong>
+      zaškrtnout volbu "<em>Add Python to PATH</em>", jinak instalace nebude fungovat!
+    </div>
+
+    <h2>2️⃣ Instalace – 3 jednoduché kroky</h2>
+
+    <div class="step-card">
+      <h3><span class="step-number">1</span>Stáhněte instalátor</h3>
+      <p>Stáhněte si soubor <code>install.bat</code> z GitHubu:</p>
+      <a href="https://github.com/maxparez/electron_app/releases/latest/download/install.bat" class="download-btn">
+        ⬇️ Stáhnout install.bat
+      </a>
+      <p style="margin-top:1rem;">
+        Nebo navštivte:
+        <a href="https://github.com/maxparez/electron_app/releases/latest">
+          github.com/maxparez/electron_app/releases/latest
+        </a>
+      </p>
+    </div>
+
+    <div class="step-card">
+      <h3><span class="step-number">2</span>Spusťte instalaci</h3>
+      <p>Dvojklikem spusťte stažený soubor <code>install.bat</code></p>
+      <ul>
+        <li>Skript zkontroluje, zda máte nainstalované všechny potřebné programy</li>
+        <li>Pokud něco chybí, zobrazí se seznam s odkazy ke stažení</li>
+        <li>Po dokončení kontrol spustí automatickou instalaci</li>
+      </ul>
+    </div>
+
+    <div class="step-card">
+      <h3><span class="step-number">3</span>Hotovo!</h3>
+      <p>Po dokončení instalace najdete na ploše zástupce <strong>"Nástroje OP JAK"</strong></p>
+      <ul>
+        <li>Dvojklik spustí aplikaci</li>
+        <li>Při prvním spuštění potvrďte oprávnění firewallu (pokud se zobrazí)</li>
+        <li>Aplikace je připravena k použití</li>
+      </ul>
+    </div>
+
+    <h2>3️⃣ Co instalační skript udělá</h2>
+
+    <p>Instalátor automaticky provede tyto kroky:</p>
+
     <ol>
-      <li>Rozbalte doručený balíček do složky, kde chcete mít instalační skripty
-        (např. <code>C:\OPJAK\installer</code>).</li>
-      <li>Otevřete PowerShell jako správce (Start → napište „PowerShell“ → pravým
-        tlačítkem „Spustit jako správce“).</li>
-      <li>Přejděte do složky se skriptem, např.:
-        <div class="command-block">
-          <button class="copy-btn" type="button" data-command="cd C:\OPJAK\installer" onclick="copyCommand(this)">Kopírovat</button>
-          <pre><code>cd C:\OPJAK\installer</code></pre>
-        </div>
-      </li>
-      <li>Pokud spouštíte skripty poprvé, povolte je:
-        <div class="command-block">
-          <button class="copy-btn" type="button" data-command="Set-ExecutionPolicy -Scope CurrentUser RemoteSigned" onclick="copyCommand(this)">Kopírovat</button>
-          <pre><code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code></pre>
-        </div>
-      </li>
-      <li>
-        Spusťte instalaci (výchozí cesta <code>C:\OPJAK</code>):
-        <div class="command-block">
-          <button class="copy-btn" type="button" data-command=".\install_windows.ps1" onclick="copyCommand(this)">Kopírovat</button>
-          <pre><code>.\install_windows.ps1</code></pre>
-        </div>
-        nebo zadejte vlastní umístění:
-        <div class="command-block">
-          <button class="copy-btn" type="button" data-command=".\install_windows.ps1 -InstallRoot &quot;D:\Aplikace\OPJAK&quot;" onclick="copyCommand(this)">Kopírovat</button>
-          <pre><code>.\install_windows.ps1 -InstallRoot "D:\Aplikace\OPJAK"</code></pre>
-        </div>
-      </li>
+      <li><strong>Kontrola závislostí</strong> – ověří Python, Node.js, npm, Git</li>
+      <li><strong>Stažení aplikace</strong> – naklonuje z GitHubu do <code>C:\OPJAK\electron_app</code></li>
+      <li><strong>Python prostředí</strong> – vytvoří virtuální prostředí a nainstaluje knihovny</li>
+      <li><strong>Node.js moduly</strong> – nainstaluje potřebné moduly pro Electron</li>
+      <li><strong>Zástupce</strong> – vytvoří ikonu na ploše pro snadné spuštění</li>
     </ol>
-
-    <h2>4. Co skript provede</h2>
-    <p>Skript provede:</p>
-    <ol>
-      <li>Kontrolu dostupnosti Pythonu, pipu, Node.js, npm a Gitu.</li>
-      <li>Zobrazení seznamu chybějících komponent (bez pokračování instalace).</li>
-      <li>Stažení/aktualizaci větve <code>windows-install</code> do
-        vybrané instalační složky.</li>
-      <li>Vytvoření a aktivaci virtuálního prostředí (<code>venv</code>), instalaci
-        Python balíčků z <code>requirements-windows.txt</code>.</li>
-      <li>Instalaci Node modulů v režimu <code>npm install --production</code>.</li>
-      <li>Vytvoření konfigurace (soubor <code>.env</code>, výstupní složky).</li>
-      <li>Kontrolní test (<code>python test_students_16plus.py</code>).</li>
-      <li>Vytvoření zástupce <em>Nástroje OP JAK</em> na ploše (odkaz na
-        <code>start-app.bat</code>).</li>
-    </ol>
-
-    <h2>5. První spuštění</h2>
-    <ul>
-      <li>Dvojklik na zástupce nebo běh <code>start-app.bat</code>.</li>
-      <li>Backend (Python) se spustí na pozadí automaticky.</li>
-      <li>V prvním spuštění potvrďte oprávnění firewallu, pokud bude vyžádáno.</li>
-    </ul>
-
-    <h2>6. Aktualizace aplikace</h2>
-    <p>Po instalaci najdete ve složce aplikace adresář <code>scripts</code>.</p>
-    <ol>
-      <li>Otevřete PowerShell a přejděte do složky s aplikací
-        (např. <code>C:\OPJAK\electron_app</code>).</li>
-      <li>Spusťte:
-        <div class="command-block">
-          <button class="copy-btn" type="button" data-command=".\scripts\update_windows.ps1" onclick="copyCommand(this)">Kopírovat</button>
-          <pre><code>.\scripts\update_windows.ps1</code></pre>
-        </div>
-        (volitelně s <code>-InstallRoot</code>, pokud instalace není v
-        <code>C:\OPJAK</code>).
-      </li>
-      <li>Skript stáhne aktuální verzi z větve <code>windows-install</code>,
-        obnoví Python/Node balíčky a spustí kontrolní test.</li>
-    </ol>
-
-    <h2>7. Odinstalace</h2>
-    <ul>
-      <li>Ukončete aplikaci.</li>
-      <li>Smažte složku instalace a zástupce.</li>
-      <li>Případně odstraňte virtuální prostředí <code>venv</code>.</li>
-    </ul>
 
     <div class="callout">
-      <strong>Potíže?</strong> Otevřete složku <code>logs</code> a přiložte
-      soubory <code>backend.log</code> a <code>electron.log</code> kolegovi, který
-      poskytuje podporu. Do zprávy napište, ve kterém kroku se instalace
-      zastavila.
+      <strong>💡 Tip:</strong> Celý proces instalace trvá 5-10 minut, v závislosti
+      na rychlosti vašeho připojení k internetu.
+    </div>
+
+    <h2>4️⃣ Aktualizace aplikace</h2>
+
+    <p>Po instalaci najdete ve složce aplikace soubor <code>update.bat</code>:</p>
+
+    <ol>
+      <li>Přejděte do složky <code>C:\OPJAK\electron_app</code></li>
+      <li>Spusťte <code>update.bat</code> dvojklikem</li>
+      <li>Skript stáhne nejnovější verzi a aktualizuje knihovny</li>
+    </ol>
+
+    <div class="callout success">
+      <strong>✅ Automatická aktualizace:</strong> Skript stáhne pouze změny,
+      takže aktualizace je rychlá (obvykle pod 1 minutu).
+    </div>
+
+    <h2>5️⃣ Řešení problémů</h2>
+
+    <h3>❌ "Python není nainstalován"</h3>
+    <ul>
+      <li>Zkontrolujte, že Python je nainstalován: otevřete CMD a napište <code>python --version</code></li>
+      <li>Pokud nevidíte verzi, přeinstalujte Python a <strong>zaškrtněte "Add Python to PATH"</strong></li>
+      <li>Po přeinstalaci <strong>restartujte počítač</strong></li>
+    </ul>
+
+    <h3>❌ "Git není nainstalován"</h3>
+    <ul>
+      <li>Stáhněte a nainstalujte <a href="https://git-scm.com/download/win">Git for Windows</a></li>
+      <li>Při instalaci ponechte výchozí nastavení</li>
+      <li>Po instalaci restartujte CMD nebo instalátor</li>
+    </ul>
+
+    <h3>❌ "Nepodařilo se nainstalovat Python knihovny"</h3>
+    <ul>
+      <li>Zkontrolujte připojení k internetu</li>
+      <li>Vypněte dočasně antivirus/firewall</li>
+      <li>Zkuste spustit instalátor jako <strong>správce</strong> (pravým tlačítkem → "Spustit jako správce")</li>
+    </ul>
+
+    <h3>❌ "Aplikace se nespustí"</h3>
+    <ul>
+      <li>Zkontrolujte, že máte nainstalovaný Microsoft Excel</li>
+      <li>Přejděte do <code>C:\OPJAK\electron_app\logs</code></li>
+      <li>Otevřete <code>backend.log</code> a <code>electron.log</code></li>
+      <li>Pošlete tyto logy kolegovi, který poskytuje podporu</li>
+    </ul>
+
+    <h2>6️⃣ Odinstalace</h2>
+
+    <p>Pokud chcete aplikaci odinstalovat:</p>
+
+    <ol>
+      <li>Ukončete aplikaci (pokud běží)</li>
+      <li>Smažte složku <code>C:\OPJAK</code></li>
+      <li>Smažte zástupce z plochy</li>
+    </ol>
+
+    <p>Python, Node.js a Git můžete ponechat – využijete je i pro jiné aplikace.</p>
+
+    <div class="callout">
+      <strong>📞 Potřebujete pomoc?</strong><br>
+      V případě problémů kontaktujte IT podporu nebo kolegu, který aplikaci
+      spravuje. Přiložte případně logy ze složky <code>logs/</code>.
     </div>
 
     <footer>
-      Verze instrukcí: 2025-06-XX · Odpovědný: tým Electron App ·
-      Dotazy: #opjak-support (Teams)
+      <strong>Verze dokumentace:</strong> 1.1.0 · 2025-12-07<br>
+      <strong>Autor aplikace:</strong> Max Parez<br>
+      <strong>GitHub:</strong> <a href="https://github.com/maxparez/electron_app">github.com/maxparez/electron_app</a>
     </footer>
   </body>
 </html>
