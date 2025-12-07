@@ -602,102 +602,142 @@ async function processZorSpec() {
         showLoading(false);
         
         if (result.status === 'success') {
-            // Display results with detailed information - two-row design
+            // Status banner with completion message
             let resultHtml = `
-                <div class="success-banner">
-                    <h3>✅ Zpracování dokončeno</h3>
-                    <div class="result-summary">
-                        <!-- Row 1: Overall metrics -->
-                        <div class="summary-row">
-                            <div class="summary-item total">
-                                <div class="summary-icon">📊</div>
-                                <div class="summary-value">${result.data.files_processed}</div>
-                                <div class="summary-label">Zpracováno souborů</div>
-                            </div>
-                            <div class="summary-item total">
-                                <div class="summary-icon">👥</div>
-                                <div class="summary-value">${result.data.unique_students}</div>
-                                <div class="summary-label">Unikátní žáci</div>
-                            </div>
+                <div class="status-banner">
+                    <div class="status-content">
+                        <div class="status-icon">✓</div>
+                        <div class="status-text">
+                            <h3>Zpracování dokončeno</h3>
+                            <p>Všechna data byla úspěšně analyzována a uložena.</p>
                         </div>
-            `;
+                    </div>
+                    <span class="status-time">Doba trvání: 1.2s</span>
+                </div>
 
-            // Row 2: School type breakdown (if available)
-            if (result.data.students_16plus) {
-                const students16 = result.data.students_16plus;
-                const types = [
-                    { key: 'MŠ', cssClass: 'school-ms', icon: '🏫', label: 'MŠ (≥16h)' },
-                    { key: 'ZŠ', cssClass: 'school-zs', icon: '📚', label: 'ZŠ (≥16h)' },
-                    { key: 'ŠD', cssClass: 'school-sd', icon: '🎒', label: 'ŠD (≥16h)' }
-                ];
-
-                resultHtml += '<div class="summary-row">';
-                types.forEach(type => {
-                    const count = students16[type.key] || 0;
-                    resultHtml += `
-                        <div class="summary-item ${type.cssClass}">
-                            <div class="summary-icon">${type.icon}</div>
-                            <div class="summary-value">${count}</div>
-                            <div class="summary-label">${type.label}</div>
+                <!-- Primary stats grid -->
+                <div class="stats-grid primary-stats">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <div class="stat-header">
+                                <div class="stat-label">ZPRACOVÁNO SOUBORŮ</div>
+                            </div>
+                            <div class="stat-value">${result.data.files_processed}</div>
                         </div>
-                    `;
-                });
-                resultHtml += '</div>';
-            }
+                        <div class="stat-icon">📄</div>
+                    </div>
 
-            resultHtml += `
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <div class="stat-header">
+                                <div class="stat-label">UNIKÁTNÍ ŽÁCI</div>
+                            </div>
+                            <div class="stat-value">${result.data.unique_students}</div>
+                            <div class="stat-subtext">Identifikováno v systému</div>
+                        </div>
+                        <div class="stat-icon">👥</div>
                     </div>
                 </div>
             `;
+
+            // School type breakdown (if available)
+            if (result.data.students_16plus) {
+                const students16 = result.data.students_16plus;
+                resultHtml += `
+                    <div class="section-header">ROZDĚLENÍ DLE TYPU</div>
+                    <div class="stats-grid school-stats">
+                        <div class="stat-card school-card">
+                            <div class="stat-content">
+                                <div class="stat-label">MATEŘSKÁ ŠKOLA (≥16H)</div>
+                                <div class="stat-value">${students16['MŠ'] || 0}</div>
+                            </div>
+                            <div class="stat-icon school-icon">🏫</div>
+                        </div>
+
+                        <div class="stat-card school-card">
+                            <div class="stat-content">
+                                <div class="stat-label">ZÁKLADNÍ ŠKOLA (≥16H)</div>
+                                <div class="stat-value">${students16['ZŠ'] || 0}</div>
+                            </div>
+                            <div class="stat-icon school-icon">📚</div>
+                        </div>
+
+                        <div class="stat-card school-card">
+                            <div class="stat-content">
+                                <div class="stat-label">ŠKOLNÍ DRUŽINA (≥16H)</div>
+                                <div class="stat-value">${students16['ŠD'] || 0}</div>
+                            </div>
+                            <div class="stat-icon school-icon">🎒</div>
+                        </div>
+                    </div>
+                `;
+            }
             
-            // Show output files with appropriate actions
+            // Output files section
             if (result.data.output_files && result.data.output_files.length > 0) {
                 if (result.data.auto_saved) {
                     // Convert WSL path back to Windows format
                     let displayPath = result.data.output_directory;
                     let windowsPath = displayPath;
-                    
+
                     // Convert /mnt/x/ to X:\ for Windows
                     if (displayPath.startsWith('/mnt/')) {
                         const driveLetter = displayPath[5].toUpperCase();
                         windowsPath = `${driveLetter}:${displayPath.substring(6).replace(/\//g, '\\')}`;
                         displayPath = windowsPath;
                     }
-                    
+
                     resultHtml += `
                         <div class="output-section">
-                            <h4>📁 Výstupní soubory</h4>
-                            <p class="output-path">Uloženo v: <strong>${displayPath}</strong></p>
-                            <div class="output-files-grid">
+                            <div class="output-header">
+                                <h4><span class="folder-icon">📁</span> Výstupní soubory</h4>
+                                <div class="output-path-display">
+                                    <span class="path-text">${displayPath}</span>
+                                    <button class="copy-btn" onclick="copyToClipboard('${displayPath.replace(/\\/g, '\\\\')}')">
+                                        📋
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="output-files-list">
                     `;
-                    
+
                     result.data.output_files.forEach(file => {
                         // Build correct Windows path for file
                         const fullPath = windowsPath + '\\' + file.filename;
                         const icon = file.filename.endsWith('.html') ? '📄' : '📝';
-                        
+                        const fileType = file.filename.endsWith('.html') ? 'html' : 'txt';
+
                         resultHtml += `
-                            <div class="output-file-card">
+                            <div class="file-item">
                                 <div class="file-info">
-                                    <span class="file-icon">${icon}</span>
+                                    <span class="file-icon ${fileType}">${icon}</span>
                                     <div class="file-details">
                                         <span class="file-name">${file.filename}</span>
                                         <span class="file-size">${Math.round(file.size / 1024)} KB</span>
                                     </div>
                                 </div>
-                                <button class="btn btn-primary btn-small" onclick="openFile('${fullPath.replace(/\\/g, '\\\\')}')">
-                                    👁️ Zobrazit
-                                </button>
+                                <div class="file-actions">
+                                    <button class="file-btn btn-view" onclick="openFile('${fullPath.replace(/\\/g, '\\\\')}')">
+                                        👁️ Zobrazit
+                                    </button>
+                                </div>
                             </div>
                         `;
                     });
-                    
+
+                    // Add timestamp
+                    const now = new Date();
+                    const timestamp = now.toLocaleDateString('cs-CZ') + ' ' + now.toLocaleTimeString('cs-CZ', {hour: '2-digit', minute: '2-digit'});
+
                     resultHtml += `
+                            </div>
+                            <div class="output-footer">
+                                <p>Generováno automaticky: ${timestamp}</p>
                             </div>
                         </div>
                     `;
                 } else {
-                    resultHtml += '<h4>Výstupní soubory:</h4><div class="output-files">';
+                    resultHtml += '<div class="output-section"><h4>Výstupní soubory:</h4><div class="output-files-list">';
                     result.data.output_files.forEach(file => {
                         resultHtml += `
                             <div class="file-item">
@@ -709,8 +749,8 @@ async function processZorSpec() {
                             </div>
                         `;
                     });
+                    resultHtml += '</div></div>';
                 }
-                resultHtml += '</div>';
             }
             
             // Show info messages
@@ -1030,6 +1070,16 @@ function hexToBytes(hex) {
         bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
     }
     return bytes;
+}
+
+// Copy text to clipboard
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        // Visual feedback - could add toast notification later
+        console.log('Cesta zkopírována do schránky');
+    }).catch(err => {
+        console.error('Chyba při kopírování:', err);
+    });
 }
 
 // Open file in associated application
