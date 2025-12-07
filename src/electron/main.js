@@ -250,7 +250,7 @@ ipcMain.handle('fs:scanFolder', async (event, folderPath) => {
 // Open file in associated application
 ipcMain.handle('file:openInApp', async (event, filePath) => {
     const fs = require('fs');
-    
+
     try {
         // Check if file exists
         if (!fs.existsSync(filePath)) {
@@ -259,16 +259,44 @@ ipcMain.handle('file:openInApp', async (event, filePath) => {
                 error: 'Soubor neexistuje'
             };
         }
-        
+
         // Open file with default application
         await shell.openPath(filePath);
-        
+
         return {
             success: true,
             filename: require('path').basename(filePath)
         };
     } catch (error) {
         console.error('Error opening file:', error);
+        return {
+            success: false,
+            error: error.message || 'Neznámá chyba'
+        };
+    }
+});
+
+// Open folder in file explorer
+ipcMain.handle('folder:open', async (event, folderPath) => {
+    const fs = require('fs');
+
+    try {
+        // Check if folder exists
+        if (!fs.existsSync(folderPath)) {
+            return {
+                success: false,
+                error: 'Složka neexistuje'
+            };
+        }
+
+        // Open folder in file explorer
+        await shell.openPath(folderPath);
+
+        return {
+            success: true
+        };
+    } catch (error) {
+        console.error('Error opening folder:', error);
         return {
             success: false,
             error: error.message || 'Neznámá chyba'

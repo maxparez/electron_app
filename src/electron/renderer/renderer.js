@@ -693,8 +693,8 @@ async function processZorSpec() {
                                 <h4><span class="folder-icon">📁</span> Výstupní soubory</h4>
                                 <div class="output-path-display">
                                     <span class="path-text">${displayPath}</span>
-                                    <button class="copy-btn" onclick="copyToClipboard('${displayPath.replace(/\\/g, '\\\\')}')">
-                                        📋
+                                    <button class="copy-btn" onclick="openFolder('${displayPath.replace(/\\/g, '\\\\')}')">
+                                        📂
                                     </button>
                                 </div>
                             </div>
@@ -1072,14 +1072,19 @@ function hexToBytes(hex) {
     return bytes;
 }
 
-// Copy text to clipboard
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        // Visual feedback - could add toast notification later
-        console.log('Cesta zkopírována do schránky');
-    }).catch(err => {
-        console.error('Chyba při kopírování:', err);
-    });
+// Open folder in file explorer
+async function openFolder(folderPath) {
+    try {
+        const result = await window.electronAPI.openFolder(folderPath);
+        if (result.success) {
+            console.log('Složka otevřena');
+        } else {
+            showMessage(`Chyba při otevírání složky: ${result.error}`, 'error');
+        }
+    } catch (err) {
+        console.error('Chyba při otevírání složky:', err);
+        showMessage('Chyba při otevírání složky', 'error');
+    }
 }
 
 // Open file in associated application
