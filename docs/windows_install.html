@@ -38,7 +38,49 @@
         font-size: 0.9rem;
         color: #475569;
       }
+      .command-block {
+        position: relative;
+        background: #0f172a;
+        color: #f8fafc;
+        padding: 0.75rem;
+        border-radius: 8px;
+        margin: 0.5rem 0 1rem;
+      }
+      .command-block pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .copy-btn {
+        position: absolute;
+        top: 0.35rem;
+        right: 0.35rem;
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 0.15rem 0.6rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+      .copy-btn:active {
+        background: #1d4ed8;
+      }
     </style>
+    <script>
+      function copyCommand(button) {
+        const text = button.getAttribute("data-command");
+        navigator.clipboard.writeText(text).then(() => {
+          const original = button.textContent;
+          button.textContent = "Zkopírováno";
+          button.disabled = true;
+          setTimeout(() => {
+            button.textContent = original;
+            button.disabled = false;
+          }, 1500);
+        });
+      }
+    </script>
   </head>
   <body>
     <h1>Instalace aplikace Nástroje OP JAK (Windows)</h1>
@@ -100,16 +142,28 @@
       <li>Otevřete PowerShell jako správce (Start → napište „PowerShell“ → pravým
         tlačítkem „Spustit jako správce“).</li>
       <li>Přejděte do složky se skriptem, např.:
-        <pre><code>cd C:\OPJAK\installer</code></pre>
+        <div class="command-block">
+          <button class="copy-btn" type="button" data-command="cd C:\OPJAK\installer" onclick="copyCommand(this)">Kopírovat</button>
+          <pre><code>cd C:\OPJAK\installer</code></pre>
+        </div>
       </li>
       <li>Pokud spouštíte skripty poprvé, povolte je:
-        <pre><code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code></pre>
+        <div class="command-block">
+          <button class="copy-btn" type="button" data-command="Set-ExecutionPolicy -Scope CurrentUser RemoteSigned" onclick="copyCommand(this)">Kopírovat</button>
+          <pre><code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code></pre>
+        </div>
       </li>
       <li>
         Spusťte instalaci (výchozí cesta <code>C:\OPJAK</code>):
-        <pre><code>.\install_windows.ps1</code></pre>
+        <div class="command-block">
+          <button class="copy-btn" type="button" data-command=".\install_windows.ps1" onclick="copyCommand(this)">Kopírovat</button>
+          <pre><code>.\install_windows.ps1</code></pre>
+        </div>
         nebo zadejte vlastní umístění:
-        <pre><code>.\install_windows.ps1 -InstallRoot "D:\Aplikace\OPJAK"</code></pre>
+        <div class="command-block">
+          <button class="copy-btn" type="button" data-command=".\install_windows.ps1 -InstallRoot &quot;D:\Aplikace\OPJAK&quot;" onclick="copyCommand(this)">Kopírovat</button>
+          <pre><code>.\install_windows.ps1 -InstallRoot "D:\Aplikace\OPJAK"</code></pre>
+        </div>
       </li>
     </ol>
 
@@ -142,7 +196,10 @@
       <li>Otevřete PowerShell a přejděte do složky s aplikací
         (např. <code>C:\OPJAK\electron_app</code>).</li>
       <li>Spusťte:
-        <pre><code>.\scripts\update_windows.ps1</code></pre>
+        <div class="command-block">
+          <button class="copy-btn" type="button" data-command=".\scripts\update_windows.ps1" onclick="copyCommand(this)">Kopírovat</button>
+          <pre><code>.\scripts\update_windows.ps1</code></pre>
+        </div>
         (volitelně s <code>-InstallRoot</code>, pokud instalace není v
         <code>C:\OPJAK</code>).
       </li>
