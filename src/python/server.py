@@ -571,6 +571,7 @@ def process_zor_spec():
                     "data": {
                         "files_processed": data['files_processed'],
                         "unique_students": data['unique_students'],
+                        "students_16plus": data.get('students_16plus', {}),  # Add student counts by type
                         "output_files": output_files
                     },
                     "errors": result.get('errors', []),
@@ -672,6 +673,7 @@ def process_zor_spec_paths():
                     "data": {
                         "files_processed": result['files_processed'],
                         "unique_students": result['unique_students'],
+                        "students_16plus": result.get('students_16plus', {}),  # Add student counts by type
                         "output_files": output_files,
                         "auto_saved": auto_save,
                         "output_directory": output_dir if auto_save else None

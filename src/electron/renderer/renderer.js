@@ -602,48 +602,47 @@ async function processZorSpec() {
         showLoading(false);
         
         if (result.status === 'success') {
-            // Display results with detailed information
+            // Display results with detailed information - two-row design
             let resultHtml = `
                 <div class="success-banner">
                     <h3>✅ Zpracování dokončeno</h3>
                     <div class="result-summary">
-                        <div class="summary-item">
-                            <span class="summary-icon">📊</span>
-                            <div>
-                                <div class="summary-label">Zpracováno souborů</div>
+                        <!-- Row 1: Overall metrics -->
+                        <div class="summary-row">
+                            <div class="summary-item total">
+                                <div class="summary-icon">📊</div>
                                 <div class="summary-value">${result.data.files_processed}</div>
+                                <div class="summary-label">Zpracováno souborů</div>
                             </div>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-icon">👥</span>
-                            <div>
-                                <div class="summary-label">Unikátní žáci</div>
+                            <div class="summary-item total">
+                                <div class="summary-icon">👥</div>
                                 <div class="summary-value">${result.data.unique_students}</div>
+                                <div class="summary-label">Unikátní žáci</div>
                             </div>
                         </div>
             `;
 
-            // Add student counts by school type if available
+            // Row 2: School type breakdown (if available)
             if (result.data.students_16plus) {
                 const students16 = result.data.students_16plus;
                 const types = [
-                    { key: 'MŠ', icon: '🏫', label: 'MŠ (≥16h)' },
-                    { key: 'ZŠ', icon: '📚', label: 'ZŠ (≥16h)' },
-                    { key: 'ŠD', icon: '🎒', label: 'ŠD (≥16h)' }
+                    { key: 'MŠ', cssClass: 'school-ms', icon: '🏫', label: 'MŠ (≥16h)' },
+                    { key: 'ZŠ', cssClass: 'school-zs', icon: '📚', label: 'ZŠ (≥16h)' },
+                    { key: 'ŠD', cssClass: 'school-sd', icon: '🎒', label: 'ŠD (≥16h)' }
                 ];
 
+                resultHtml += '<div class="summary-row">';
                 types.forEach(type => {
                     const count = students16[type.key] || 0;
                     resultHtml += `
-                        <div class="summary-item">
-                            <span class="summary-icon">${type.icon}</span>
-                            <div>
-                                <div class="summary-label">${type.label}</div>
-                                <div class="summary-value">${count}</div>
-                            </div>
+                        <div class="summary-item ${type.cssClass}">
+                            <div class="summary-icon">${type.icon}</div>
+                            <div class="summary-value">${count}</div>
+                            <div class="summary-label">${type.label}</div>
                         </div>
                     `;
                 });
+                resultHtml += '</div>';
             }
 
             resultHtml += `

@@ -43,6 +43,26 @@ function createWindow() {
         mainWindow.webContents.openDevTools();
     }
 
+    // Add keyboard shortcut for DevTools (F12 or Ctrl+Shift+I)
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        // F12 key
+        if (input.key === 'F12') {
+            if (mainWindow.webContents.isDevToolsOpened()) {
+                mainWindow.webContents.closeDevTools();
+            } else {
+                mainWindow.webContents.openDevTools();
+            }
+        }
+        // Ctrl+Shift+I (or Cmd+Shift+I on Mac)
+        if (input.control && input.shift && input.key === 'I') {
+            if (mainWindow.webContents.isDevToolsOpened()) {
+                mainWindow.webContents.closeDevTools();
+            } else {
+                mainWindow.webContents.openDevTools();
+            }
+        }
+    });
+
     // Handle window closed
     mainWindow.on('closed', function () {
         mainWindow = null;

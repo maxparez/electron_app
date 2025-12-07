@@ -121,7 +121,7 @@ class ZorSpecDatProcessor(BaseTool):
                 "names_list": txt_file,
                 "output_files": [html_file, txt_file]
             }
-            
+
             self.add_info(f"Report uložen: {html_file}||{os.path.basename(html_file)}")
             self.add_info(f"Seznam žáků uložen: {txt_file}||{os.path.basename(txt_file)}")
             
@@ -673,6 +673,7 @@ class ZorSpecDatProcessor(BaseTool):
                 'success': True,
                 'files_processed': result['data']['files_processed'],
                 'unique_students': result['data']['unique_students'],
+                'students_16plus': result['data'].get('students_16plus', {}),  # Add student counts by type
                 'output_files': [
                     {
                         'filename': os.path.basename(path),

@@ -224,3 +224,84 @@ Počet žáků s více jak 16 h inovativního vzdělávání
 - All tests passing
 - No breaking changes
 
+
+### 2025-12-07 – ChatGPT GUI Redesign Review (ZorSpecDat Results)
+- **Topic**: Visual redesign of ZorSpecDat results summary display
+- **Implementation Date**: 2025-12-07
+- **Consultant**: ChatGPT (GPT-5.1) via Codex CLI
+- **Reviewer**: Claude Sonnet 4.5 (chatgpt-consultant agent)
+
+#### Documents Reviewed
+- `CLAUDE.md`: Project overview, user profile (10 non-tech colleagues)
+- `CORE_DEVELOPMENT_PRINCIPLES.md`: KISS/DRY/YAGNI enforcement
+- `src/electron/renderer/styles.css`: Current styles (lines 848-877)
+- `src/electron/renderer/renderer.js`: ZorSpecDat results rendering logic
+
+#### Proposed Changes
+From js-docs agent consultation:
+1. Two-row grid layout (top: totals, bottom: school breakdown)
+2. `grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))`
+3. Modern card design: box-shadow, gradients, border-left color coding
+4. Hover effects for interactivity
+
+#### ChatGPT Findings (via Codex)
+1. **Layout Improvement**: Two-row grid helps non-tech users scan totals first, then school breakdown
+   - Current: Single flex row (lines 848-877)
+   - Improved scannability with stacked rows
+   
+2. **Typography Concerns**: 
+   - Current labels: 12px (line 869)
+   - Recommendation: Bump to 14px for better readability on school desktops
+   - Keep large value text (24px, line 876)
+   
+3. **Color/Gradient Warning**:
+   - Subtle gradients on white can flatten cards
+   - Border-left needs high-contrast accent colors
+   - Risk: 12px labels may blend into gradient backgrounds
+   
+4. **Spacing Validation**:
+   - Proposed: gap 24px (rows), 16px (cards)
+   - Current padding: 15-20px (lines 854-860)
+   - Verdict: Keep current padding to avoid cramped appearance
+   
+5. **Grid Responsiveness**:
+   - `auto-fit` can collapse cards <200px width
+   - May cause abrupt second-row push on narrow windows
+   - Alternative: Consider `auto-fill` for consistent column counts
+   
+6. **Technical Compatibility**:
+   - Electron (Chromium) fully supports CSS Grid, gradients, hover
+   - No rendering red flags for Windows
+   - Pure CSS = zero performance/security impact
+
+#### Constraint Compliance Check
+- Windows-only: No issues
+- Existing Electron renderer: Compatible
+- Czech UI labels: Maintained
+- KISS principle: Pure CSS, no new dependencies
+- No architectural changes: Just style tweaks
+
+#### Recommendations
+1. **IMPLEMENT** the two-row grid layout
+2. **ADJUST** label font size from 12px to 14px
+3. **CAREFUL** with gradient stops - ensure contrast near text
+4. **TEST** responsive behavior at minimum window width
+5. **KEEP** current padding (15-20px)
+6. **ENSURE** high-contrast border-left colors for categorization
+
+#### Next Steps
+- Implement redesign with ChatGPT's typography adjustments
+- Test at various window widths (especially minimum supported)
+- Verify gradient contrast with 14px labels
+- Consider auto-fill vs auto-fit based on window behavior
+- Ready for commit with tag [feat-XXX]
+
+#### Verdict
+**APPROVED FOR IMPLEMENTATION** with minor adjustments:
+- Bump labels to 14px
+- Keep existing padding
+- Test grid responsiveness
+- Ensure gradient contrast
+
+No blocking issues. Design is appropriate for non-tech Windows users.
+
