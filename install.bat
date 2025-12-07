@@ -75,6 +75,12 @@ if not defined NPM_CMD (
     )
 )
 
+if defined NPM_CMD (
+    for %%p in ("!NPM_CMD!") do (
+        if exist %%p set "NPM_CMD=%%~fsp"
+    )
+)
+
 if not defined NPM_CMD (
     echo ❌ npm není nainstalován nebo není dostupný v PATH!
     echo    ➜ npm se instaluje s Node.js z: https://nodejs.org/
