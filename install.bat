@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 chcp 65001 >nul
 cls
 
@@ -68,7 +69,8 @@ if errorlevel 1 (
     set MISSING_DEPS=1
 ) else (
     echo ✅ npm nalezen
-    npm --version 2>&1
+    for /f "delims=" %%i in ('npm --version 2^>^&1') do set NPM_VERSION=%%i
+    echo !NPM_VERSION!
 )
 
 REM Kontrola Git
