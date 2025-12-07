@@ -24,6 +24,7 @@ echo ╚════════════════════════
 echo.
 
 set MISSING_DEPS=
+set "NPM_CMD="
 
 REM Kontrola Python
 echo [1/4] Kontroluji Python 3.11+...
@@ -61,16 +62,36 @@ if errorlevel 1 (
 
 REM Kontrola npm
 echo [3/4] Kontroluji npm...
-npm --version >nul 2>&1
-if errorlevel 1 (
-    echo ❌ npm není nainstalován!
+if not defined NPM_CMD (
+    for /f "delims=" %%i in ('where npm 2^>nul') do (
+        if not defined NPM_CMD set "NPM_CMD=%%~i"
+    )
+)
+if not defined NPM_CMD (
+    for %%i in ("%ProgramFiles%\nodejs\npm.cmd" "%ProgramFiles(x86)%\nodejs\npm.cmd" "%LOCALAPPDATA%\Programs\nodejs\npm.cmd" "%APPDATA%\npm\npm.cmd") do (
+        if not defined NPM_CMD (
+            if exist %%i set "NPM_CMD=%%~i"
+        )
+    )
+)
+
+if not defined NPM_CMD (
+    echo ❌ npm není nainstalován nebo není dostupný v PATH!
     echo    ➜ npm se instaluje s Node.js z: https://nodejs.org/
     echo.
     set MISSING_DEPS=1
 ) else (
-    echo ✅ npm nalezen
-    for /f "delims=" %%i in ('npm --version 2^>^&1') do set NPM_VERSION=%%i
-    echo !NPM_VERSION!
+    for /f "delims=" %%i in ('call "!NPM_CMD!" --version 2^>^&1') do set "NPM_VERSION=%%i"
+    if not defined NPM_VERSION (
+        echo ❌ npm se nepodařilo spustit (kontrola selhala).
+        echo    Cesta zjištěná skriptem: !NPM_CMD!
+        echo.
+        set MISSING_DEPS=1
+    ) else (
+        echo ✅ npm nalezen
+        echo    Verze: !NPM_VERSION!
+        echo    Umístění: !NPM_CMD!
+    )
 )
 
 REM Kontrola Git
@@ -206,7 +227,7 @@ echo ╚════════════════════════
 echo.
 
 echo Instaluji Node.js moduly (může trvat několik minut)...
-call npm install --production --loglevel=error
+call "!NPM_CMD!" install --production --loglevel=error
 if errorlevel 1 (
     echo ❌ CHYBA: Nepodařilo se nainstalovat Node.js moduly!
     pause
