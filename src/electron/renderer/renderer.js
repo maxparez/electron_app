@@ -693,7 +693,7 @@ async function processZorSpec() {
                                 <h4><span class="folder-icon">📁</span> Výstupní soubory</h4>
                                 <div class="output-path-display">
                                     <span class="path-text">${displayPath}</span>
-                                    <button class="copy-btn" onclick="openFolder('${displayPath.replace(/\\/g, '\\\\')}')">
+                                    <button class="copy-btn" onclick="openFolder('${displayPath.replace(/\\/g, '\\\\')}')" title="Otevřít složku s výsledky">
                                         📂
                                     </button>
                                 </div>
