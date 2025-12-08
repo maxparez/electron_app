@@ -1168,7 +1168,15 @@ class InvVzdProcessor(BaseTool):
             # STEP 2: Write activities to "Seznam aktivit" sheet at C3
             self.logger.info(f"[INVVZD] STEP 2: Writing activities...")
             sheet = wb.sheets['Seznam aktivit']
-            
+
+            # Replace regular space with NBSP in specific topic name (in original data)
+            if len(data) > 0 and 'tema' in data.columns:
+                data['tema'] = data['tema'].str.replace(
+                    'Vzdělávání s využitím nových technologií',
+                    'Vzdělávání s\u00A0využitím nových technologií',
+                    regex=False
+                )
+
             # Prepare activities data for export (following original export_columns)
             if len(data) > 0:
                 # For 16h version include time column, for 32h version exclude it
@@ -1177,8 +1185,7 @@ class InvVzdProcessor(BaseTool):
                 else:
                     export_columns = ["datum", "hodin", "forma", "tema", "ucitel"]
                 activities_data = data[export_columns] if all(col in data.columns for col in export_columns) else data
-                
-                
+
                 self.add_info(f"Zapisuji {len(activities_data)} aktivit do Seznam aktivit")
                 sheet.range("C3").options(ndim="expand").value = activities_data.values
             
