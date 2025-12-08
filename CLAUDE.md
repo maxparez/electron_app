@@ -121,10 +121,16 @@ npm run make                     # Create installer
 
 ## MCP Servers Configuration
 
-- **Filesystem:** Access to project files
-- **Git:** Version control
-- **Context7:** Library documentation
-- **Fetch:** API testing
+Projekt používá pouze jeden MCP server:
+
+- **Context7:** Up-to-date documentation for libraries and frameworks
+  - Used by `python-docs` and `js-docs` agents
+  - Provides real-time API references and code examples
+
+Built-in Claude Code tools are used for:
+- **Filesystem operations:** Read, Write, Edit, Glob, Grep
+- **Version control:** Git operations via Bash tool
+- **API testing:** WebFetch tool
 
 ## Progress Tracking
 
