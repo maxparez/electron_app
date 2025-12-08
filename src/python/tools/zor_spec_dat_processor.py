@@ -22,7 +22,7 @@ DATE_RANGES = [
 
 TEMA_ORDER = [
     "čtenářská pre/gramotnost",
-    "matematická pre/gramotnost", 
+    "matematická pre/gramotnost",
     "umělecká gramotnost",
     "mediální gramotnost",
     "cizí jazyky/komunikace v cizím jazyce",
@@ -34,9 +34,11 @@ TEMA_ORDER = [
     "historické povědomí, výuka moderních dějin",
     "rozvoj podnikavosti a kreativity",
     "well-being a psychohygiena",
+    "pohybové aktivity",
     "genderová tematika v obsahu vzdělávání",
     "kariérové poradenství včetně identifikace a rozvoje nadání",
-    "občanské vzdělávání a demokratické myšlení"
+    "občanské vzdělávání a demokratické myšlení",
+    "odborná témata sš/voš"
 ]
 
 # Text replacements for normalization
@@ -46,7 +48,13 @@ TEXT_REPLACEMENTS = {
         'propojování formálního a neformálního vzdělávání': 'propojování neformálního a formálního vzdělávání'
     },
     'tema': {
-        'vzdělávání pro udržitelný rozvoj – např. evvo, klimatické vzdělávání, principy místně zakotveného učení': 'evvo a vzdělávání pro udržitelný rozvoj'
+        # EVVO topic - long to short form
+        'vzdělávání pro udržitelný rozvoj – např. evvo, klimatické vzdělávání, principy místně zakotveného učení': 'evvo a vzdělávání pro udržitelný rozvoj',
+        # SŠ/VOŠ professional topics - long to short form
+        'odborná témata zaměřená na konkrétní obory středního a vyššího odborného vzdělávání a vzdělávání v konzervatoři': 'odborná témata sš/voš',
+        # SŠ variants without "pre/" - normalize to standard form
+        'čtenářská gramotnost': 'čtenářská pre/gramotnost',
+        'matematická gramotnost': 'matematická pre/gramotnost'
     }
 }
 
