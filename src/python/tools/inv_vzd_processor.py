@@ -601,7 +601,6 @@ class InvVzdProcessor(BaseTool):
                     for idx in failed_indices:
                         # For 16h format, dates are in row 6, columns start at C (3)
                         # idx 0 = column C, idx 1 = column D, etc.
-                        from openpyxl.utils import get_column_letter
                         col_letter = get_column_letter(3 + idx)  # C=3, D=4, E=5, etc.
                         cell_ref = f"{col_letter}6"  # Row 6 for dates in 16h format
                         self.add_error(f"Chybí nebo neplatné datum v buňce {cell_ref}")
@@ -683,7 +682,6 @@ class InvVzdProcessor(BaseTool):
                             datum = str(date_cell).strip()
                     else:
                         # ERROR: Missing date in activity column
-                        from openpyxl.utils import get_column_letter
                         col_letter = get_column_letter(col)
                         self.add_error(f"Chybí datum aktivity v buňce {col_letter}6")
                         datum = None  # Mark as invalid
@@ -744,7 +742,6 @@ class InvVzdProcessor(BaseTool):
                             datum = str(date_cell).strip()
                     else:
                         # ERROR: Missing date in activity column
-                        from openpyxl.utils import get_column_letter
                         col_letter = get_column_letter(col)
                         self.add_error(f"Chybí datum aktivity v buňce {col_letter}6")
                         datum = None  # Mark as invalid
@@ -806,7 +803,6 @@ class InvVzdProcessor(BaseTool):
                     failed_indices = df[df['datum'].isna()].index.tolist()
                     for idx in failed_indices:
                         # For 32h format, dates are in row 6, columns start at C (3)
-                        from openpyxl.utils import get_column_letter
                         col_letter = get_column_letter(3 + idx)  # C=3, D=4, E=5, etc.
                         cell_ref = f"{col_letter}6"  # Row 6 for dates
                         self.add_error(f"Chybí nebo neplatné datum v buňce {cell_ref}")
@@ -896,7 +892,6 @@ class InvVzdProcessor(BaseTool):
         def get_cell_ref(index, row, col):
             if isinstance(col, int):
                 # For 32h version, col is starting column number
-                from openpyxl.utils import get_column_letter
                 col_letter = get_column_letter(col + index)
                 return f"{col_letter}{row}"
             else:
