@@ -54,7 +54,9 @@ TEXT_REPLACEMENTS = {
         'odborná témata zaměřená na konkrétní obory středního a vyššího odborného vzdělávání a vzdělávání v konzervatoři': 'odborná témata sš/voš',
         # SŠ variants without "pre/" - normalize to standard form
         'čtenářská gramotnost': 'čtenářská pre/gramotnost',
-        'matematická gramotnost': 'matematická pre/gramotnost'
+        'matematická gramotnost': 'matematická pre/gramotnost',
+        # Fix NBSP (non-breaking space) character issue
+        'vzdělávání s\u00A0využitím nových technologií': 'vzdělávání s využitím nových technologií'
     }
 }
 
