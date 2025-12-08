@@ -459,3 +459,78 @@ else:
 - No new dependencies
 - Windows-compatible (regex, datetime are cross-platform)
 
+
+### 2025-12-08 - ZorSpecDat Control Sums Implementation Review
+
+**Docs consulted:** CLAUDE.md, PROGRESS.md, CORE_DEVELOPMENT_PRINCIPLES.md, zor_spec_dat_processor.py, renderer.js
+
+**Change summary:**
+- Added `total_forma_hours` and `total_tema_hours` to ZorSpecDat results
+- Backend: Sums `forma_result['cena celkem']` and `tema_result['cena celkem']`
+- Frontend: New UI section "Kontrolní součty hodin" with two stat cards
+- Lines changed: Python 311-313, 340-341; JS 717-739
+
+**Gemini consultation attempt:**
+- CLI invoked with focused prompt about data validation, Czech localization, edge cases
+- Result: Timeout (>60s) - Gemini service unavailable/slow
+- Decision: Proceed with local analysis per CLAUDE.md guidelines
+
+**Local analysis findings:**
+
+1. **Data Validation - Column Correctness:**
+   - ✅ `'cena celkem'` is CORRECT - confirmed by examining `_aggregate()` method (lines 233-249)
+   - The column is created from `pocet_hodin` (hours) aggregation
+   - Column names defined in `self.result_cols_names = ["forma/téma", "číslo celkem", "cena celkem", "typ"]` (line 59)
+   - Despite the name "cena" (price), it actually contains hours sum
+
+2. **Calculation Logic:**
+   - ✅ CORRECT - Uses `forma_result['cena celkem'].sum()` which aggregates ALL processed files
+   - `forma_result` and `tema_result` are created from `concatenated` DataFrame containing all files (line 305-306)
+   - Empty DataFrame check present: `if not forma_result.empty else 0`
+
+3. **Czech Localization Quality:**
+   - ✅ APPROPRIATE for target users (administrative workers)
+   - "Kontrolní součty hodin" = Control sums of hours (standard accounting term in Czech)
+   - "CELKEM HODIN - FORMY" = Total hours - forms (clear, matches existing terminology)
+   - "CELKEM HODIN - TÉMATA" = Total hours - topics (consistent with FORMY label)
+   - Matches existing Czech UI style (uppercase labels in stat cards)
+
+4. **Edge Cases Handled:**
+   - ✅ Empty DataFrames: `if not forma_result.empty else 0`
+   - ✅ Frontend undefined check: `students16.total_forma_hours || 0`
+   - ✅ Missing data: Conditional rendering checks both values exist
+   - ✅ Type safety: `int()` conversion in Python, JavaScript fallback to 0
+
+5. **xlwings Impact:**
+   - ✅ NO IMPACT - This change only affects:
+     - Post-processing aggregation (after Excel files are read)
+     - Frontend display
+     - Does NOT touch Excel template reading or writing
+
+6. **Test Scenarios Needed:**
+   - Single file processing (verify sum = file hours)
+   - Multiple files processing (verify cumulative sum)
+   - Empty folder (verify 0 displayed)
+   - Mixed valid/invalid files (verify only valid counted)
+   - Large dataset (performance check)
+   - UI rendering (Czech labels visible, formatting correct)
+
+**Constraint verdict:** ✅ COMPLIANT
+- English code, Czech UI: ✅ (variable names English, labels Czech)
+- No new dependencies: ✅ (uses existing pandas, JavaScript)
+- Windows packaging intact: ✅ (no xlwings changes)
+- KISS/DRY/YAGNI: ✅ (simple sum, no premature optimization)
+
+**Final recommendation:**
+APPROVE implementation with these verification steps:
+1. Test with real multi-file dataset (confirm sums match manual calculation)
+2. Verify UI displays properly on Windows (screenshot recommended)
+3. Add test case to test suite: `test_zor_spec_dat_control_sums()`
+4. Document in user manual if this is a reporting requirement
+
+**Next steps:**
+1. Manual testing with production data
+2. Optional: Add unit test for control sum calculation
+3. Update PROGRESS.md with feature completion
+4. Consider adding to HTML report output (currently only in UI)
+

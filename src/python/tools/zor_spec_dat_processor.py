@@ -308,6 +308,10 @@ class ZorSpecDatProcessor(BaseTool):
         final_result = pd.concat([forma_result, tema_result], axis="rows")
         final_result.columns = self.result_cols_names
 
+        # Calculate control sums (total hours)
+        total_forma_hours = int(forma_result['cena celkem'].sum()) if not forma_result.empty else 0
+        total_tema_hours = int(tema_result['cena celkem'].sum()) if not tema_result.empty else 0
+
         # Calculate student count with 16+ hours by school type
         students_16plus = self._calculate_students_16plus_by_type(concatenated)
 
@@ -332,7 +336,9 @@ class ZorSpecDatProcessor(BaseTool):
         students_16plus_dict = {
             'MŠ': int(students_16plus['MŠ'].values[0]),
             'ZŠ': int(students_16plus['ZŠ'].values[0]),
-            'ŠD': int(students_16plus['ŠD'].values[0])
+            'ŠD': int(students_16plus['ŠD'].values[0]),
+            'total_forma_hours': total_forma_hours,
+            'total_tema_hours': total_tema_hours
         }
 
         return html_content, unique_names, students_16plus_dict

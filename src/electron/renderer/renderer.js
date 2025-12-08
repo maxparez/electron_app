@@ -713,7 +713,31 @@ async function processZorSpec() {
                     </div>
                 `;
             }
-            
+
+            // Control sums - total hours for forms and topics
+            if (result.data.students_16plus &&
+                (result.data.students_16plus.total_forma_hours !== undefined ||
+                 result.data.students_16plus.total_tema_hours !== undefined)) {
+                const students16 = result.data.students_16plus;
+                resultHtml += `
+                    <div class="section-header">Kontrolní součty hodin</div>
+                    <div class="stats-grid control-sums">
+                        <div class="stat-card">
+                            <div class="stat-content">
+                                <div class="stat-label">CELKEM HODIN - FORMY</div>
+                                <div class="stat-value">${students16.total_forma_hours || 0}</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-content">
+                                <div class="stat-label">CELKEM HODIN - TÉMATA</div>
+                                <div class="stat-value">${students16.total_tema_hours || 0}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
             // Output files section
             if (result.data.output_files && result.data.output_files.length > 0) {
                 if (result.data.auto_saved) {
