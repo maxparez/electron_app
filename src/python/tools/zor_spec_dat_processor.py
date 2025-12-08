@@ -337,6 +337,8 @@ class ZorSpecDatProcessor(BaseTool):
             'MŠ': int(students_16plus['MŠ'].values[0]),
             'ZŠ': int(students_16plus['ZŠ'].values[0]),
             'ŠD': int(students_16plus['ŠD'].values[0]),
+            'ZUŠ': int(students_16plus['ZUŠ'].values[0]),
+            'SŠ': int(students_16plus['SŠ'].values[0]),
             'total_forma_hours': total_forma_hours,
             'total_tema_hours': total_tema_hours
         }
@@ -434,6 +436,10 @@ class ZorSpecDatProcessor(BaseTool):
             return 'ŠD'
         elif 'mš' in template_lower or 'mateřsk' in template_lower:
             return 'MŠ'
+        elif 'zuš' in template_lower or 'uměleck' in template_lower:
+            return 'ZUŠ'
+        elif 'sš' in template_lower or 'střední' in template_lower:
+            return 'SŠ'
         elif 'zš' in template_lower or 'základní' in template_lower:
             return 'ZŠ'
         else:
@@ -481,7 +487,7 @@ class ZorSpecDatProcessor(BaseTool):
             df: DataFrame with all processed data including 'jmena', 'sablona', 'pocet_hodin'
 
         Returns:
-            DataFrame with single row: MŠ, ZŠ, ŠD columns with student counts
+            DataFrame with single row: MŠ, ZŠ, ŠD, ZUŠ, SŠ columns with student counts
         """
         # Group by student name and school (sablona), sum all hours
         student_hours = df.groupby(['jmena', 'sablona'], as_index=False)['pocet_hodin'].sum()
@@ -496,11 +502,13 @@ class ZorSpecDatProcessor(BaseTool):
         type_counts = students_16plus.groupby('typ_skoly', as_index=False).size()
         type_counts.columns = ['typ_skoly', 'pocet']
 
-        # Create result row with MŠ, ZŠ, ŠD columns
+        # Create result row with MŠ, ZŠ, ŠD, ZUŠ, SŠ columns
         result = pd.DataFrame({
             'MŠ': [0],
             'ZŠ': [0],
-            'ŠD': [0]
+            'ŠD': [0],
+            'ZUŠ': [0],
+            'SŠ': [0]
         })
 
         # Fill in actual counts

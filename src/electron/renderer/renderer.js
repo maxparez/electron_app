@@ -710,6 +710,22 @@ async function processZorSpec() {
                             </div>
                             <div class="stat-icon school-icon">🎒</div>
                         </div>
+
+                        <div class="stat-card school-card">
+                            <div class="stat-content">
+                                <div class="stat-label">ZÁKLADNÍ UMĚLECKÁ ŠKOLA</div>
+                                <div class="stat-value">${students16['ZUŠ'] || 0}</div>
+                            </div>
+                            <div class="stat-icon school-icon">🎨</div>
+                        </div>
+
+                        <div class="stat-card school-card">
+                            <div class="stat-content">
+                                <div class="stat-label">STŘEDNÍ ŠKOLA</div>
+                                <div class="stat-value">${students16['SŠ'] || 0}</div>
+                            </div>
+                            <div class="stat-icon school-icon">🎓</div>
+                        </div>
                     </div>
                 `;
             }
