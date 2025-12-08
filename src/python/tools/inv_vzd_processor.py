@@ -22,7 +22,7 @@ try:
     XLWINGS_AVAILABLE = True
 except ImportError:
     XLWINGS_AVAILABLE = False
-from datetime import datetime
+from datetime import datetime, time
 import unicodedata
 import re
 
@@ -512,7 +512,30 @@ class InvVzdProcessor(BaseTool):
                 
                 # Get time (row 7) - specific to 16h
                 time_cell = sheet.cell(row=7, column=col).value
-                cas = str(time_cell) if time_cell else ''
+
+                # Handle different types openpyxl may return
+                if time_cell is None:
+                    cas = ''
+                elif isinstance(time_cell, datetime):
+                    # Excel datetime object - format time part only
+                    cas = time_cell.strftime('%H:%M')
+                elif isinstance(time_cell, time):
+                    # Excel time object
+                    cas = time_cell.strftime('%H:%M')
+                elif isinstance(time_cell, str):
+                    cas_raw = time_cell.strip()
+
+                    # Check if it's a time range pattern (HH:MM-HH:MM with various dashes)
+                    if re.match(r'^\s*\d{1,2}:\d{2}\s*[-–—]\s*\d{1,2}:\d{2}', cas_raw):
+                        # Extract start time from range
+                        cas = re.split(r'\s*[-–—]\s*', cas_raw, maxsplit=1)[0].strip()
+                        col_letter = get_column_letter(col)
+                        self.add_info(f"Upraven čas v buňce {col_letter}7: {cas_raw} → {cas}")
+                    else:
+                        cas = cas_raw
+                else:
+                    # Fallback for unexpected types
+                    cas = str(time_cell).strip()
                 
                 # Get form (row 8)
                 forma_cell = sheet.cell(row=8, column=col).value
