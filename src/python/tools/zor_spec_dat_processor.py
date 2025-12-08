@@ -44,6 +44,9 @@ TEXT_REPLACEMENTS = {
     'forma': {
         'projektové vzdělávání (ve škole / mimo školu)': 'projektové vzdělávání / projektová výuka',
         'propojování formálního a neformálního vzdělávání': 'propojování neformálního a formálního vzdělávání'
+    },
+    'tema': {
+        'vzdělávání pro udržitelný rozvoj – např. evvo, klimatické vzdělávání, principy místně zakotveného učení': 'evvo a vzdělávání pro udržitelný rozvoj'
     }
 }
 
@@ -202,7 +205,12 @@ class ZorSpecDatProcessor(BaseTool):
             # Standardize forma values using TEXT_REPLACEMENTS
             for old_val, new_val in TEXT_REPLACEMENTS['forma'].items():
                 df['forma'] = df['forma'].replace(old_val, new_val)
-                
+
+            # Standardize tema values using TEXT_REPLACEMENTS
+            if 'tema' in TEXT_REPLACEMENTS:
+                for old_val, new_val in TEXT_REPLACEMENTS['tema'].items():
+                    df['tema'] = df['tema'].replace(old_val, new_val)
+
             # Add file identifier and clean data
             df['ca'] = df['ca'].astype(str) + str(hash(excel_file))
             df = df.dropna()
