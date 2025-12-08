@@ -1022,6 +1022,10 @@ h3.error {
     grid-template-columns: repeat(3, 1fr);
 }
 
+.control-sums {
+    grid-template-columns: repeat(2, 1fr);
+}
+
 /* Stat Cards */
 .stat-card {
     background: white;
