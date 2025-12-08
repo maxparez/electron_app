@@ -524,8 +524,13 @@ class InvVzdProcessor(BaseTool):
                 elif isinstance(time_cell, str):
                     cas_raw = time_cell.strip()
 
+                    # Check if it's an Excel formula (starts with =)
+                    if cas_raw.startswith('='):
+                        col_letter = get_column_letter(col)
+                        self.add_error(f"Čas v buňce {col_letter}7 obsahuje formuli '{cas_raw}' - zadejte prosím přímo čas")
+                        cas = ''
                     # Check if it's a time range pattern (HH:MM-HH:MM or HH.MM-HH.MM with various dashes)
-                    if re.match(r'^\s*\d{1,2}[:.]\d{2}\s*[-–—]\s*\d{1,2}[:.]\d{2}', cas_raw):
+                    elif re.match(r'^\s*\d{1,2}[:.]\d{2}\s*[-–—]\s*\d{1,2}[:.]\d{2}', cas_raw):
                         # Extract start time from range
                         cas = re.split(r'\s*[-–—]\s*', cas_raw, maxsplit=1)[0].strip()
                         # Normalize dot to colon for consistency
