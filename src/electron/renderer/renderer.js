@@ -10,6 +10,9 @@ const state = {
     selectedTemplate: {
         'inv-vzd': null
     },
+    selectedFolder: {
+        'inv-vzd': null
+    },
     detectedTemplateVersion: null
 };
 
@@ -22,6 +25,7 @@ const elements = {
     // Inv Vzd elements
     invSelectBtn: document.getElementById('select-inv-files'),
     invFolderBtn: document.getElementById('select-inv-folder'),
+    invRefreshBtn: document.getElementById('refresh-inv-folder'),
     invFilesList: document.getElementById('inv-files-list'),
     invProcessBtn: document.getElementById('process-inv-vzd'),
     invResults: document.getElementById('inv-vzd-results'),
@@ -83,6 +87,7 @@ async function init() {
     // Setup file selection buttons
     elements.invSelectBtn.addEventListener('click', () => selectFiles('inv-vzd'));
     elements.invFolderBtn.addEventListener('click', selectInvFolder);
+    elements.invRefreshBtn.addEventListener('click', refreshInvFolder);
     
     // Initially disable file selection buttons until template is selected
     elements.invSelectBtn.disabled = true;
@@ -365,15 +370,20 @@ async function selectInvFolder() {
             configKey: 'lastInvVzdFolder',
             title: 'Vyberte složku s docházkami'
         });
-        
+
         if (folderPath) {
+            // Store folder path for refresh
+            state.selectedFolder['inv-vzd'] = folderPath;
+
             // Scan folder for Excel files
             const suitableFiles = await scanFolderForAttendanceFiles(folderPath);
-            
+
             if (suitableFiles.length > 0) {
                 state.selectedFiles['inv-vzd'] = suitableFiles;
                 updateFilesList('inv-vzd');
                 checkInvVzdReady();
+                // Show refresh button
+                elements.invRefreshBtn.style.display = 'inline-block';
                 showMessage(`Nalezeno ${suitableFiles.length} vhodných souborů docházky`, 'success');
             } else {
                 showMessage('Ve vybrané složce nebyly nalezeny žádné vhodné soubory docházky', 'warning');
@@ -382,6 +392,37 @@ async function selectInvFolder() {
     } catch (error) {
         console.error('Folder selection error:', error);
         showMessage('Chyba při výběru složky', 'error');
+    }
+}
+
+// Refresh folder - rescan for attendance files
+async function refreshInvFolder() {
+    const folderPath = state.selectedFolder['inv-vzd'];
+    if (!folderPath) {
+        showMessage('Není vybrána žádná složka k obnovení', 'warning');
+        return;
+    }
+
+    try {
+        // Clear current files
+        state.selectedFiles['inv-vzd'] = [];
+        updateFilesList('inv-vzd');
+
+        // Rescan folder
+        const suitableFiles = await scanFolderForAttendanceFiles(folderPath);
+
+        if (suitableFiles.length > 0) {
+            state.selectedFiles['inv-vzd'] = suitableFiles;
+            updateFilesList('inv-vzd');
+            checkInvVzdReady();
+            showMessage(`Obnoveno: Nalezeno ${suitableFiles.length} vhodných souborů docházky`, 'success');
+        } else {
+            elements.invRefreshBtn.style.display = 'none';
+            showMessage('Ve složce nejsou žádné vhodné soubory docházky', 'warning');
+        }
+    } catch (error) {
+        console.error('Folder refresh error:', error);
+        showMessage('Chyba při obnovování seznamu', 'error');
     }
 }
 
