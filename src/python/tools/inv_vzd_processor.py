@@ -524,10 +524,12 @@ class InvVzdProcessor(BaseTool):
                 elif isinstance(time_cell, str):
                     cas_raw = time_cell.strip()
 
-                    # Check if it's a time range pattern (HH:MM-HH:MM with various dashes)
-                    if re.match(r'^\s*\d{1,2}:\d{2}\s*[-–—]\s*\d{1,2}:\d{2}', cas_raw):
+                    # Check if it's a time range pattern (HH:MM-HH:MM or HH.MM-HH.MM with various dashes)
+                    if re.match(r'^\s*\d{1,2}[:.]\d{2}\s*[-–—]\s*\d{1,2}[:.]\d{2}', cas_raw):
                         # Extract start time from range
                         cas = re.split(r'\s*[-–—]\s*', cas_raw, maxsplit=1)[0].strip()
+                        # Normalize dot to colon for consistency
+                        cas = cas.replace('.', ':')
                         col_letter = get_column_letter(col)
                         self.add_info(f"Upraven čas v buňce {col_letter}7: {cas_raw} → {cas}")
                     else:
