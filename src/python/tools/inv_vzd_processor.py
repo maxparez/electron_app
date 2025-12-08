@@ -445,7 +445,7 @@ class InvVzdProcessor(BaseTool):
     def _read_16_hour_data(self, source_file: str) -> Optional[pd.DataFrame]:
         """Read data from 16 hour source file (zdroj-dochazka sheet)"""
         try:
-            wb = load_workbook(source_file)
+            wb = load_workbook(source_file, data_only=True)
             
             # Find the correct sheet - prefer zdroj-dochazka
             sheet_name = None
@@ -524,13 +524,8 @@ class InvVzdProcessor(BaseTool):
                 elif isinstance(time_cell, str):
                     cas_raw = time_cell.strip()
 
-                    # Check if it's an Excel formula (starts with =)
-                    if cas_raw.startswith('='):
-                        col_letter = get_column_letter(col)
-                        self.add_error(f"Čas v buňce {col_letter}7 obsahuje formuli '{cas_raw}' - zadejte prosím přímo čas")
-                        cas = ''
                     # Check if it's a time range pattern (HH:MM-HH:MM or HH.MM-HH.MM with various dashes)
-                    elif re.match(r'^\s*\d{1,2}[:.]\d{2}\s*[-–—]\s*\d{1,2}[:.]\d{2}', cas_raw):
+                    if re.match(r'^\s*\d{1,2}[:.]\d{2}\s*[-–—]\s*\d{1,2}[:.]\d{2}', cas_raw):
                         # Extract start time from range
                         cas = re.split(r'\s*[-–—]\s*', cas_raw, maxsplit=1)[0].strip()
                         # Normalize dot to colon for consistency
@@ -641,7 +636,7 @@ class InvVzdProcessor(BaseTool):
     def _read_32_hour_data(self, source_file: str) -> Optional[pd.DataFrame]:
         """Read data from 32 hour source file (List1 or zdroj-dochazka sheet)"""
         try:
-            wb = load_workbook(source_file)
+            wb = load_workbook(source_file, data_only=True)
             
             # Try to find the correct sheet - prefer zdroj-dochazka, fallback to List1
             sheet_name = None
