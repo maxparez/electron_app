@@ -1,8 +1,8 @@
 # Electron App Development Progress
 
-## Current Phase: PRODUCTION PERFECT - All Windows Issues Resolved
-**Date:** 2025-06-13
-**Status:** 🎯 **PRODUCTION PERFECT - Clean Execution, No Admin Rights, No CMD Windows**
+## Current Phase: PRODUCTION READY - Enhanced InvVzd Processing
+**Date:** 2025-12-08
+**Status:** 🎯 **PRODUCTION READY - Time Range Parsing + UX Improvements**
 
 ## ✅ Completed Tasks
 
@@ -224,16 +224,79 @@
 **📞 Support:** Complete documentation + diagnostic tools
 
 ## Recent Git commits log (Latest First)
+- `86211b6`: [feat-127] Add button spacing and refresh folder button
+- `e43189d`: [fix-126] Remove debug logging - template filtering confirmed working
+- `6170e3a`: [fix-124] Exclude selected template from source file list
+- `ff6b7eb`: [fix-123] Evaluate Excel formulas automatically with data_only=True
+- `4bca711`: [fix-120] Remove all local imports of get_column_letter in _read_16_hour_data
+- `0efe11a`: [fix-121] Support dot as time separator in time ranges
+- `931913b`: [fix-118] Parse time ranges in InvVzd row 7 (start time)
+- `9f1bc04`: [fix-117] Improve Python detection and installer robustness
 - `35ff515`: [feat-051] Add Windows installation system with Git support
-- `52caa19`: [fix-050] Stop processing when missing dates found - prevent output file creation
-- `38e5c27`: [fix-049] Fix error messages to show correct cell references (E6, F6) instead of row numbers
-- `c7508b2`: [fix-048] Accept more attendance value formats - ANO, Ano, ano, x, X, +, with spaces
-- `1d501d0`: [fix-047] Fix InvVzd attendance calculation - read actual attendance instead of creating all combinations
-- `0eb3235`: [fix-046] Restore per-file details, remove only general processing messages
-- `eb88910`: [fix-045] Clean up UI logs and simplify file display
-- `b8a9292`: [fix-044] Improved error handling: specific cell errors, no output on data errors, continue processing
+- `52caa19`: [fix-050] Stop processing when missing dates found
 
-## ## 🎉 CRITICAL WINDOWS FIXES COMPLETED (2025-06-13)
+## 🚀 LATEST ENHANCEMENTS (2025-12-08)
+
+### ✅ InvVzd Time Range Parsing & Excel Formula Support
+- **[fix-118]**: Comprehensive time field parsing with type checking
+  - Handles datetime objects, time objects, and strings
+  - Extracts start time from ranges: `8:50-9:35` → `8:50`
+  - Reviewed by ChatGPT consultant for correctness
+  - UI displays info when range is simplified
+
+- **[fix-119, fix-120]**: Fixed "cannot access local variable" error
+  - Removed 6 redundant local imports of `get_column_letter`
+  - Uses global import throughout method
+  - Resolved Python scoping issue
+
+- **[fix-121]**: Support for dot as time separator
+  - Accepts both `:` and `.` in time values
+  - `7:55-8.40` → `7:55` ✅
+  - Normalizes dots to colons for consistency
+
+- **[fix-122, fix-123]**: Excel formula evaluation
+  - Detects formulas starting with `=`
+  - Uses `data_only=True` to evaluate formulas automatically
+  - Formula `=$C$7` returns actual value from C7
+  - Applies to both 16h and 32h data reading
+
+### ✅ Template Exclusion & UI Improvements
+- **[fix-124, fix-125, fix-126]**: Template file filtering
+  - Selected template no longer appears in source file list
+  - Path comparison using `os.path.abspath()`
+  - Passes template_path from API to select_folder()
+  - Verified working in production logs
+
+- **[feat-127]**: Frontend UX enhancements
+  - Added `margin-bottom: 10px` to buttons for proper spacing
+  - New "🔄 Obnovit seznam" refresh button
+  - Button appears after successful folder scan
+  - Rescans folder when clicked (useful for file changes)
+  - Tracks last selected folder in state
+
+### 📋 Technical Details
+- **Consultant reviews**: ChatGPT reviewed time parsing logic
+  - Identified datetime object corruption risk
+  - Recommended regex pattern matching
+  - Confirmed edge case handling
+
+- **Edge cases handled**:
+  - Datetime/time objects from Excel
+  - Time ranges with various dash types (-, –, —)
+  - Dot separators (`8.50`)
+  - Excel formulas (`=$C$7`)
+  - Empty/None values
+  - Unexpected types
+
+### 🎯 User Benefits
+- ✅ Automatic time range parsing (no manual editing needed)
+- ✅ Support for common user input variations
+- ✅ Excel formulas work transparently
+- ✅ Cleaner source file selection (no template confusion)
+- ✅ Quick folder refresh without re-selection
+- ✅ Better button spacing in UI
+
+## 🎉 CRITICAL WINDOWS FIXES COMPLETED (2025-06-13)
 
 ### ✅ Major Production Fixes Applied:
 - **[fix-062]**: CMD window lifecycle - Electron properly manages Python backend
