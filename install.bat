@@ -6,7 +6,7 @@ cls
 echo.
 echo ╔════════════════════════════════════════════════════════════════╗
 echo ║          Instalace - Nástroje pro ŠI a ŠII OP JAK            ║
-echo ║                        Verze 1.1.0                             ║
+echo ║                        Verze 1.1.2                             ║
 echo ╚════════════════════════════════════════════════════════════════╝
 echo.
 echo Tento skript nainstaluje aplikaci do složky C:\OPJAK\electron_app
@@ -25,60 +25,78 @@ echo.
 
 set MISSING_DEPS=
 
-REM Kontrola Python
-echo [1/4] Kontroluji Python 3.11+...
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo ❌ Python není nainstalován!
-    echo    ➜ Stáhněte z: https://www.python.org/downloads/
-    echo    ⚠️  Při instalaci zaškrtněte "Add Python to PATH"
-    echo.
-    set MISSING_DEPS=1
-) else (
-    python --version 2>&1 | findstr /R "3\.1[1-3]" >nul
-    if errorlevel 1 (
-        echo ⚠️  Python je nainstalován, ale verze může být nekompatibilní
-        echo    Doporučujeme Python 3.11 až 3.13
-        python --version
-    ) else (
-        echo ✅ Python nalezen
-        python --version 2>&1
-    )
+REM --- KROK 1: Detekce příkazu pro Python ---
+echo [1/4] Kontroluji Python...
+
+set "PYTHON_CMD="
+
+REM Zkusíme najít 'python'
+where python >nul 2>&1
+if %errorlevel% equ 0 set "PYTHON_CMD=python"
+
+REM Pokud není 'python', zkusíme 'py' launcher (časté na Windows)
+if not defined PYTHON_CMD (
+    where py >nul 2>&1
+    if !errorlevel! equ 0 set "PYTHON_CMD=py"
 )
 
-REM Kontrola Node.js
+REM Pokud jsme nic nenašli, nahlásíme chybu
+if not defined PYTHON_CMD (
+    echo ❌ Python nebyl nalezen v PATH!
+    echo    Vidím, že ho máte ve složce, ale systémový příkaz ho nevidí.
+    echo    Zkuste napsat do příkazové řádky: set PATH=%%PATH%%;C:\Users\WDAGUtilityAccount\AppData\Local\Programs\Python\Python314\
+    echo.
+    set MISSING_DEPS=1
+    goto :check_node
+)
+
+echo ✅ Nalezen příkaz: %PYTHON_CMD%
+
+REM --- KROK 2: Kontrola verze Pythonu ---
+REM Používáme cmd /c pro izolaci, aby chyby nezhroutily skript
+REM Regex 3.1[0-9] pokryje verze 3.10 az 3.19 (včetně vaší 3.14)
+
+cmd /c "%PYTHON_CMD% --version 2>&1" | findstr /R "3\.1[0-9]" >nul
+if %errorlevel% equ 0 (
+    echo ✅ Verze Pythonu je v pořádku:
+    %PYTHON_CMD% --version
+) else (
+    echo ⚠️  Python nalezen, ale verze se zdá být starší než 3.10 nebo exotická.
+    echo    Detekovaná verze:
+    %PYTHON_CMD% --version
+)
+
+:check_node
+REM --- KROK 3: Kontrola Node.js ---
+echo.
 echo [2/4] Kontroluji Node.js...
 node --version >nul 2>&1
 if errorlevel 1 (
     echo ❌ Node.js není nainstalován!
     echo    ➜ Stáhněte z: https://nodejs.org/
-    echo.
     set MISSING_DEPS=1
 ) else (
     echo ✅ Node.js nalezen
     node --version 2>&1
 )
 
-REM Kontrola npm
+REM --- KROK 4: Kontrola npm ---
 echo [3/4] Kontroluji npm...
 call npm --version >nul 2>&1
 if errorlevel 1 (
     echo ❌ npm není nainstalován!
-    echo    ➜ npm se instaluje s Node.js z: https://nodejs.org/
-    echo.
     set MISSING_DEPS=1
 ) else (
     echo ✅ npm nalezen
     cmd /c npm --version
 )
 
-REM Kontrola Git
+REM --- KROK 5: Kontrola Git ---
 echo [4/4] Kontroluji Git...
 git --version >nul 2>&1
 if errorlevel 1 (
     echo ❌ Git není nainstalován!
     echo    ➜ Stáhněte z: https://git-scm.com/download/win
-    echo.
     set MISSING_DEPS=1
 ) else (
     echo ✅ Git nalezen
@@ -91,14 +109,7 @@ if defined MISSING_DEPS (
     echo ║ ❌ CHYBÍ POTŘEBNÝ SOFTWARE                                     ║
     echo ╚════════════════════════════════════════════════════════════════╝
     echo.
-    echo Prosím nainstalujte chybějící programy ^(viz odkazy výše^) a poté
-    echo spusťte tento instalátor znovu.
-    echo.
-    echo Dodatečně budete potřebovat:
-    echo   • Microsoft Office s Excelem ^(2019+ nebo Microsoft 365^)
-    echo   • Microsoft Visual C++ Redistributable 2015-2022
-    echo     ➜ https://aka.ms/vs/17/release/vc_redist.x64.exe
-    echo.
+    echo Prosím opravte instalace a spusťte znovu.
     pause
     exit /b 1
 )
@@ -125,20 +136,13 @@ echo GitHub repozitář: %REPO_URL%
 echo Větev: %BRANCH%
 echo.
 
-REM Vytvoření složky
-if not exist "C:\OPJAK" (
-    echo Vytvářím složku C:\OPJAK...
-    mkdir "C:\OPJAK"
-)
+if not exist "C:\OPJAK" mkdir "C:\OPJAK"
 
-REM Klonování nebo aktualizace
 if not exist "%INSTALL_DIR%\.git" (
-    REM ZDE BYLA CHYBA - pridany strisky ^ pred zavorky
-    echo Stahují aplikaci ^(může trvat několik minut^)...
+    echo Stahují aplikaci...
     git clone -b %BRANCH% %REPO_URL% "%INSTALL_DIR%"
     if errorlevel 1 (
-        echo ❌ CHYBA: Nepodařilo se stáhnout aplikaci z GitHubu!
-        echo Zkontrolujte připojení k internetu a zkuste znovu.
+        echo ❌ CHYBA: Nepodařilo se stáhnout aplikaci!
         pause
         exit /b 1
     )
@@ -151,7 +155,7 @@ if not exist "%INSTALL_DIR%\.git" (
     git clean -fd
 )
 
-echo ✅ Aplikace stažena do: %INSTALL_DIR%
+echo ✅ Aplikace stažena.
 echo.
 
 REM ========================================================================
@@ -166,35 +170,31 @@ echo.
 cd /d "%INSTALL_DIR%"
 
 if exist "venv" (
-    echo Virtuální prostředí již existuje, mažu staré...
+    echo Mazání starého venv...
     rmdir /s /q venv
 )
 
-echo Vytvářím Python virtuální prostředí...
-python -m venv venv
+echo Vytvářím venv pomocí: %PYTHON_CMD%
+%PYTHON_CMD% -m venv venv
 if errorlevel 1 (
     echo ❌ CHYBA: Nepodařilo se vytvořit virtuální prostředí!
     pause
     exit /b 1
 )
 
-echo Aktivuji virtuální prostředí...
+echo Aktivuji venv a instaluji knihovny...
 call venv\Scripts\activate.bat
-
-echo Aktualizuji pip...
 python -m pip install --upgrade pip --quiet
 
-REM ZDE BYLA CHYBA - pridany strisky ^ pred zavorky
-echo Instaluji Python knihovny ^(může trvat několik minut^)...
+echo Instaluji requirements ^(chvilku strpení^)...
 pip install -r requirements-windows.txt --quiet
 if errorlevel 1 (
-    echo ❌ CHYBA: Nepodařilo se nainstalovat Python knihovny!
-    echo Zkontrolujte připojení k internetu a zkuste znovu.
+    echo ❌ CHYBA: Nepodařilo se nainstalovat knihovny!
     pause
     exit /b 1
 )
 
-echo ✅ Python prostředí připraveno
+echo ✅ Python OK.
 echo.
 
 REM ========================================================================
@@ -206,16 +206,15 @@ echo ║ FÁZE 4/5: Instalace Node.js modulů                            ║
 echo ╚════════════════════════════════════════════════════════════════╝
 echo.
 
-REM ZDE BYLA CHYBA - pridany strisky ^ pred zavorky
-echo Instaluji Node.js moduly ^(může trvat několik minut^)...
+echo Instaluji npm moduly...
 call npm install --loglevel=error
 if errorlevel 1 (
-    echo ❌ CHYBA: Nepodařilo se nainstalovat Node.js moduly!
+    echo ❌ CHYBA: npm install selhal!
     pause
     exit /b 1
 )
 
-echo ✅ Node.js moduly nainstalovány
+echo ✅ Node.js moduly OK.
 echo.
 
 REM ========================================================================
@@ -227,35 +226,29 @@ echo ║ FÁZE 5/5: Dokončení instalace                                 ║
 echo ╚════════════════════════════════════════════════════════════════╝
 echo.
 
-echo Vytvářím zástupce na ploše...
-powershell -ExecutionPolicy Bypass -Command "& {$WshShell = New-Object -comObject WScript.Shell; $Desktop = [System.Environment]::GetFolderPath('Desktop'); $ShortcutPath = \"$Desktop\Nástroje OP JAK.lnk\"; $Shortcut = $WshShell.CreateShortcut($ShortcutPath); $Shortcut.TargetPath = '%INSTALL_DIR%\start-app.bat'; $Shortcut.WorkingDirectory = '%INSTALL_DIR%'; $Shortcut.IconLocation = '%INSTALL_DIR%\icon.ico'; $Shortcut.Description = 'Nástroje pro zpracování dokumentace OP JAK'; $Shortcut.Save()}"
-if errorlevel 1 (
-    echo ⚠️  Nepodařilo se vytvořit zástupce automaticky
-    echo Můžete vytvořit zástupce ručně - odkázat na: %INSTALL_DIR%\start-app.bat
-) else (
-    echo ✅ Zástupce vytvořen na ploše
+set "TARGET_FILE=%INSTALL_DIR%\start-app.bat"
+set "ICON_FILE=%INSTALL_DIR%\icon.ico"
+set "SHORTCUT_NAME=Nástroje OP JAK.lnk"
+
+echo Vytvářím zástupce...
+
+set "PS_COMMAND=$WshShell = New-Object -comObject WScript.Shell; "
+set "PS_COMMAND=!PS_COMMAND! $Desktop = [System.Environment]::GetFolderPath('Desktop'); "
+set "PS_COMMAND=!PS_COMMAND! $ShortcutPath = Join-Path $Desktop '%SHORTCUT_NAME%'; "
+set "PS_COMMAND=!PS_COMMAND! $Shortcut = $WshShell.CreateShortcut($ShortcutPath); "
+set "PS_COMMAND=!PS_COMMAND! $Shortcut.TargetPath = '%TARGET_FILE%'; "
+set "PS_COMMAND=!PS_COMMAND! $Shortcut.WorkingDirectory = '%INSTALL_DIR%'; "
+if exist "%ICON_FILE%" (
+    set "PS_COMMAND=!PS_COMMAND! $Shortcut.IconLocation = '%ICON_FILE%'; "
 )
+set "PS_COMMAND=!PS_COMMAND! $Shortcut.Description = 'Nástroje pro zpracování dokumentace OP JAK'; "
+set "PS_COMMAND=!PS_COMMAND! $Shortcut.Save()"
+
+powershell -ExecutionPolicy Bypass -Command "!PS_COMMAND!"
 
 echo.
 echo ╔════════════════════════════════════════════════════════════════╗
 echo ║              ✅ INSTALACE ÚSPĚŠNĚ DOKONČENA!                   ║
 echo ╚════════════════════════════════════════════════════════════════╝
-echo.
-echo 📁 Aplikace nainstalována do: %INSTALL_DIR%
-echo 🖥️  Zástupce vytvořen na ploše: "Nástroje OP JAK"
-echo.
-echo ┌────────────────────────────────────────────────────────────────┐
-echo │ Jak spustit aplikaci:                                          │
-echo │  1. Dvojklik na zástupce na ploše                             │
-echo │  2. Nebo spusťte: %INSTALL_DIR%\start-app.bat       │
-echo └────────────────────────────────────────────────────────────────┘
-echo.
-echo ┌────────────────────────────────────────────────────────────────┐
-echo │ Pro aktualizaci aplikace později:                              │
-echo │  Spusťte: %INSTALL_DIR%\update.bat                   │
-echo └────────────────────────────────────────────────────────────────┘
-echo.
-echo ⚠️  DŮLEŽITÉ: Při prvním spuštění potvrďte oprávnění firewallu,
-echo    pokud Windows o to požádá.
 echo.
 pause
