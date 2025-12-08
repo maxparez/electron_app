@@ -1169,9 +1169,10 @@ class InvVzdProcessor(BaseTool):
             self.logger.info(f"[INVVZD] STEP 2: Writing activities...")
             sheet = wb.sheets['Seznam aktivit']
 
-            # Replace regular space with NBSP in specific topic name (in original data)
-            if len(data) > 0 and 'tema' in data.columns:
-                data['tema'] = data['tema'].str.replace(
+            # Replace regular space with NBSP in forma column only (not tema!)
+            # Excel template expects NBSP in column F (forma), but NOT in column G (tema)
+            if len(data) > 0 and 'forma' in data.columns:
+                data['forma'] = data['forma'].str.replace(
                     'Vzdělávání s využitím nových technologií',
                     'Vzdělávání s\u00A0využitím nových technologií',
                     regex=False
