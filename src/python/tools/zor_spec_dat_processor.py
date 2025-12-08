@@ -309,8 +309,8 @@ class ZorSpecDatProcessor(BaseTool):
         final_result.columns = self.result_cols_names
 
         # Calculate control sums (total hours)
-        total_forma_hours = int(forma_result['cena celkem'].sum()) if not forma_result.empty else 0
-        total_tema_hours = int(tema_result['cena celkem'].sum()) if not tema_result.empty else 0
+        total_forma_hours = int(forma_result['cena'].sum()) if not forma_result.empty else 0
+        total_tema_hours = int(tema_result['cena'].sum()) if not tema_result.empty else 0
 
         # Calculate student count with 16+ hours by school type
         students_16plus = self._calculate_students_16plus_by_type(concatenated)
