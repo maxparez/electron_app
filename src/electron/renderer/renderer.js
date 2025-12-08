@@ -388,7 +388,6 @@ async function selectInvFolder() {
 // Scan folder for suitable attendance files
 async function scanFolderForAttendanceFiles(folderPath) {
     try {
-        console.log('[DEBUG] scanFolderForAttendanceFiles - selectedTemplate:', state.selectedTemplate['inv-vzd']);
         // Call backend API to scan folder
         const response = await window.electronAPI.apiCall('select-folder', 'POST', {
             folderPath: folderPath,
