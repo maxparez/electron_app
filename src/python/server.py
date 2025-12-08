@@ -241,7 +241,7 @@ def select_folder():
                         from tools.inv_vzd_processor import VERSIONS
                         processor.config = VERSIONS.get(template_version)
             
-            result = processor.select_folder(folder_path)
+            result = processor.select_folder(folder_path, template_path)
             server_logger.info(f"[SELECT-FOLDER] InvVzd scan result: {result}")
             return jsonify(result)
         else:

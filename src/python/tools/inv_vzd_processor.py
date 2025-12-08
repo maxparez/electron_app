@@ -1292,10 +1292,11 @@ class InvVzdProcessor(BaseTool):
             self.add_error(f"Chyba při vytváření přehledu: {str(e)}")
             return []
     
-    def select_folder(self, folder_path: str) -> Dict[str, Any]:
+    def select_folder(self, folder_path: str, template_path: str = None) -> Dict[str, Any]:
         """Scan folder for attendance files and filter them"""
         self.logger.info(f"[INVVZD] === SELECT FOLDER START ===")
         self.logger.info(f"[INVVZD] Folder path: {folder_path}")
+        self.logger.info(f"[INVVZD] Template path: {template_path}")
         
         result = {"success": False, "files": [], "message": ""}
         
@@ -1323,9 +1324,14 @@ class InvVzdProcessor(BaseTool):
                         self.logger.info(f"[INVVZD] Skipping output file: {file}")
                         continue
                     
-                    # Skip template files
+                    # Skip template files (by name pattern)
                     if 'sablona' in file.lower() or 'template' in file.lower():
                         self.logger.info(f"[INVVZD] Skipping template file: {file}")
+                        continue
+
+                    # Skip the selected template file (by path comparison)
+                    if template_path and os.path.abspath(full_path) == os.path.abspath(template_path):
+                        self.logger.info(f"[INVVZD] Skipping selected template: {file}")
                         continue
                     
                     # Try to detect version from content
