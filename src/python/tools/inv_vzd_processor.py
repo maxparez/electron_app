@@ -505,7 +505,6 @@ class InvVzdProcessor(BaseTool):
                     else:
                         datum = str(date_cell).strip()
                 else:
-                    from openpyxl.utils import get_column_letter
                     col_letter = get_column_letter(col)
                     self.add_error(f"Chybí datum aktivity v buňce {col_letter}6")
                     datum = None

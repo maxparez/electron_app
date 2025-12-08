@@ -305,3 +305,157 @@ From js-docs agent consultation:
 
 No blocking issues. Design is appropriate for non-tech Windows users.
 
+
+### 2025-12-08 – ChatGPT Review: InvVzd Time Range Extraction
+- **Topic**: Parsing time ranges in row 7 (e.g., "8:50-9:35" → "8:50")
+- **Implementation Date**: 2025-12-08
+- **Consultant**: ChatGPT (GPT-5.1) via Codex CLI
+- **Reviewer**: Claude Sonnet 4.5 (chatgpt-consultant agent)
+
+#### Documents Reviewed
+- `CLAUDE.md`: Core principles (xlwings requirement, Windows-only, KISS/DRY/YAGNI)
+- `PROGRESS.md`: InvVzd tool status (100% complete, production-ready)
+- `CORE_DEVELOPMENT_PRINCIPLES.md`: Mandatory English code, Czech UI
+- `src/python/tools/inv_vzd_processor.py` (lines 513-515): Current time extraction logic
+
+#### Proposed Change
+**File**: `src/python/tools/inv_vzd_processor.py`
+**Lines**: 513-515
+
+**Current Code**:
+```python
+time_cell = sheet.cell(row=7, column=col).value
+cas = str(time_cell) if time_cell else ''
+```
+
+**Proposed Code**:
+```python
+time_cell = sheet.cell(row=7, column=col).value
+cas_raw = str(time_cell).strip() if time_cell else ''
+if '-' in cas_raw:
+    cas = cas_raw.split('-')[0].strip()
+    # log the change
+else:
+    cas = cas_raw
+```
+
+#### ChatGPT Findings (GPT-5.1 via Codex)
+1. **CRITICAL: datetime Object Corruption**
+   - Excel may store times as `datetime.datetime` or `datetime.time` objects
+   - `str(datetime(2024, 1, 10, 8, 30))` → `"2024-01-10 08:30:00"`
+   - Proposed code would split on `-` and return `"2024"`, corrupting all proper datetime values
+   - **Risk**: Breaking existing files with Excel-formatted times
+
+2. **Type Handling Required**
+   - openpyxl returns different types: `str`, `datetime.datetime`, `datetime.time`, or `None`
+   - Must use `isinstance()` checks before string operations
+   - Recommend `strftime('%H:%M')` for datetime objects to ensure consistent formatting
+
+3. **Dash Character Variants**
+   - Users may enter en-dash (`–`), em-dash (`—`), or ASCII hyphen (`-`)
+   - Proposed code only checks ASCII `-`, missing other variants
+   - Recommend regex: `r'\s*[-–—]\s*'` to support all dash types
+
+4. **Pattern Matching Needed**
+   - Only split when string matches time range pattern: `HH:MM-HH:MM`
+   - Regex: `^\s*\d{1,2}:\d{2}\s*[-–—]\s*\d{1,2}:\d{2}`
+   - Prevents false positives on unrelated hyphenated content
+
+5. **Logging Gap**
+   - Inline comment says "# log the change" but no actual logging call
+   - Non-tech users need transparency when values are modified
+   - Must use `self.add_info()` to show the transformation in UI
+
+#### Constraint Compliance Check
+- Windows-only: No issues (existing constraint)
+- xlwings compatibility: Safe (change happens before xlwings write)
+- KISS principle: WARNING - regex adds complexity, but necessary for correctness
+- No new dependencies: Uses existing `re` module (already imported)
+- English code / Czech UI: Must maintain (logging in Czech)
+
+#### Recommendations
+1. **IMPLEMENT** type checking before string operations:
+   ```python
+   from datetime import datetime, time
+   
+   if isinstance(time_cell, (datetime, time)):
+       cas = time_cell.strftime('%H:%M')
+   elif isinstance(time_cell, str):
+       # proceed with range extraction
+   ```
+
+2. **USE** regex pattern to identify time ranges only:
+   ```python
+   import re
+   pattern = r'^\s*\d{1,2}:\d{2}\s*[-–—]\s*\d{1,2}:\d{2}'
+   if re.match(pattern, cas_raw):
+       cas = re.split(r'\s*[-–—]\s*', cas_raw, maxsplit=1)[0].strip()
+   ```
+
+3. **ADD** actual logging call:
+   ```python
+   from openpyxl.utils import get_column_letter
+   col_letter = get_column_letter(col)
+   self.add_info(f"Upraven čas v buňce {col_letter}7: {cas_raw} → {cas}")
+   ```
+
+4. **TEST** edge cases:
+   - `datetime.time(8, 50)` → should become `"08:50"` (not split)
+   - `datetime.datetime(2024, 1, 10, 8, 50)` → `"08:50"` (not `"2024"`)
+   - `"8:50-9:35"` → `"8:50"` (split)
+   - `"08:50 – 09:35"` → `"08:50"` (en-dash, spaces)
+   - `"8:50 "` → `"8:50"` (trailing space)
+   - `None` → `""` (empty)
+   - `"8:50"` → `"8:50"` (no split, simple time)
+
+#### Verdict
+**CRITICAL ISSUES FOUND - DO NOT IMPLEMENT AS PROPOSED**
+
+The original proposed change has a **critical bug** that will corrupt datetime objects stored by Excel. Must implement type checking and regex pattern matching before proceeding.
+
+#### Recommended Implementation
+```python
+# Get time (row 7) - specific to 16h
+time_cell = sheet.cell(row=7, column=col).value
+
+# Handle different types openpyxl may return
+if time_cell is None:
+    cas = ''
+elif isinstance(time_cell, datetime):
+    # Excel datetime object - format time part only
+    cas = time_cell.strftime('%H:%M')
+elif isinstance(time_cell, time):
+    # Excel time object
+    cas = time_cell.strftime('%H:%M')
+elif isinstance(time_cell, str):
+    cas_raw = time_cell.strip()
+    
+    # Check if it's a time range pattern (HH:MM-HH:MM with various dashes)
+    import re
+    if re.match(r'^\s*\d{1,2}:\d{2}\s*[-–—]\s*\d{1,2}:\d{2}', cas_raw):
+        # Extract start time from range
+        cas = re.split(r'\s*[-–—]\s*', cas_raw, maxsplit=1)[0].strip()
+        col_letter = get_column_letter(col)
+        self.add_info(f"Upraven čas v buňce {col_letter}7: {cas_raw} → {cas}")
+    else:
+        cas = cas_raw
+else:
+    # Fallback for unexpected types
+    cas = str(time_cell).strip()
+```
+
+#### Next Steps
+- Implement recommended version with type checking and regex
+- Create unit tests for all edge cases listed above
+- Test with real Excel files containing both datetime objects and string ranges
+- Commit with tag [fix-XXX] after testing
+- Document this change in user manual (time range auto-extraction feature)
+
+#### Compliance
+- Adheres to KISS (minimal necessary complexity for correctness)
+- Follows DRY (reuses existing imports and patterns)
+- Respects YAGNI (no speculative features, solves real user problem)
+- English code, Czech logging messages
+- No new dependencies
+- Windows-compatible (regex, datetime are cross-platform)
+
