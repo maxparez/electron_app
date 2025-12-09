@@ -1,8 +1,65 @@
 # Electron App Development Progress
 
-## Current Phase: PRODUCTION READY - Enhanced InvVzd Processing
-**Date:** 2025-12-08
-**Status:** 🎯 **PRODUCTION READY - Time Range Parsing + UX Improvements**
+## Current Phase: PRODUCTION READY - ZorSpecDat Enhancements + Windows Deploy
+**Date:** 2025-12-09
+**Status:** 🎯 **PRODUCTION READY - Control Sums, School Types, Windows Deployment**
+
+## 📅 Recent Updates
+
+### 2025-12-09: ZorSpecDat Control Sums + School Types + Windows Deployment
+
+#### ZorSpecDat Enhancements
+- [x] **[feat-130]** Added control sums (total hours) for forms and topics
+  - Backend: Calculate `total_forma_hours` and `total_tema_hours`
+  - Frontend: Display control sums in new UI section
+  - Reviewed and approved by gemini-consultant
+- [x] **[fix-131]** Fixed column name for control sums calculation (cena → correct column)
+- [x] **[feat-132]** Display control sums side by side (2 columns grid layout)
+
+#### School Type Statistics
+- [x] **[feat-133]** Added ZUŠ and SŠ school types to 16h+ attendance stats
+  - Extended `_identify_school_type` for ZUŠ and SŠ detection
+  - Added ZUŠ (🎨) and SŠ (🎓) to UI display
+  - Updated CSS grid: 3 → 5 columns for all school types
+  - Now tracking: MŠ, ZŠ, ŠD, ZUŠ, SŠ
+
+#### Topic Normalization & NBSP Fixes
+- [x] **[fix-134]** Added tema normalization for EVVO topic (long → short form)
+- [x] **[feat-135]** Added SŠ/VOŠ topics and normalized all topic variants
+  - New topics: "pohybové aktivity", "odborná témata sš/voš"
+  - Normalization rules for SŠ variants (gramotnost → pre/gramotnost)
+- [x] **[fix-136]** Fixed NBSP mismatch in 'Vzdělávání s využitím nových technologií'
+  - ZorSpecDat: NBSP → regular space (for matching)
+- [x] **[fix-137]** Added NBSP to InvVzd output (forma column only)
+- [x] **[fix-138]** Fixed NBSP - applies to 'forma' column, not 'tema'
+
+#### Windows-Install Branch - Production Deployment
+- [x] **[cleanup]** Removed all development files (110 files)
+  - Removed: tests/, docs/, all *.md except README.md, dev scripts
+  - Kept: src/, install scripts, templates, dependencies
+- [x] **[fix-139]** Restored update scripts (update.bat, update-windows.bat)
+- [x] **[fix-140]** Added start-app.bat + removed dev scripts
+  - Fixed desktop shortcut issue
+  - Removed: build scripts, sync scripts, backup files
+- [x] **[cleanup-141]** Removed duplicate Excel templates from root
+- [x] **[docs-142]** Rewrote README.md for production users
+  - User-friendly guide for non-technical colleagues
+  - Installation, usage, troubleshooting, update instructions
+- [x] **[security-143]** Fixed 6 npm security vulnerabilities
+  - Critical: form-data (unsafe random boundary)
+  - High: axios (DoS attack)
+  - Moderate: body-parser, electron
+  - Low: brace-expansion, tmp
+  - Result: 0 vulnerabilities ✅
+
+#### Summary
+- **13 commits** with new features, fixes, and deployment preparation
+- **ZorSpecDat** now has control sums, 5 school types, proper topic normalization
+- **InvVzd** properly handles NBSP in forma column
+- **Windows-install branch** is production-ready with security fixes
+
+### 2025-12-08: InvVzd Processing + UX Improvements
+*(Previous session content preserved below)*
 
 ## ✅ Completed Tasks
 
