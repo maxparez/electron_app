@@ -651,8 +651,8 @@ function showZorVersionError(versionCheck) {
     `;
 
     // Insert before the file list
-    const fileListContainer = elements.zorFileList.parentElement;
-    fileListContainer.insertBefore(errorDiv, elements.zorFileList);
+    const fileListContainer = elements.zorFilesList.parentElement;
+    fileListContainer.insertBefore(errorDiv, elements.zorFilesList);
 }
 
 // Keep only 16h files
