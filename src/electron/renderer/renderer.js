@@ -632,16 +632,22 @@ async function processInvVzd() {
 async function processZorSpec() {
     try {
         showLoading(true);
-        
+
+        // Track processing time
+        const startTime = performance.now();
+
         // Use path-based processing with auto-save
         const result = await window.electronAPI.apiCall('process/zor-spec-paths', 'POST', {
             filePaths: state.selectedFiles['zor-spec'],
             options: {},
             autoSave: true  // Auto-save to source folder
         });
-        
+
+        // Calculate duration
+        const duration = ((performance.now() - startTime) / 1000).toFixed(1);
+
         showLoading(false);
-        
+
         if (result.status === 'success') {
             // Status banner with completion message
             let resultHtml = `
@@ -653,7 +659,7 @@ async function processZorSpec() {
                             <p>Všechna data byla úspěšně analyzována a uložena.</p>
                         </div>
                     </div>
-                    <span class="status-time">Doba trvání: 1.2s</span>
+                    <span class="status-time">Doba trvání: ${duration}s</span>
                 </div>
             `;
 
