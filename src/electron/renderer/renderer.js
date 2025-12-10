@@ -609,20 +609,82 @@ function showZorVersionError(versionCheck) {
     // Create error message element
     const errorDiv = document.createElement('div');
     errorDiv.id = 'zor-version-error';
-    errorDiv.className = 'version-error-banner';
+    errorDiv.className = 'version-error-panel';
     errorDiv.innerHTML = `
-        <div class="version-error-icon">⚠️</div>
-        <div class="version-error-content">
-            <h4>Nelze kombinovat různé verze šablon</h4>
-            <p>Nalezeno <strong>${versionCheck.count16h} souborů Šablony I (16h)</strong>
-               a <strong>${versionCheck.count32h} souborů Šablony II (32h)</strong>.</p>
-            <p>Prosím odeberte buď všechny soubory 16h verze, nebo všechny soubory 32h verze.</p>
+        <div class="version-error-header">
+            <div class="version-error-icon">⚠️</div>
+            <div class="version-error-title">
+                <h4>Nelze kombinovat různé verze šablon</h4>
+                <p>Zpracování je zablokováno z důvodu smíšených verzí</p>
+            </div>
+        </div>
+        <div class="version-error-body">
+            <div class="version-error-details">
+                <div class="version-detail">
+                    <span class="version-badge version-16h">16h</span>
+                    <span class="version-count">${versionCheck.count16h} souborů Šablony I</span>
+                </div>
+                <div class="version-detail">
+                    <span class="version-badge version-32h">32h</span>
+                    <span class="version-count">${versionCheck.count32h} souborů Šablony II</span>
+                </div>
+            </div>
+            <div class="version-error-solution">
+                <p><strong>Jak to vyřešit:</strong></p>
+                <p>Odeberte všechny soubory jedné verze ze seznamu níže, nebo:</p>
+                <div class="version-error-actions">
+                    <button class="btn-action btn-keep-16h" onclick="keepOnly16hFiles()">
+                        <span class="btn-icon">📋</span>
+                        Ponechat pouze 16h verzi
+                    </button>
+                    <button class="btn-action btn-keep-32h" onclick="keepOnly32hFiles()">
+                        <span class="btn-icon">📋</span>
+                        Ponechat pouze 32h verzi
+                    </button>
+                    <button class="btn-action btn-clear-all" onclick="clearAllZorFiles()">
+                        <span class="btn-icon">🗑️</span>
+                        Smazat vše a začít znovu
+                    </button>
+                </div>
+            </div>
         </div>
     `;
 
     // Insert before the file list
     const fileListContainer = elements.zorFileList.parentElement;
     fileListContainer.insertBefore(errorDiv, elements.zorFileList);
+}
+
+// Keep only 16h files
+function keepOnly16hFiles() {
+    const versionCheck = detectMixedVersions(state.selectedFiles['zor-spec']);
+    state.selectedFiles['zor-spec'] = state.selectedFiles['zor-spec'].filter(filePath => {
+        const filename = filePath.split(/[/\\]/).pop().toLowerCase();
+        return !(filename.includes('32h_') || filename.includes('32_inv') ||
+                 filename.includes('32_hodin') || filename.includes('32h'));
+    });
+    updateFilesList('zor-spec');
+    checkZorSpecReady();
+}
+
+// Keep only 32h files
+function keepOnly32hFiles() {
+    const versionCheck = detectMixedVersions(state.selectedFiles['zor-spec']);
+    state.selectedFiles['zor-spec'] = state.selectedFiles['zor-spec'].filter(filePath => {
+        const filename = filePath.split(/[/\\]/).pop().toLowerCase();
+        return (filename.includes('32h_') || filename.includes('32_inv') ||
+                filename.includes('32_hodin') || filename.includes('32h'));
+    });
+    updateFilesList('zor-spec');
+    checkZorSpecReady();
+}
+
+// Clear all ZorSpec files
+function clearAllZorFiles() {
+    state.selectedFiles['zor-spec'] = [];
+    state.zorFileVersions = {};
+    updateFilesList('zor-spec');
+    checkZorSpecReady();
 }
 
 // Process Inv Vzd
