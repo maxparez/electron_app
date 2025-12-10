@@ -208,7 +208,8 @@ async function selectFiles(tool) {
                     state.selectedFiles[tool] = validFiles;
                     state.zorFileVersions = fileVersions;
                     updateFilesList(tool);
-                    elements.zorProcessBtn.disabled = false;
+                    // Check if ready to process (validates version compatibility)
+                    checkZorSpecReady();
                     showMessage(`Vybráno ${validFiles.length} vhodných souborů`, 'success');
                 } else {
                     showMessage('Žádný z vybraných souborů neobsahuje požadovaný list', 'error');
