@@ -711,8 +711,9 @@ async function processZorSpec() {
             // School type breakdown (if available)
             if (result.data.students_16plus) {
                 const students16 = result.data.students_16plus;
+                const hourThreshold = students16.hour_threshold || 16;  // Default to 16 if not provided
                 resultHtml += `
-                    <div class="section-header">Počet dětí/žáků se splněnou docházkou 16h</div>
+                    <div class="section-header">Počet dětí/žáků se splněnou docházkou ${hourThreshold}h</div>
                     <div class="stats-grid school-stats">
                         <div class="stat-card school-card">
                             <div class="stat-content">

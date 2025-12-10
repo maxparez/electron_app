@@ -376,9 +376,13 @@ class ZorSpecDatProcessor(BaseTool):
         total_forma_hours = int(forma_result['cena'].sum()) if not forma_result.empty else 0
         total_tema_hours = int(tema_result['cena'].sum()) if not tema_result.empty else 0
 
-        # Calculate student count with 16+ hours by school type
-        self.logger.info(f"[ZORSPECDAT] Počítám žáky s 16+ hodinami podle typu školy...")
-        students_16plus = self._calculate_students_16plus_by_type(concatenated)
+        # Detect hour threshold (16 or 32) from filenames
+        hour_threshold = self._detect_hour_threshold(excel_files)
+        self.logger.info(f"[ZORSPECDAT] Detekovaný práh hodin: {hour_threshold}h")
+
+        # Calculate student count with threshold+ hours by school type
+        self.logger.info(f"[ZORSPECDAT] Počítám žáky s {hour_threshold}+ hodinami podle typu školy...")
+        students_threshold_plus = self._calculate_students_16plus_by_type(concatenated, hour_threshold)
 
         # Get unique names
         self.logger.info(f"[ZORSPECDAT] Získávám unikátní jména...")
@@ -390,26 +394,27 @@ class ZorSpecDatProcessor(BaseTool):
         html_parts.insert(0, "<h2>Údaje do ZoR</h2>")
 
         # Add student count table (below main table)
-        html_parts.insert(0, self._dataframe_to_html_table(students_16plus))
-        html_parts.insert(0, "<h3>Počet žáků s více jak 16 h inovativního vzdělávání</h3>")
+        html_parts.insert(0, self._dataframe_to_html_table(students_threshold_plus))
+        html_parts.insert(0, f"<h3>Počet žáků s více jak {hour_threshold} h inovativního vzdělávání</h3>")
 
         html_parts.insert(0, "<h1>Specifické datové položky pro ZoR</h1>")
-        
+
         # Create complete HTML document
         html_content = self._create_html_document("".join(html_parts))
 
-        # Convert students_16plus DataFrame to dict for easier access
-        students_16plus_dict = {
-            'MŠ': int(students_16plus['MŠ'].values[0]),
-            'ZŠ': int(students_16plus['ZŠ'].values[0]),
-            'ŠD': int(students_16plus['ŠD'].values[0]),
-            'ZUŠ': int(students_16plus['ZUŠ'].values[0]),
-            'SŠ': int(students_16plus['SŠ'].values[0]),
+        # Convert students DataFrame to dict for easier access
+        students_threshold_dict = {
+            'MŠ': int(students_threshold_plus['MŠ'].values[0]),
+            'ZŠ': int(students_threshold_plus['ZŠ'].values[0]),
+            'ŠD': int(students_threshold_plus['ŠD'].values[0]),
+            'ZUŠ': int(students_threshold_plus['ZUŠ'].values[0]),
+            'SŠ': int(students_threshold_plus['SŠ'].values[0]),
             'total_forma_hours': total_forma_hours,
-            'total_tema_hours': total_tema_hours
+            'total_tema_hours': total_tema_hours,
+            'hour_threshold': hour_threshold  # Include threshold for UI display
         }
 
-        return html_content, unique_names, students_16plus_dict
+        return html_content, unique_names, students_threshold_dict
         
     def _aggregate_data_by_template(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         """Aggregate data by template with period analysis"""
@@ -546,14 +551,36 @@ class ZorSpecDatProcessor(BaseTool):
 
         return result
 
-    def _calculate_students_16plus_by_type(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Calculate count of student records with >=16 hours by school type
+    def _detect_hour_threshold(self, excel_files: List[str]) -> int:
+        """Detect hour threshold (16 or 32) from filenames
+
+        Looks for '32h', '32_inv', '32_hodin' patterns in filenames.
+        Defaults to 16 if not found.
+
+        Args:
+            excel_files: List of Excel file paths
+
+        Returns:
+            Hour threshold: 16 or 32
+        """
+        for file_path in excel_files:
+            filename = os.path.basename(file_path).lower()
+            # Check for 32h indicators
+            if any(pattern in filename for pattern in ['32h_', '32_inv', '32_hodin', '32h']):
+                return 32
+
+        # Default to 16h
+        return 16
+
+    def _calculate_students_16plus_by_type(self, df: pd.DataFrame, hour_threshold: int = 16) -> pd.DataFrame:
+        """Calculate count of student records with >=threshold hours by school type
 
         Each student in each school (sablona) is counted separately.
         Same student in different schools counts multiple times.
 
         Args:
             df: DataFrame with all processed data including 'jmena', 'sablona', 'pocet_hodin'
+            hour_threshold: Minimum hours threshold (16 or 32)
 
         Returns:
             DataFrame with single row: MŠ, ZŠ, ŠD, ZUŠ, SŠ columns with student counts
@@ -561,14 +588,14 @@ class ZorSpecDatProcessor(BaseTool):
         # Group by student name and school (sablona), sum all hours
         student_hours = df.groupby(['jmena', 'sablona'], as_index=False)['pocet_hodin'].sum()
 
-        # Filter records with >= 16 hours
-        students_16plus = student_hours[student_hours['pocet_hodin'] >= 16].copy()
+        # Filter records with >= threshold hours
+        students_threshold_plus = student_hours[student_hours['pocet_hodin'] >= hour_threshold].copy()
 
         # Identify school type for each record
-        students_16plus['typ_skoly'] = students_16plus['sablona'].apply(self._identify_school_type)
+        students_threshold_plus['typ_skoly'] = students_threshold_plus['sablona'].apply(self._identify_school_type)
 
         # Count records by school type
-        type_counts = students_16plus.groupby('typ_skoly', as_index=False).size()
+        type_counts = students_threshold_plus.groupby('typ_skoly', as_index=False).size()
         type_counts.columns = ['typ_skoly', 'pocet']
 
         # Create result row with MŠ, ZŠ, ŠD, ZUŠ, SŠ columns
