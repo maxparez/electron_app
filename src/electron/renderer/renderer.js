@@ -655,7 +655,28 @@ async function processZorSpec() {
                     </div>
                     <span class="status-time">Doba trvání: 1.2s</span>
                 </div>
+            `;
 
+            // Show warnings right after status banner
+            if (result.warnings && result.warnings.length > 0) {
+                resultHtml += `
+                    <div class="warning-banner">
+                        <div class="warning-banner-icon">⚠️</div>
+                        <div class="warning-banner-content">
+                            <h4>Varování při zpracování</h4>
+                            <ul class="warning-banner-list">
+                `;
+                result.warnings.forEach(msg => {
+                    resultHtml += `<li>${msg}</li>`;
+                });
+                resultHtml += `
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+
+            resultHtml += `
                 <!-- Primary stats grid -->
                 <div class="stats-grid primary-stats">
                     <div class="stat-card">
@@ -873,16 +894,7 @@ async function processZorSpec() {
                     </div>
                 `;
             }
-            
-            // Show warnings
-            if (result.warnings && result.warnings.length > 0) {
-                resultHtml += '<h4>Varování:</h4><ul class="warning-messages">';
-                result.warnings.forEach(msg => {
-                    resultHtml += `<li>⚠️ ${msg}</li>`;
-                });
-                resultHtml += '</ul>';
-            }
-            
+
             elements.zorResults.innerHTML = resultHtml;
             elements.zorResults.classList.add('show');
         } else {
