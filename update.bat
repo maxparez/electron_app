@@ -5,7 +5,7 @@ cls
 echo.
 echo ╔════════════════════════════════════════════════════════════════╗
 echo ║        Aktualizace - Nástroje pro ŠI a ŠII OP JAK            ║
-echo ║                      Verze 1.1.0                               ║
+echo ║                      Verze 1.2.0                               ║
 echo ╚════════════════════════════════════════════════════════════════╝
 echo.
 echo Tento skript aktualizuje aplikaci na nejnovější verzi z GitHubu.

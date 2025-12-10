@@ -6,7 +6,7 @@ cls
 echo.
 echo ╔════════════════════════════════════════════════════════════════╗
 echo ║          Instalace - Nástroje pro ŠI a ŠII OP JAK            ║
-echo ║                        Verze 1.1.2                             ║
+echo ║                        Verze 1.2.0                             ║
 echo ╚════════════════════════════════════════════════════════════════╝
 echo.
 echo Tento skript nainstaluje aplikaci do složky C:\OPJAK\electron_app
