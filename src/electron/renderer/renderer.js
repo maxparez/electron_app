@@ -466,18 +466,12 @@ async function selectZorFolder() {
                 state.selectedFiles['zor-spec'] = scanResult.files;
                 // Store version info for display
                 state.zorFileVersions = scanResult.versions;
-                
-                // Check for mixed versions and warn user
-                const versions = Object.values(scanResult.versions);
-                const uniqueVersions = [...new Set(versions)];
-                
-                if (uniqueVersions.length > 1) {
-                    const versionCounts = uniqueVersions.map(v => `${v}: ${versions.filter(version => version === v).length} souborů`).join(', ');
-                    showMessage(`⚠️ POZOR: Nalezeny soubory s různými verzemi (${versionCounts}). Zkontrolujte, zda chcete zpracovat všechny soubory současně.`, 'warning');
-                }
-                
+
                 updateFilesList('zor-spec');
-                elements.zorProcessBtn.disabled = false;
+
+                // Check if ready to process (validates version compatibility)
+                checkZorSpecReady();
+
                 showMessage(`Nalezeno ${scanResult.files.length} vhodných souborů docházky`, 'success');
             } else {
                 showMessage('Ve vybrané složce nebyly nalezeny žádné soubory s listem "Úvod a postup vyplňování"', 'warning');
@@ -539,13 +533,96 @@ function checkInvVzdReady() {
     const hasTemplate = state.selectedTemplate['inv-vzd'] !== null;
     const hasFiles = state.selectedFiles['inv-vzd'].length > 0;
     const hasValidVersion = state.detectedTemplateVersion !== null;
-    
+
     // Enable/disable file selection buttons based on template validity
     elements.invSelectBtn.disabled = !hasValidVersion;
     elements.invFolderBtn.disabled = !hasValidVersion;
-    
+
     // Enable process button only if everything is ready
     elements.invProcessBtn.disabled = !(hasTemplate && hasFiles && hasValidVersion);
+}
+
+// Check if Zor Spec is ready to process
+function checkZorSpecReady() {
+    const hasFiles = state.selectedFiles['zor-spec'].length > 0;
+
+    if (!hasFiles) {
+        elements.zorProcessBtn.disabled = true;
+        // Clear any version error message
+        const errorMsg = document.getElementById('zor-version-error');
+        if (errorMsg) errorMsg.remove();
+        return;
+    }
+
+    // Detect mixed versions (16h and 32h)
+    const versionCheck = detectMixedVersions(state.selectedFiles['zor-spec']);
+
+    if (versionCheck.mixed) {
+        // Show error message
+        showZorVersionError(versionCheck);
+        elements.zorProcessBtn.disabled = true;
+    } else {
+        // Clear error message and enable processing
+        const errorMsg = document.getElementById('zor-version-error');
+        if (errorMsg) errorMsg.remove();
+        elements.zorProcessBtn.disabled = false;
+    }
+}
+
+// Detect mixed versions in file list
+function detectMixedVersions(filePaths) {
+    let has16h = false;
+    let has32h = false;
+    const files16h = [];
+    const files32h = [];
+
+    filePaths.forEach(filePath => {
+        const filename = filePath.split(/[/\\]/).pop().toLowerCase();
+        // Check for 32h indicators
+        if (filename.includes('32h_') || filename.includes('32_inv') ||
+            filename.includes('32_hodin') || filename.includes('32h')) {
+            has32h = true;
+            files32h.push(filePath.split(/[/\\]/).pop());
+        } else {
+            has16h = true;
+            files16h.push(filePath.split(/[/\\]/).pop());
+        }
+    });
+
+    return {
+        mixed: has16h && has32h,
+        has16h,
+        has32h,
+        files16h,
+        files32h,
+        count16h: files16h.length,
+        count32h: files32h.length
+    };
+}
+
+// Show error message for mixed versions
+function showZorVersionError(versionCheck) {
+    // Remove existing error if any
+    const existingError = document.getElementById('zor-version-error');
+    if (existingError) existingError.remove();
+
+    // Create error message element
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'zor-version-error';
+    errorDiv.className = 'version-error-banner';
+    errorDiv.innerHTML = `
+        <div class="version-error-icon">⚠️</div>
+        <div class="version-error-content">
+            <h4>Nelze kombinovat různé verze šablon</h4>
+            <p>Nalezeno <strong>${versionCheck.count16h} souborů Šablony I (16h)</strong>
+               a <strong>${versionCheck.count32h} souborů Šablony II (32h)</strong>.</p>
+            <p>Prosím odeberte buď všechny soubory 16h verze, nebo všechny soubory 32h verze.</p>
+        </div>
+    `;
+
+    // Insert before the file list
+    const fileListContainer = elements.zorFileList.parentElement;
+    fileListContainer.insertBefore(errorDiv, elements.zorFileList);
 }
 
 // Process Inv Vzd

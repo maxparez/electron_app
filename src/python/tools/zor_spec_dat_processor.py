@@ -555,22 +555,43 @@ class ZorSpecDatProcessor(BaseTool):
         """Detect hour threshold (16 or 32) from filenames
 
         Looks for '32h', '32_inv', '32_hodin' patterns in filenames.
-        Defaults to 16 if not found.
+        Validates that all files are the same version.
 
         Args:
             excel_files: List of Excel file paths
 
         Returns:
             Hour threshold: 16 or 32
+
+        Raises:
+            Exception: If mixed versions (16h and 32h) are detected
         """
+        has_16h = False
+        has_32h = False
+        files_16h = []
+        files_32h = []
+
         for file_path in excel_files:
             filename = os.path.basename(file_path).lower()
             # Check for 32h indicators
             if any(pattern in filename for pattern in ['32h_', '32_inv', '32_hodin', '32h']):
-                return 32
+                has_32h = True
+                files_32h.append(os.path.basename(file_path))
+            else:
+                has_16h = True
+                files_16h.append(os.path.basename(file_path))
 
-        # Default to 16h
-        return 16
+        # Check for mixed versions
+        if has_16h and has_32h:
+            error_msg = (
+                f"Nelze kombinovat inovativní vzdělávání Šablony I (16h) a Šablony II (32h). "
+                f"Nalezeno {len(files_16h)} souborů 16h verze a {len(files_32h)} souborů 32h verze. "
+                f"Prosím odeberte buď všechny 16h soubory, nebo všechny 32h soubory před zpracováním."
+            )
+            raise Exception(error_msg)
+
+        # Return detected threshold
+        return 32 if has_32h else 16
 
     def _calculate_students_16plus_by_type(self, df: pd.DataFrame, hour_threshold: int = 16) -> pd.DataFrame:
         """Calculate count of student records with >=threshold hours by school type
