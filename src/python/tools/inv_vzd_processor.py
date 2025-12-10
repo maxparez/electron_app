@@ -247,10 +247,11 @@ class InvVzdProcessor(BaseTool):
                 
         except Exception as e:
             self.logger.error(f"[INVVZD] === PROCESS EXCEPTION ===")
+            self.logger.error(f"[INVVZD] Soubory k zpracování: {[os.path.basename(f) for f in files]}")
             self.logger.error(f"[INVVZD] Exception: {str(e)}")
             import traceback
             self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
-            self.add_error(f"Chyba při zpracování: {str(e)}")
+            self.add_error(f"Kritická chyba při zpracování ({len(files)} souborů): {str(e)}")
             result = self.get_result(False)
             self.logger.info(f"[INVVZD] Returning exception result: {result}")
             return result
@@ -428,7 +429,8 @@ class InvVzdProcessor(BaseTool):
     def _read_source_data(self, source_file: str) -> Optional[pd.DataFrame]:
         """Read and process source data"""
         try:
-            self.logger.info(f"[INVVZD] Reading source data for version: {self.version}")
+            file_name = os.path.basename(source_file)
+            self.logger.info(f"[INVVZD] Čtu zdrojová data z '{file_name}' (verze {self.version})")
             if self.version == "16":
                 return self._read_16_hour_data(source_file)
             elif self.version == "32":
@@ -439,7 +441,12 @@ class InvVzdProcessor(BaseTool):
                 return None
                 
         except Exception as e:
-            self.add_error(f"Chyba při čtení zdrojových dat: {str(e)}")
+            import traceback
+            file_name = os.path.basename(source_file)
+            error_msg = f"Chyba při čtení zdrojových dat ze souboru '{file_name}': {str(e)}"
+            self.logger.error(f"[INVVZD] {error_msg}")
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
+            self.add_error(error_msg)
             return None
             
     def _read_16_hour_data(self, source_file: str) -> Optional[pd.DataFrame]:
@@ -1215,10 +1222,12 @@ class InvVzdProcessor(BaseTool):
             
         except Exception as e:
             self.logger.error(f"[INVVZD] === COPY TEMPLATE EXCEPTION ===")
+            file_name = os.path.basename(source_file)
+            self.logger.error(f"[INVVZD] Zdrojový soubor: {file_name}")
             self.logger.error(f"[INVVZD] Exception: {str(e)}")
             import traceback
             self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
-            self.add_error(f"Chyba při kopírování šablony: {str(e)}")
+            self.add_error(f"Chyba při kopírování šablony pro soubor '{file_name}': {str(e)}")
             # Try to close Excel if still open
             try:
                 if 'wb' in locals():

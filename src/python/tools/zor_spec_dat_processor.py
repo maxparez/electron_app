@@ -102,23 +102,23 @@ class ZorSpecDatProcessor(BaseTool):
         """Process attendance files and generate ZoR special data items report"""
         if not self.validate_inputs(files, options):
             return self.get_result(False)
-            
+
         try:
             source_dir = options.get('source_dir')
             output_dir = options.get('output_dir', source_dir or os.getcwd())
-            
+
             # Get files to process
             if source_dir:
                 excel_files = self._get_files_from_directory(source_dir)
             else:
                 excel_files = self._validate_files(files)
-                
+
             if not excel_files:
                 self.add_error("Nebyl nalezen žádný platný soubor ke zpracování")
                 return self.get_result(False)
-                
+
             self.add_info(f"Nalezeno {len(excel_files)} souborů ke zpracování")
-            
+
             # Process files and generate report
             html_report, unique_names_data, students_16plus = self._generate_report(excel_files)
 
@@ -137,11 +137,15 @@ class ZorSpecDatProcessor(BaseTool):
 
             self.add_info(f"Report uložen: {html_file}||{os.path.basename(html_file)}")
             self.add_info(f"Seznam žáků uložen: {txt_file}||{os.path.basename(txt_file)}")
-            
+
             return self.get_result(True, processed_data)
-            
+
         except Exception as e:
-            self.add_error(f"Chyba při zpracování: {str(e)}")
+            import traceback
+            error_msg = f"Chyba při zpracování: {str(e)}"
+            self.logger.error(f"[ZORSPECDAT] {error_msg}")
+            self.logger.error(f"[ZORSPECDAT] Traceback: {traceback.format_exc()}")
+            self.add_error(error_msg)
             return self.get_result(False)
             
     def _get_files_from_directory(self, source_dir: str) -> List[str]:
@@ -211,7 +215,35 @@ class ZorSpecDatProcessor(BaseTool):
             
             # Clean string data
             df = df.applymap(lambda x: x.lower().strip() if isinstance(x, str) else x)
-            
+
+            # Check for numeric values in 'jmena' column (expected to be names, not numbers)
+            if 'jmena' in df.columns:
+                file_name = os.path.basename(excel_file)
+                numeric_mask = pd.to_numeric(df['jmena'], errors='coerce').notna()
+
+                if numeric_mask.any():
+                    numeric_values = df[numeric_mask]['jmena'].unique()
+                    numeric_count = numeric_mask.sum()
+
+                    # Get row numbers (Excel rows, adding 2 for header and 0-based index)
+                    numeric_rows = df[numeric_mask].index + 2
+                    row_list = ', '.join([f"řádek {r}" for r in numeric_rows[:5]])  # Show first 5
+                    if len(numeric_rows) > 5:
+                        row_list += f" a další {len(numeric_rows) - 5}"
+
+                    warning_msg = (
+                        f"Soubor '{file_name}': Sloupec 'jmena' obsahuje {numeric_count} číselných hodnot "
+                        f"místo jmen ({row_list}). Hodnoty: {', '.join(map(str, numeric_values[:3]))}..."
+                        if len(numeric_values) > 3 else
+                        f"Soubor '{file_name}': Sloupec 'jmena' obsahuje {numeric_count} číselných hodnot "
+                        f"místo jmen ({row_list}). Hodnoty: {', '.join(map(str, numeric_values))}"
+                    )
+                    self.add_warning(warning_msg)
+                    self.logger.warning(f"[ZORSPECDAT] {warning_msg}")
+
+                # Convert all to string to allow processing to continue
+                df['jmena'] = df['jmena'].astype(str)
+
             # Standardize forma values using TEXT_REPLACEMENTS
             for old_val, new_val in TEXT_REPLACEMENTS['forma'].items():
                 df['forma'] = df['forma'].replace(old_val, new_val)
@@ -281,45 +313,58 @@ class ZorSpecDatProcessor(BaseTool):
         # Process each file
         for file_path in excel_files:
             try:
+                file_name = os.path.basename(file_path)
+                self.logger.info(f"[ZORSPECDAT] Zpracovávám soubor: {file_name}")
+
                 df, subreport = self._calculate_subreport(file_path)
                 concatenated = pd.concat([concatenated, df], axis="rows")
-                
+
                 # Add file section to HTML
-                file_name = os.path.basename(file_path)
                 html_parts.append(f"<h2>{file_name}</h2>")
                 html_parts.append(self._dataframe_to_html_table(subreport))
-                
+
                 self.add_info(f"Zpracován soubor: {file_name}")
-                
+
             except Exception as e:
-                self.add_error(f"Chyba při zpracování {os.path.basename(file_path)}: {str(e)}")
+                import traceback
+                file_name = os.path.basename(file_path)
+                error_msg = f"Chyba při zpracování souboru '{file_name}': {str(e)}"
+                self.logger.error(f"[ZORSPECDAT] {error_msg}")
+                self.logger.error(f"[ZORSPECDAT] Traceback: {traceback.format_exc()}")
+                self.add_error(error_msg)
                 continue
                 
         if concatenated.empty:
             raise Exception("Žádná data nebyla úspěšně zpracována")
-            
+
+        self.logger.info(f"[ZORSPECDAT] Celkem zpracováno {len(concatenated)} řádků ze {len(excel_files)} souborů")
+
         # Filter out excluded names
         if self.name_list:
+            self.logger.info(f"[ZORSPECDAT] Filtruji vyloučená jména...")
             original_count = len(concatenated)
             concatenated = concatenated[~concatenated['jmena'].isin(self.name_list)]
             excluded_count = original_count - len(concatenated)
             if excluded_count > 0:
                 self.add_info(f"Vyloučeno {excluded_count} záznamů podle seznamu")
-                
+
         # Calculate hash names for deduplication
+        self.logger.info(f"[ZORSPECDAT] Počítám hash pro jména...")
         concatenated['hash_jmena'] = concatenated['jmena'].apply(self._custom_hash)
-        
+
         # Generate template-based aggregation
+        self.logger.info(f"[ZORSPECDAT] Agregace podle šablon...")
         template_data = self._aggregate_data_by_template(concatenated)
-        
+
         # Add template sections to HTML
         for template_name, data in template_data.items():
             html_parts.insert(0, self._dataframe_to_html_table(data))
             html_parts.insert(0, f"<h3>Šablona: {template_name}</h3>")
-            
+
         html_parts.insert(0, "<h2>SDP ZoR</h2>")
-        
+
         # Generate final aggregated results
+        self.logger.info(f"[ZORSPECDAT] Agregace podle forem a témat...")
         forma_result = self._aggregate(concatenated, "forma", "forma")
         tema_result = self._aggregate(concatenated, "tema", "téma")
 
@@ -327,13 +372,20 @@ class ZorSpecDatProcessor(BaseTool):
         final_result.columns = self.result_cols_names
 
         # Calculate control sums (total hours)
+        self.logger.info(f"[ZORSPECDAT] Počítám kontrolní součty hodin...")
         total_forma_hours = int(forma_result['cena'].sum()) if not forma_result.empty else 0
         total_tema_hours = int(tema_result['cena'].sum()) if not tema_result.empty else 0
 
-        # Calculate student count with 16+ hours by school type
-        students_16plus = self._calculate_students_16plus_by_type(concatenated)
+        # Detect hour threshold (16 or 32) from filenames
+        hour_threshold = self._detect_hour_threshold(excel_files)
+        self.logger.info(f"[ZORSPECDAT] Detekovaný práh hodin: {hour_threshold}h")
+
+        # Calculate student count with threshold+ hours by school type
+        self.logger.info(f"[ZORSPECDAT] Počítám žáky s {hour_threshold}+ hodinami podle typu školy...")
+        students_threshold_plus = self._calculate_students_16plus_by_type(concatenated, hour_threshold)
 
         # Get unique names
+        self.logger.info(f"[ZORSPECDAT] Získávám unikátní jména...")
         unique_names, unique_count = self._get_unique_names(concatenated)
 
         # Build final HTML
@@ -342,26 +394,27 @@ class ZorSpecDatProcessor(BaseTool):
         html_parts.insert(0, "<h2>Údaje do ZoR</h2>")
 
         # Add student count table (below main table)
-        html_parts.insert(0, self._dataframe_to_html_table(students_16plus))
-        html_parts.insert(0, "<h3>Počet žáků s více jak 16 h inovativního vzdělávání</h3>")
+        html_parts.insert(0, self._dataframe_to_html_table(students_threshold_plus))
+        html_parts.insert(0, f"<h3>Počet žáků s více jak {hour_threshold} h inovativního vzdělávání</h3>")
 
         html_parts.insert(0, "<h1>Specifické datové položky pro ZoR</h1>")
-        
+
         # Create complete HTML document
         html_content = self._create_html_document("".join(html_parts))
 
-        # Convert students_16plus DataFrame to dict for easier access
-        students_16plus_dict = {
-            'MŠ': int(students_16plus['MŠ'].values[0]),
-            'ZŠ': int(students_16plus['ZŠ'].values[0]),
-            'ŠD': int(students_16plus['ŠD'].values[0]),
-            'ZUŠ': int(students_16plus['ZUŠ'].values[0]),
-            'SŠ': int(students_16plus['SŠ'].values[0]),
+        # Convert students DataFrame to dict for easier access
+        students_threshold_dict = {
+            'MŠ': int(students_threshold_plus['MŠ'].values[0]),
+            'ZŠ': int(students_threshold_plus['ZŠ'].values[0]),
+            'ŠD': int(students_threshold_plus['ŠD'].values[0]),
+            'ZUŠ': int(students_threshold_plus['ZUŠ'].values[0]),
+            'SŠ': int(students_threshold_plus['SŠ'].values[0]),
             'total_forma_hours': total_forma_hours,
-            'total_tema_hours': total_tema_hours
+            'total_tema_hours': total_tema_hours,
+            'hour_threshold': hour_threshold  # Include threshold for UI display
         }
 
-        return html_content, unique_names, students_16plus_dict
+        return html_content, unique_names, students_threshold_dict
         
     def _aggregate_data_by_template(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         """Aggregate data by template with period analysis"""
@@ -439,6 +492,9 @@ class ZorSpecDatProcessor(BaseTool):
         if "jmena" not in df.columns:
             return [], 0
 
+        # Ensure all names are strings (safety net, already converted in _calculate_subreport)
+        df['jmena'] = df['jmena'].astype(str)
+
         # Remove duplicates by hash
         unique_data = df.drop_duplicates(subset=["hash_jmena"]).sort_values(by=["jmena"])
         unique_count = df["hash_jmena"].nunique()
@@ -495,14 +551,57 @@ class ZorSpecDatProcessor(BaseTool):
 
         return result
 
-    def _calculate_students_16plus_by_type(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Calculate count of student records with >=16 hours by school type
+    def _detect_hour_threshold(self, excel_files: List[str]) -> int:
+        """Detect hour threshold (16 or 32) from filenames
+
+        Looks for '32h', '32_inv', '32_hodin' patterns in filenames.
+        Validates that all files are the same version.
+
+        Args:
+            excel_files: List of Excel file paths
+
+        Returns:
+            Hour threshold: 16 or 32
+
+        Raises:
+            Exception: If mixed versions (16h and 32h) are detected
+        """
+        has_16h = False
+        has_32h = False
+        files_16h = []
+        files_32h = []
+
+        for file_path in excel_files:
+            filename = os.path.basename(file_path).lower()
+            # Check for 32h indicators
+            if any(pattern in filename for pattern in ['32h_', '32_inv', '32_hodin', '32h']):
+                has_32h = True
+                files_32h.append(os.path.basename(file_path))
+            else:
+                has_16h = True
+                files_16h.append(os.path.basename(file_path))
+
+        # Check for mixed versions
+        if has_16h and has_32h:
+            error_msg = (
+                f"Nelze kombinovat inovativní vzdělávání Šablony I (16h) a Šablony II (32h). "
+                f"Nalezeno {len(files_16h)} souborů 16h verze a {len(files_32h)} souborů 32h verze. "
+                f"Prosím odeberte buď všechny 16h soubory, nebo všechny 32h soubory před zpracováním."
+            )
+            raise Exception(error_msg)
+
+        # Return detected threshold
+        return 32 if has_32h else 16
+
+    def _calculate_students_16plus_by_type(self, df: pd.DataFrame, hour_threshold: int = 16) -> pd.DataFrame:
+        """Calculate count of student records with >=threshold hours by school type
 
         Each student in each school (sablona) is counted separately.
         Same student in different schools counts multiple times.
 
         Args:
             df: DataFrame with all processed data including 'jmena', 'sablona', 'pocet_hodin'
+            hour_threshold: Minimum hours threshold (16 or 32)
 
         Returns:
             DataFrame with single row: MŠ, ZŠ, ŠD, ZUŠ, SŠ columns with student counts
@@ -510,14 +609,14 @@ class ZorSpecDatProcessor(BaseTool):
         # Group by student name and school (sablona), sum all hours
         student_hours = df.groupby(['jmena', 'sablona'], as_index=False)['pocet_hodin'].sum()
 
-        # Filter records with >= 16 hours
-        students_16plus = student_hours[student_hours['pocet_hodin'] >= 16].copy()
+        # Filter records with >= threshold hours
+        students_threshold_plus = student_hours[student_hours['pocet_hodin'] >= hour_threshold].copy()
 
         # Identify school type for each record
-        students_16plus['typ_skoly'] = students_16plus['sablona'].apply(self._identify_school_type)
+        students_threshold_plus['typ_skoly'] = students_threshold_plus['sablona'].apply(self._identify_school_type)
 
         # Count records by school type
-        type_counts = students_16plus.groupby('typ_skoly', as_index=False).size()
+        type_counts = students_threshold_plus.groupby('typ_skoly', as_index=False).size()
         type_counts.columns = ['typ_skoly', 'pocet']
 
         # Create result row with MŠ, ZŠ, ŠD, ZUŠ, SŠ columns
