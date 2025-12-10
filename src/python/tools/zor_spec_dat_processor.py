@@ -215,7 +215,11 @@ class ZorSpecDatProcessor(BaseTool):
             
             # Clean string data
             df = df.applymap(lambda x: x.lower().strip() if isinstance(x, str) else x)
-            
+
+            # Ensure 'jmena' column is always string type (handle numeric values from Excel)
+            if 'jmena' in df.columns:
+                df['jmena'] = df['jmena'].astype(str)
+
             # Standardize forma values using TEXT_REPLACEMENTS
             for old_val, new_val in TEXT_REPLACEMENTS['forma'].items():
                 df['forma'] = df['forma'].replace(old_val, new_val)
@@ -458,6 +462,9 @@ class ZorSpecDatProcessor(BaseTool):
         """Extract unique student names"""
         if "jmena" not in df.columns:
             return [], 0
+
+        # Ensure all names are strings (handle mixed types from Excel)
+        df['jmena'] = df['jmena'].astype(str)
 
         # Remove duplicates by hash
         unique_data = df.drop_duplicates(subset=["hash_jmena"]).sort_values(by=["jmena"])
