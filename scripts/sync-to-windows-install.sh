@@ -77,9 +77,6 @@ git show "$CURRENT_COMMIT:src/python/tools/plakat_generator.py" > src/python/too
 git show "$CURRENT_COMMIT:templates/template_16_hodin.xlsx" > templates/template_16_hodin.xlsx
 git show "$CURRENT_COMMIT:templates/template_32_hodin.xlsx" > templates/template_32_hodin.xlsx
 
-# Config
-git show "$CURRENT_COMMIT:config/production.json" > config/production.json
-
 # Root files
 git show "$CURRENT_COMMIT:package.json" > package.json
 git show "$CURRENT_COMMIT:package-lock.json" > package-lock.json
