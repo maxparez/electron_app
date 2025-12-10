@@ -55,4 +55,4 @@ htmlcov/
 # Temporary files
 *.tmp
 *.temp
-.cache/
+.cache/tests/result.html

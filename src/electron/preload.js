@@ -14,7 +14,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     selectFolder: (options) => ipcRenderer.invoke('dialog:selectFolder', options),
     writeFile: (path, data) => ipcRenderer.invoke('file:write', path, data),
     openFileInApp: (filePath) => ipcRenderer.invoke('file:openInApp', filePath),
-    
+    openFolder: (folderPath) => ipcRenderer.invoke('folder:open', folderPath),
+
     // Config
     getConfig: (key) => ipcRenderer.invoke('config:get', key),
     setConfig: (key, value) => ipcRenderer.invoke('config:set', key, value),

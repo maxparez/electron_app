@@ -1,32 +1,71 @@
-# Nástroje pro ŠI a ŠII OP JAK
+# Projektová dokumentace - Electron App
 
-Desktop aplikace pro zpracování projektové dokumentace.
+Desktop aplikace pro zpracování školní projektové dokumentace (OP JAK).
 
-## 🚀 Instalace
+## Požadavky
 
-1. **Nainstalujte závislosti:**
-   - Python 3.13: https://www.python.org/downloads/
-   - Node.js LTS: https://nodejs.org/
-   - Git: https://git-scm.com/download/win
+- Windows 10/11
+- MS Office (Excel)
+- Node.js 18+
+- Python 3.9+
 
-2. **Spusťte instalaci:**
-   - Stáhněte `install-windows-standalone.bat`
-   - Klikněte pravým tlačítkem → "Spustit jako správce"
-   - Čekejte na dokončení instalace
+## Instalace pro vývoj
 
-3. **Spuštění aplikace:**
-   - Dvojklik na zástupce "Nástroje OP JAK" na ploše
-   - Nebo spusťte `start-app.bat` ze složky aplikace
+```bash
+# Klonování repozitáře
+git clone git@github.com:maxparez/electron_app.git
+cd electron_app
 
-## 🛠️ Nástroje
+# Instalace Node.js závislostí
+npm install
 
-- **InvVzd Copy**: Zpracování docházky inovativního vzdělávání (16/32h)
-- **ZorSpec Dat**: Zpracování docházky z různých tříd + HTML reporty
-- **Plakát Generator**: Generování PDF plakátů z Excel seznamů
+# Vytvoření Python virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# nebo
+venv\Scripts\activate  # Windows
 
-## 📞 Podpora
+# Instalace Python závislostí
+pip install -r requirements.txt
+```
 
-V případě problémů kontaktujte vývojáře.
+## Spuštění
 
----
-*Verze: Production 1.0*
+```bash
+# Spuštění v development módu
+npm run dev
+```
+
+## Instalace pro Windows uživatele
+
+Pro jednoduchou instalaci klientské verze na Windows sledujte
+`docs/windows_install.html`, kde je popsána větev `windows-install`,
+požadované programy a skripty pro kontrolu závislostí a vytvoření zástupce.
+
+## Build
+
+```bash
+# Vytvoření instalátoru pro Windows
+npm run make
+```
+
+## Struktura projektu
+
+```
+electron_app/
+├── src/
+│   ├── electron/      # Electron frontend
+│   │   ├── main.js    # Hlavní proces
+│   │   ├── preload.js # Preload script
+│   │   └── renderer/  # UI komponenty
+│   └── python/        # Python backend
+│       ├── server.py  # Flask server
+│       └── tools/     # Nástroje pro zpracování
+├── docs/              # Dokumentace
+├── tests/             # Testy
+└── legacy_code/       # Původní Python skripty
+```
+
+## Licence
+
+MIT

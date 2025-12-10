@@ -43,6 +43,26 @@ function createWindow() {
         mainWindow.webContents.openDevTools();
     }
 
+    // Add keyboard shortcut for DevTools (F12 or Ctrl+Shift+I)
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        // F12 key
+        if (input.key === 'F12') {
+            if (mainWindow.webContents.isDevToolsOpened()) {
+                mainWindow.webContents.closeDevTools();
+            } else {
+                mainWindow.webContents.openDevTools();
+            }
+        }
+        // Ctrl+Shift+I (or Cmd+Shift+I on Mac)
+        if (input.control && input.shift && input.key === 'I') {
+            if (mainWindow.webContents.isDevToolsOpened()) {
+                mainWindow.webContents.closeDevTools();
+            } else {
+                mainWindow.webContents.openDevTools();
+            }
+        }
+    });
+
     // Handle window closed
     mainWindow.on('closed', function () {
         mainWindow = null;
@@ -230,7 +250,7 @@ ipcMain.handle('fs:scanFolder', async (event, folderPath) => {
 // Open file in associated application
 ipcMain.handle('file:openInApp', async (event, filePath) => {
     const fs = require('fs');
-    
+
     try {
         // Check if file exists
         if (!fs.existsSync(filePath)) {
@@ -239,16 +259,44 @@ ipcMain.handle('file:openInApp', async (event, filePath) => {
                 error: 'Soubor neexistuje'
             };
         }
-        
+
         // Open file with default application
         await shell.openPath(filePath);
-        
+
         return {
             success: true,
             filename: require('path').basename(filePath)
         };
     } catch (error) {
         console.error('Error opening file:', error);
+        return {
+            success: false,
+            error: error.message || 'Neznámá chyba'
+        };
+    }
+});
+
+// Open folder in file explorer
+ipcMain.handle('folder:open', async (event, folderPath) => {
+    const fs = require('fs');
+
+    try {
+        // Check if folder exists
+        if (!fs.existsSync(folderPath)) {
+            return {
+                success: false,
+                error: 'Složka neexistuje'
+            };
+        }
+
+        // Open folder in file explorer
+        await shell.openPath(folderPath);
+
+        return {
+            success: true
+        };
+    } catch (error) {
+        console.error('Error opening folder:', error);
         return {
             success: false,
             error: error.message || 'Neznámá chyba'

@@ -10,6 +10,9 @@ const state = {
     selectedTemplate: {
         'inv-vzd': null
     },
+    selectedFolder: {
+        'inv-vzd': null
+    },
     detectedTemplateVersion: null
 };
 
@@ -22,6 +25,7 @@ const elements = {
     // Inv Vzd elements
     invSelectBtn: document.getElementById('select-inv-files'),
     invFolderBtn: document.getElementById('select-inv-folder'),
+    invRefreshBtn: document.getElementById('refresh-inv-folder'),
     invFilesList: document.getElementById('inv-files-list'),
     invProcessBtn: document.getElementById('process-inv-vzd'),
     invResults: document.getElementById('inv-vzd-results'),
@@ -83,6 +87,7 @@ async function init() {
     // Setup file selection buttons
     elements.invSelectBtn.addEventListener('click', () => selectFiles('inv-vzd'));
     elements.invFolderBtn.addEventListener('click', selectInvFolder);
+    elements.invRefreshBtn.addEventListener('click', refreshInvFolder);
     
     // Initially disable file selection buttons until template is selected
     elements.invSelectBtn.disabled = true;
@@ -203,7 +208,8 @@ async function selectFiles(tool) {
                     state.selectedFiles[tool] = validFiles;
                     state.zorFileVersions = fileVersions;
                     updateFilesList(tool);
-                    elements.zorProcessBtn.disabled = false;
+                    // Check if ready to process (validates version compatibility)
+                    checkZorSpecReady();
                     showMessage(`Vybráno ${validFiles.length} vhodných souborů`, 'success');
                 } else {
                     showMessage('Žádný z vybraných souborů neobsahuje požadovaný list', 'error');
@@ -365,15 +371,20 @@ async function selectInvFolder() {
             configKey: 'lastInvVzdFolder',
             title: 'Vyberte složku s docházkami'
         });
-        
+
         if (folderPath) {
+            // Store folder path for refresh
+            state.selectedFolder['inv-vzd'] = folderPath;
+
             // Scan folder for Excel files
             const suitableFiles = await scanFolderForAttendanceFiles(folderPath);
-            
+
             if (suitableFiles.length > 0) {
                 state.selectedFiles['inv-vzd'] = suitableFiles;
                 updateFilesList('inv-vzd');
                 checkInvVzdReady();
+                // Show refresh button
+                elements.invRefreshBtn.style.display = 'inline-block';
                 showMessage(`Nalezeno ${suitableFiles.length} vhodných souborů docházky`, 'success');
             } else {
                 showMessage('Ve vybrané složce nebyly nalezeny žádné vhodné soubory docházky', 'warning');
@@ -382,6 +393,37 @@ async function selectInvFolder() {
     } catch (error) {
         console.error('Folder selection error:', error);
         showMessage('Chyba při výběru složky', 'error');
+    }
+}
+
+// Refresh folder - rescan for attendance files
+async function refreshInvFolder() {
+    const folderPath = state.selectedFolder['inv-vzd'];
+    if (!folderPath) {
+        showMessage('Není vybrána žádná složka k obnovení', 'warning');
+        return;
+    }
+
+    try {
+        // Clear current files
+        state.selectedFiles['inv-vzd'] = [];
+        updateFilesList('inv-vzd');
+
+        // Rescan folder
+        const suitableFiles = await scanFolderForAttendanceFiles(folderPath);
+
+        if (suitableFiles.length > 0) {
+            state.selectedFiles['inv-vzd'] = suitableFiles;
+            updateFilesList('inv-vzd');
+            checkInvVzdReady();
+            showMessage(`Obnoveno: Nalezeno ${suitableFiles.length} vhodných souborů docházky`, 'success');
+        } else {
+            elements.invRefreshBtn.style.display = 'none';
+            showMessage('Ve složce nejsou žádné vhodné soubory docházky', 'warning');
+        }
+    } catch (error) {
+        console.error('Folder refresh error:', error);
+        showMessage('Chyba při obnovování seznamu', 'error');
     }
 }
 
@@ -425,18 +467,12 @@ async function selectZorFolder() {
                 state.selectedFiles['zor-spec'] = scanResult.files;
                 // Store version info for display
                 state.zorFileVersions = scanResult.versions;
-                
-                // Check for mixed versions and warn user
-                const versions = Object.values(scanResult.versions);
-                const uniqueVersions = [...new Set(versions)];
-                
-                if (uniqueVersions.length > 1) {
-                    const versionCounts = uniqueVersions.map(v => `${v}: ${versions.filter(version => version === v).length} souborů`).join(', ');
-                    showMessage(`⚠️ POZOR: Nalezeny soubory s různými verzemi (${versionCounts}). Zkontrolujte, zda chcete zpracovat všechny soubory současně.`, 'warning');
-                }
-                
+
                 updateFilesList('zor-spec');
-                elements.zorProcessBtn.disabled = false;
+
+                // Check if ready to process (validates version compatibility)
+                checkZorSpecReady();
+
                 showMessage(`Nalezeno ${scanResult.files.length} vhodných souborů docházky`, 'success');
             } else {
                 showMessage('Ve vybrané složce nebyly nalezeny žádné soubory s listem "Úvod a postup vyplňování"', 'warning');
@@ -498,13 +534,158 @@ function checkInvVzdReady() {
     const hasTemplate = state.selectedTemplate['inv-vzd'] !== null;
     const hasFiles = state.selectedFiles['inv-vzd'].length > 0;
     const hasValidVersion = state.detectedTemplateVersion !== null;
-    
+
     // Enable/disable file selection buttons based on template validity
     elements.invSelectBtn.disabled = !hasValidVersion;
     elements.invFolderBtn.disabled = !hasValidVersion;
-    
+
     // Enable process button only if everything is ready
     elements.invProcessBtn.disabled = !(hasTemplate && hasFiles && hasValidVersion);
+}
+
+// Check if Zor Spec is ready to process
+function checkZorSpecReady() {
+    const hasFiles = state.selectedFiles['zor-spec'].length > 0;
+
+    if (!hasFiles) {
+        elements.zorProcessBtn.disabled = true;
+        // Clear any version error message
+        const errorMsg = document.getElementById('zor-version-error');
+        if (errorMsg) errorMsg.remove();
+        return;
+    }
+
+    // Detect mixed versions (16h and 32h)
+    const versionCheck = detectMixedVersions(state.selectedFiles['zor-spec']);
+
+    if (versionCheck.mixed) {
+        // Show error message
+        showZorVersionError(versionCheck);
+        elements.zorProcessBtn.disabled = true;
+    } else {
+        // Clear error message and enable processing
+        const errorMsg = document.getElementById('zor-version-error');
+        if (errorMsg) errorMsg.remove();
+        elements.zorProcessBtn.disabled = false;
+    }
+}
+
+// Detect mixed versions in file list
+function detectMixedVersions(filePaths) {
+    let has16h = false;
+    let has32h = false;
+    const files16h = [];
+    const files32h = [];
+
+    filePaths.forEach(filePath => {
+        const filename = filePath.split(/[/\\]/).pop().toLowerCase();
+        // Check for 32h indicators
+        if (filename.includes('32h_') || filename.includes('32_inv') ||
+            filename.includes('32_hodin') || filename.includes('32h')) {
+            has32h = true;
+            files32h.push(filePath.split(/[/\\]/).pop());
+        } else {
+            has16h = true;
+            files16h.push(filePath.split(/[/\\]/).pop());
+        }
+    });
+
+    return {
+        mixed: has16h && has32h,
+        has16h,
+        has32h,
+        files16h,
+        files32h,
+        count16h: files16h.length,
+        count32h: files32h.length
+    };
+}
+
+// Show error message for mixed versions
+function showZorVersionError(versionCheck) {
+    // Remove existing error if any
+    const existingError = document.getElementById('zor-version-error');
+    if (existingError) existingError.remove();
+
+    // Create error message element
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'zor-version-error';
+    errorDiv.className = 'version-error-panel';
+    errorDiv.innerHTML = `
+        <div class="version-error-header">
+            <div class="version-error-icon">⚠️</div>
+            <div class="version-error-title">
+                <h4>Nelze kombinovat různé verze šablon</h4>
+                <p>Zpracování je zablokováno z důvodu smíšených verzí</p>
+            </div>
+        </div>
+        <div class="version-error-body">
+            <div class="version-error-details">
+                <div class="version-detail">
+                    <span class="version-badge version-16h">16h</span>
+                    <span class="version-count">${versionCheck.count16h} souborů Šablony I</span>
+                </div>
+                <div class="version-detail">
+                    <span class="version-badge version-32h">32h</span>
+                    <span class="version-count">${versionCheck.count32h} souborů Šablony II</span>
+                </div>
+            </div>
+            <div class="version-error-solution">
+                <p><strong>Jak to vyřešit:</strong></p>
+                <p>Odeberte všechny soubory jedné verze ze seznamu níže, nebo:</p>
+                <div class="version-error-actions">
+                    <button class="btn-action btn-keep-16h" onclick="keepOnly16hFiles()">
+                        <span class="btn-icon">📋</span>
+                        Ponechat pouze 16h verzi
+                    </button>
+                    <button class="btn-action btn-keep-32h" onclick="keepOnly32hFiles()">
+                        <span class="btn-icon">📋</span>
+                        Ponechat pouze 32h verzi
+                    </button>
+                    <button class="btn-action btn-clear-all" onclick="clearAllZorFiles()">
+                        <span class="btn-icon">🗑️</span>
+                        Smazat vše a začít znovu
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Insert before the file list
+    const fileListContainer = elements.zorFilesList.parentElement;
+    fileListContainer.insertBefore(errorDiv, elements.zorFilesList);
+}
+
+// Keep only 16h files
+function keepOnly16hFiles() {
+    const versionCheck = detectMixedVersions(state.selectedFiles['zor-spec']);
+    state.selectedFiles['zor-spec'] = state.selectedFiles['zor-spec'].filter(filePath => {
+        const filename = filePath.split(/[/\\]/).pop().toLowerCase();
+        return !(filename.includes('32h_') || filename.includes('32_inv') ||
+                 filename.includes('32_hodin') || filename.includes('32h'));
+    });
+    updateFilesList('zor-spec');
+    checkZorSpecReady();
+}
+
+// Keep only 32h files
+function keepOnly32hFiles() {
+    const versionCheck = detectMixedVersions(state.selectedFiles['zor-spec']);
+    state.selectedFiles['zor-spec'] = state.selectedFiles['zor-spec'].filter(filePath => {
+        const filename = filePath.split(/[/\\]/).pop().toLowerCase();
+        return (filename.includes('32h_') || filename.includes('32_inv') ||
+                filename.includes('32_hodin') || filename.includes('32h'));
+    });
+    updateFilesList('zor-spec');
+    checkZorSpecReady();
+}
+
+// Clear all ZorSpec files
+function clearAllZorFiles() {
+    state.selectedFiles['zor-spec'] = [];
+    state.zorFileVersions = {};
+    updateFilesList('zor-spec');
+    checkZorSpecReady();
 }
 
 // Process Inv Vzd
@@ -591,88 +772,221 @@ async function processInvVzd() {
 async function processZorSpec() {
     try {
         showLoading(true);
-        
+
+        // Track processing time
+        const startTime = performance.now();
+
         // Use path-based processing with auto-save
         const result = await window.electronAPI.apiCall('process/zor-spec-paths', 'POST', {
             filePaths: state.selectedFiles['zor-spec'],
             options: {},
             autoSave: true  // Auto-save to source folder
         });
-        
+
+        // Calculate duration
+        const duration = ((performance.now() - startTime) / 1000).toFixed(1);
+
         showLoading(false);
-        
+
         if (result.status === 'success') {
-            // Display results with detailed information
+            // Status banner with completion message
             let resultHtml = `
-                <div class="success-banner">
-                    <h3>✅ Zpracování dokončeno</h3>
-                    <div class="result-summary">
-                        <div class="summary-item">
-                            <span class="summary-icon">📊</span>
-                            <div>
-                                <div class="summary-label">Zpracováno souborů</div>
-                                <div class="summary-value">${result.data.files_processed}</div>
-                            </div>
+                <div class="status-banner">
+                    <div class="status-content">
+                        <div class="status-icon">✓</div>
+                        <div class="status-text">
+                            <h3>Zpracování dokončeno</h3>
+                            <p>Všechna data byla úspěšně analyzována a uložena.</p>
                         </div>
-                        <div class="summary-item">
-                            <span class="summary-icon">👥</span>
-                            <div>
-                                <div class="summary-label">Unikátní žáci</div>
-                                <div class="summary-value">${result.data.unique_students}</div>
-                            </div>
+                    </div>
+                    <span class="status-time">Doba trvání: ${duration}s</span>
+                </div>
+            `;
+
+            // Show warnings right after status banner
+            if (result.warnings && result.warnings.length > 0) {
+                resultHtml += `
+                    <div class="warning-banner">
+                        <div class="warning-banner-icon">⚠️</div>
+                        <div class="warning-banner-content">
+                            <h4>Varování při zpracování</h4>
+                            <ul class="warning-banner-list">
+                `;
+                result.warnings.forEach(msg => {
+                    resultHtml += `<li>${msg}</li>`;
+                });
+                resultHtml += `
+                            </ul>
                         </div>
+                    </div>
+                `;
+            }
+
+            resultHtml += `
+                <!-- Primary stats grid -->
+                <div class="stats-grid primary-stats">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <div class="stat-header">
+                                <div class="stat-label">ZPRACOVÁNO SOUBORŮ</div>
+                            </div>
+                            <div class="stat-value">${result.data.files_processed}</div>
+                        </div>
+                        <div class="stat-icon">📄</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <div class="stat-header">
+                                <div class="stat-label">UNIKÁTNÍ ŽÁCI</div>
+                            </div>
+                            <div class="stat-value">${result.data.unique_students}</div>
+                            <div class="stat-subtext">Identifikováno v systému</div>
+                        </div>
+                        <div class="stat-icon">👥</div>
                     </div>
                 </div>
             `;
-            
-            // Show output files with appropriate actions
+
+            // School type breakdown (if available)
+            if (result.data.students_16plus) {
+                const students16 = result.data.students_16plus;
+                const hourThreshold = students16.hour_threshold || 16;  // Default to 16 if not provided
+                resultHtml += `
+                    <div class="section-header">Počet dětí/žáků se splněnou docházkou ${hourThreshold}h</div>
+                    <div class="stats-grid school-stats">
+                        <div class="stat-card school-card">
+                            <div class="stat-content">
+                                <div class="stat-label">MATEŘSKÁ ŠKOLA</div>
+                                <div class="stat-value">${students16['MŠ'] || 0}</div>
+                            </div>
+                            <div class="stat-icon school-icon">🏫</div>
+                        </div>
+
+                        <div class="stat-card school-card">
+                            <div class="stat-content">
+                                <div class="stat-label">ZÁKLADNÍ ŠKOLA</div>
+                                <div class="stat-value">${students16['ZŠ'] || 0}</div>
+                            </div>
+                            <div class="stat-icon school-icon">📚</div>
+                        </div>
+
+                        <div class="stat-card school-card">
+                            <div class="stat-content">
+                                <div class="stat-label">ŠKOLNÍ DRUŽINA</div>
+                                <div class="stat-value">${students16['ŠD'] || 0}</div>
+                            </div>
+                            <div class="stat-icon school-icon">🎒</div>
+                        </div>
+
+                        <div class="stat-card school-card">
+                            <div class="stat-content">
+                                <div class="stat-label">ZÁKLADNÍ UMĚLECKÁ ŠKOLA</div>
+                                <div class="stat-value">${students16['ZUŠ'] || 0}</div>
+                            </div>
+                            <div class="stat-icon school-icon">🎨</div>
+                        </div>
+
+                        <div class="stat-card school-card">
+                            <div class="stat-content">
+                                <div class="stat-label">STŘEDNÍ ŠKOLA</div>
+                                <div class="stat-value">${students16['SŠ'] || 0}</div>
+                            </div>
+                            <div class="stat-icon school-icon">🎓</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Control sums - total hours for forms and topics
+            if (result.data.students_16plus &&
+                (result.data.students_16plus.total_forma_hours !== undefined ||
+                 result.data.students_16plus.total_tema_hours !== undefined)) {
+                const students16 = result.data.students_16plus;
+                resultHtml += `
+                    <div class="section-header">Kontrolní součty hodin</div>
+                    <div class="stats-grid control-sums">
+                        <div class="stat-card">
+                            <div class="stat-content">
+                                <div class="stat-label">CELKEM HODIN - FORMY</div>
+                                <div class="stat-value">${students16.total_forma_hours || 0}</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-content">
+                                <div class="stat-label">CELKEM HODIN - TÉMATA</div>
+                                <div class="stat-value">${students16.total_tema_hours || 0}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Output files section
             if (result.data.output_files && result.data.output_files.length > 0) {
                 if (result.data.auto_saved) {
                     // Convert WSL path back to Windows format
                     let displayPath = result.data.output_directory;
                     let windowsPath = displayPath;
-                    
+
                     // Convert /mnt/x/ to X:\ for Windows
                     if (displayPath.startsWith('/mnt/')) {
                         const driveLetter = displayPath[5].toUpperCase();
                         windowsPath = `${driveLetter}:${displayPath.substring(6).replace(/\//g, '\\')}`;
                         displayPath = windowsPath;
                     }
-                    
+
                     resultHtml += `
                         <div class="output-section">
-                            <h4>📁 Výstupní soubory</h4>
-                            <p class="output-path">Uloženo v: <strong>${displayPath}</strong></p>
-                            <div class="output-files-grid">
+                            <div class="output-header">
+                                <h4><span class="folder-icon">📁</span> Výstupní soubory</h4>
+                                <div class="output-path-display">
+                                    <span class="path-text">${displayPath}</span>
+                                    <button class="copy-btn" onclick="openFolder('${displayPath.replace(/\\/g, '\\\\')}')" title="Otevřít složku s výsledky">
+                                        📂
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="output-files-list">
                     `;
-                    
+
                     result.data.output_files.forEach(file => {
                         // Build correct Windows path for file
                         const fullPath = windowsPath + '\\' + file.filename;
                         const icon = file.filename.endsWith('.html') ? '📄' : '📝';
-                        
+                        const fileType = file.filename.endsWith('.html') ? 'html' : 'txt';
+
                         resultHtml += `
-                            <div class="output-file-card">
+                            <div class="file-item">
                                 <div class="file-info">
-                                    <span class="file-icon">${icon}</span>
+                                    <span class="file-icon ${fileType}">${icon}</span>
                                     <div class="file-details">
                                         <span class="file-name">${file.filename}</span>
                                         <span class="file-size">${Math.round(file.size / 1024)} KB</span>
                                     </div>
                                 </div>
-                                <button class="btn btn-primary btn-small" onclick="openFile('${fullPath.replace(/\\/g, '\\\\')}')">
-                                    👁️ Zobrazit
-                                </button>
+                                <div class="file-actions">
+                                    <button class="file-btn btn-view" onclick="openFile('${fullPath.replace(/\\/g, '\\\\')}')">
+                                        👁️ Zobrazit
+                                    </button>
+                                </div>
                             </div>
                         `;
                     });
-                    
+
+                    // Add timestamp
+                    const now = new Date();
+                    const timestamp = now.toLocaleDateString('cs-CZ') + ' ' + now.toLocaleTimeString('cs-CZ', {hour: '2-digit', minute: '2-digit'});
+
                     resultHtml += `
+                            </div>
+                            <div class="output-footer">
+                                <p>Generováno automaticky: ${timestamp}</p>
                             </div>
                         </div>
                     `;
                 } else {
-                    resultHtml += '<h4>Výstupní soubory:</h4><div class="output-files">';
+                    resultHtml += '<div class="output-section"><h4>Výstupní soubory:</h4><div class="output-files-list">';
                     result.data.output_files.forEach(file => {
                         resultHtml += `
                             <div class="file-item">
@@ -684,8 +998,8 @@ async function processZorSpec() {
                             </div>
                         `;
                     });
+                    resultHtml += '</div></div>';
                 }
-                resultHtml += '</div>';
             }
             
             // Show info messages
@@ -727,16 +1041,7 @@ async function processZorSpec() {
                     </div>
                 `;
             }
-            
-            // Show warnings
-            if (result.warnings && result.warnings.length > 0) {
-                resultHtml += '<h4>Varování:</h4><ul class="warning-messages">';
-                result.warnings.forEach(msg => {
-                    resultHtml += `<li>⚠️ ${msg}</li>`;
-                });
-                resultHtml += '</ul>';
-            }
-            
+
             elements.zorResults.innerHTML = resultHtml;
             elements.zorResults.classList.add('show');
         } else {
@@ -1005,6 +1310,21 @@ function hexToBytes(hex) {
         bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
     }
     return bytes;
+}
+
+// Open folder in file explorer
+async function openFolder(folderPath) {
+    try {
+        const result = await window.electronAPI.openFolder(folderPath);
+        if (result.success) {
+            console.log('Složka otevřena');
+        } else {
+            showMessage(`Chyba při otevírání složky: ${result.error}`, 'error');
+        }
+    } catch (err) {
+        console.error('Chyba při otevírání složky:', err);
+        showMessage('Chyba při otevírání složky', 'error');
+    }
 }
 
 // Open file in associated application
