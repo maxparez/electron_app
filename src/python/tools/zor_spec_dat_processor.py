@@ -102,23 +102,23 @@ class ZorSpecDatProcessor(BaseTool):
         """Process attendance files and generate ZoR special data items report"""
         if not self.validate_inputs(files, options):
             return self.get_result(False)
-            
+
         try:
             source_dir = options.get('source_dir')
             output_dir = options.get('output_dir', source_dir or os.getcwd())
-            
+
             # Get files to process
             if source_dir:
                 excel_files = self._get_files_from_directory(source_dir)
             else:
                 excel_files = self._validate_files(files)
-                
+
             if not excel_files:
                 self.add_error("Nebyl nalezen žádný platný soubor ke zpracování")
                 return self.get_result(False)
-                
+
             self.add_info(f"Nalezeno {len(excel_files)} souborů ke zpracování")
-            
+
             # Process files and generate report
             html_report, unique_names_data, students_16plus = self._generate_report(excel_files)
 
@@ -137,11 +137,15 @@ class ZorSpecDatProcessor(BaseTool):
 
             self.add_info(f"Report uložen: {html_file}||{os.path.basename(html_file)}")
             self.add_info(f"Seznam žáků uložen: {txt_file}||{os.path.basename(txt_file)}")
-            
+
             return self.get_result(True, processed_data)
-            
+
         except Exception as e:
-            self.add_error(f"Chyba při zpracování: {str(e)}")
+            import traceback
+            error_msg = f"Chyba při zpracování: {str(e)}"
+            self.logger.error(f"[ZORSPECDAT] {error_msg}")
+            self.logger.error(f"[ZORSPECDAT] Traceback: {traceback.format_exc()}")
+            self.add_error(error_msg)
             return self.get_result(False)
             
     def _get_files_from_directory(self, source_dir: str) -> List[str]:
@@ -281,45 +285,58 @@ class ZorSpecDatProcessor(BaseTool):
         # Process each file
         for file_path in excel_files:
             try:
+                file_name = os.path.basename(file_path)
+                self.logger.info(f"[ZORSPECDAT] Zpracovávám soubor: {file_name}")
+
                 df, subreport = self._calculate_subreport(file_path)
                 concatenated = pd.concat([concatenated, df], axis="rows")
-                
+
                 # Add file section to HTML
-                file_name = os.path.basename(file_path)
                 html_parts.append(f"<h2>{file_name}</h2>")
                 html_parts.append(self._dataframe_to_html_table(subreport))
-                
+
                 self.add_info(f"Zpracován soubor: {file_name}")
-                
+
             except Exception as e:
-                self.add_error(f"Chyba při zpracování {os.path.basename(file_path)}: {str(e)}")
+                import traceback
+                file_name = os.path.basename(file_path)
+                error_msg = f"Chyba při zpracování souboru '{file_name}': {str(e)}"
+                self.logger.error(f"[ZORSPECDAT] {error_msg}")
+                self.logger.error(f"[ZORSPECDAT] Traceback: {traceback.format_exc()}")
+                self.add_error(error_msg)
                 continue
                 
         if concatenated.empty:
             raise Exception("Žádná data nebyla úspěšně zpracována")
-            
+
+        self.logger.info(f"[ZORSPECDAT] Celkem zpracováno {len(concatenated)} řádků ze {len(excel_files)} souborů")
+
         # Filter out excluded names
         if self.name_list:
+            self.logger.info(f"[ZORSPECDAT] Filtruji vyloučená jména...")
             original_count = len(concatenated)
             concatenated = concatenated[~concatenated['jmena'].isin(self.name_list)]
             excluded_count = original_count - len(concatenated)
             if excluded_count > 0:
                 self.add_info(f"Vyloučeno {excluded_count} záznamů podle seznamu")
-                
+
         # Calculate hash names for deduplication
+        self.logger.info(f"[ZORSPECDAT] Počítám hash pro jména...")
         concatenated['hash_jmena'] = concatenated['jmena'].apply(self._custom_hash)
-        
+
         # Generate template-based aggregation
+        self.logger.info(f"[ZORSPECDAT] Agregace podle šablon...")
         template_data = self._aggregate_data_by_template(concatenated)
-        
+
         # Add template sections to HTML
         for template_name, data in template_data.items():
             html_parts.insert(0, self._dataframe_to_html_table(data))
             html_parts.insert(0, f"<h3>Šablona: {template_name}</h3>")
-            
+
         html_parts.insert(0, "<h2>SDP ZoR</h2>")
-        
+
         # Generate final aggregated results
+        self.logger.info(f"[ZORSPECDAT] Agregace podle forem a témat...")
         forma_result = self._aggregate(concatenated, "forma", "forma")
         tema_result = self._aggregate(concatenated, "tema", "téma")
 
@@ -327,13 +344,16 @@ class ZorSpecDatProcessor(BaseTool):
         final_result.columns = self.result_cols_names
 
         # Calculate control sums (total hours)
+        self.logger.info(f"[ZORSPECDAT] Počítám kontrolní součty hodin...")
         total_forma_hours = int(forma_result['cena'].sum()) if not forma_result.empty else 0
         total_tema_hours = int(tema_result['cena'].sum()) if not tema_result.empty else 0
 
         # Calculate student count with 16+ hours by school type
+        self.logger.info(f"[ZORSPECDAT] Počítám žáky s 16+ hodinami podle typu školy...")
         students_16plus = self._calculate_students_16plus_by_type(concatenated)
 
         # Get unique names
+        self.logger.info(f"[ZORSPECDAT] Získávám unikátní jména...")
         unique_names, unique_count = self._get_unique_names(concatenated)
 
         # Build final HTML
