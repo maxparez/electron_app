@@ -216,8 +216,32 @@ class ZorSpecDatProcessor(BaseTool):
             # Clean string data
             df = df.applymap(lambda x: x.lower().strip() if isinstance(x, str) else x)
 
-            # Ensure 'jmena' column is always string type (handle numeric values from Excel)
+            # Check for numeric values in 'jmena' column (expected to be names, not numbers)
             if 'jmena' in df.columns:
+                file_name = os.path.basename(excel_file)
+                numeric_mask = pd.to_numeric(df['jmena'], errors='coerce').notna()
+
+                if numeric_mask.any():
+                    numeric_values = df[numeric_mask]['jmena'].unique()
+                    numeric_count = numeric_mask.sum()
+
+                    # Get row numbers (Excel rows, adding 2 for header and 0-based index)
+                    numeric_rows = df[numeric_mask].index + 2
+                    row_list = ', '.join([f"řádek {r}" for r in numeric_rows[:5]])  # Show first 5
+                    if len(numeric_rows) > 5:
+                        row_list += f" a další {len(numeric_rows) - 5}"
+
+                    warning_msg = (
+                        f"Soubor '{file_name}': Sloupec 'jmena' obsahuje {numeric_count} číselných hodnot "
+                        f"místo jmen ({row_list}). Hodnoty: {', '.join(map(str, numeric_values[:3]))}..."
+                        if len(numeric_values) > 3 else
+                        f"Soubor '{file_name}': Sloupec 'jmena' obsahuje {numeric_count} číselných hodnot "
+                        f"místo jmen ({row_list}). Hodnoty: {', '.join(map(str, numeric_values))}"
+                    )
+                    self.add_warning(warning_msg)
+                    self.logger.warning(f"[ZORSPECDAT] {warning_msg}")
+
+                # Convert all to string to allow processing to continue
                 df['jmena'] = df['jmena'].astype(str)
 
             # Standardize forma values using TEXT_REPLACEMENTS
@@ -463,7 +487,7 @@ class ZorSpecDatProcessor(BaseTool):
         if "jmena" not in df.columns:
             return [], 0
 
-        # Ensure all names are strings (handle mixed types from Excel)
+        # Ensure all names are strings (safety net, already converted in _calculate_subreport)
         df['jmena'] = df['jmena'].astype(str)
 
         # Remove duplicates by hash
