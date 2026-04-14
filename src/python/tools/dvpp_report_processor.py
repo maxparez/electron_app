@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import re
 import unicodedata
 import zipfile
@@ -111,7 +112,7 @@ class DvppReportProcessor(BaseTool):
 
     def normalize_input_path(self, path_str: str) -> Path:
         windows_match = re.match(r"^([a-zA-Z]):[\\/](.*)$", path_str)
-        if windows_match:
+        if windows_match and platform.system() != "Windows":
             drive = windows_match.group(1).lower()
             tail = windows_match.group(2).replace("\\", "/")
             return Path(f"/mnt/{drive}/{tail}")
