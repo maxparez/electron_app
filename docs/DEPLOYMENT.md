@@ -39,9 +39,10 @@ Uživatelská konfigurace: `%APPDATA%/NastrojeOPJAK/config.json`
 ### 4. Update mechanismus
 
 - Kolegové instalují a aktualizují aplikaci ze zjednodušené větve `windows-install`
+- Pro řízené testování lze existující instalaci přepnout na `windows-install-test`
 - Instalace probíhá přes `install.bat` / `install-windows-standalone.bat`
 - Aktualizace probíhá manuálně přes `update.bat` / `update-windows.bat`
-- Skripty synchronizují pouze curated obsah a následně zkontrolují Python a Node.js závislosti
+- Skripty synchronizují pouze curated obsah, respektují aktivní update kanál z `channel-config.json` a následně zkontrolují Python a Node.js závislosti
 
 ## Instalace
 
@@ -136,7 +137,7 @@ $env:FLASK_DEBUG="true"
 ### Aktualizace se nestahuje
 
 1. Zkontrolujte internetové připojení
-2. Ověřte, že instalace pochází z git clone větve `windows-install`
+2. Ověřte, že instalace pochází z git clone větve `windows-install` nebo `windows-install-test`
 3. Spusťte `update-windows.bat` z instalační složky znovu
 
 ## Monitorování
@@ -161,7 +162,23 @@ Sledujte:
 
 1. Otevřete instalační složku aplikace
 2. Spusťte `update-windows.bat` nebo `update.bat`
-3. Skript synchronizuje větev `windows-install`
+3. Skript synchronizuje větev uloženou v `channel-config.json`
+
+### Přepnutí kanálu
+
+První přepnutí na testovací kanál:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\update_windows.ps1 -Branch windows-install-test
+```
+
+Návrat na stabilní kanál:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\update_windows.ps1 -Branch windows-install
+```
+
+Každá aktualizace ukládá transcript do `logs\update\`. Testovací kanál navíc zapisuje start aplikace do `logs\launcher\` a backend se hlásí jako `test` kanál v runtime konfiguraci.
 4. Skript podle potřeby aktualizuje Python a Node.js závislosti
 
 ## Bezpečnost

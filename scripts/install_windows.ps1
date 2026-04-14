@@ -8,7 +8,7 @@
 #>
 param(
     [string]$RepoUrl = "https://github.com/maxparez/electron_app.git",
-    [string]$Branch = "windows-install",
+    [string]$Branch = "",
     [string]$InstallRoot = "C:\OPJAK"
 )
 
@@ -36,6 +36,25 @@ function Test-Dependency {
     }
 }
 
+function Get-DefaultBranch {
+    $configPath = Join-Path (Resolve-Path (Join-Path $PSScriptRoot "..")).Path "channel-config.json"
+    if (-not (Test-Path $configPath)) {
+        return "windows-install"
+    }
+
+    try {
+        $config = Get-Content -Raw -Path $configPath | ConvertFrom-Json
+        if ($config.branch) {
+            return [string]$config.branch
+        }
+    }
+    catch {
+        Write-Host "Varování: channel-config.json není čitelný, používám windows-install." -ForegroundColor Yellow
+    }
+
+    return "windows-install"
+}
+
 Write-Step "Kontrola prostředí"
 $requirements = @(
     @{ Command = "python"; Name = "Python 3.11+"; Url = "https://www.python.org/downloads/" },
@@ -56,6 +75,10 @@ if ($missing.Count -gt 0) {
     Write-Host ""
     Write-Host "Instalaci nelze pokračovat. Nejprve doinstalujte výše uvedené položky." -ForegroundColor Red
     exit 1
+}
+
+if (-not $Branch) {
+    $Branch = Get-DefaultBranch
 }
 
 $python = (Get-Command python).Source

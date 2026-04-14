@@ -10,7 +10,7 @@ Tato větev obsahuje minimální sadu souborů pro instalaci a aktualizace aplik
 2. **Spusťte** `install.bat` dvojklikem
 3. **Hotovo** – aplikace se nainstaluje do `C:\OPJAK\electron_app`
 
-Instalační i aktualizační skripty pracují pouze s větví `windows-install`, takže se na počítače kolegů nestahují vývojářské soubory, testy ani interní dokumentace.
+Instalační i aktualizační skripty standardně pracují s větví `windows-install`, takže se na počítače kolegů nestahují vývojářské soubory, testy ani interní dokumentace. Pro řízené testování lze stejným mechanismem přepnout instalaci na kanál `windows-install-test`.
 
 📖 **Podrobný návod:** [Instalační dokumentace](docs/windows_install.html)
 
@@ -53,7 +53,29 @@ cd C:\OPJAK\electron_app
 update.bat
 ```
 
-Skript přepne repozitář na `windows-install`, stáhne poslední změny a případně doinstaluje Python a Node.js závislosti.
+Skript načte cílovou větev z `channel-config.json`, stáhne poslední změny a případně doinstaluje Python a Node.js závislosti.
+
+### Testovací kanál
+
+Jednorázové přepnutí existující instalace na test kanál:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\update_windows.ps1 -Branch windows-install-test
+```
+
+Další běžné aktualizace už stačí spouštět přes:
+
+```cmd
+update-windows.bat
+```
+
+Návrat zpět na stable:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\update_windows.ps1 -Branch windows-install
+```
+
+Každá aktualizace ukládá transcript do `logs\update\` a test kanál navíc zapíná detailnější launch logging přes `logs\launcher\`.
 
 ## 🛠️ Pro vývojáře
 

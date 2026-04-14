@@ -45,7 +45,29 @@ Tato větev obsahuje jen instalační soubory a minimální runtime obsah pro ko
 update-windows.bat
 ```
 
-Skript synchronizuje lokální instalaci s větví `windows-install` a poté zkontroluje závislosti.
+Skript synchronizuje lokální instalaci s větví uloženou v `channel-config.json` a poté zkontroluje závislosti.
+
+### Přepnutí na testovací kanál
+
+Pokud potřebujete otestovat připravovanou verzi, spusťte jednou:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\update_windows.ps1 -Branch windows-install-test
+```
+
+Tím se instalace přepne na testovací kanál. Další aktualizace už stačí spouštět běžně:
+
+```cmd
+update-windows.bat
+```
+
+### Návrat na stabilní kanál
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\update_windows.ps1 -Branch windows-install
+```
+
+Aktualizační transcript najdete v `logs\update\`, start aplikace v testovacím kanálu navíc zapisuje do `logs\launcher\`.
 
 ### Bez Gitu:
 1. Stáhněte novou verzi ZIP

@@ -73,6 +73,9 @@ echo [5/6] Stahuji aplikaci z GitHubu...
 cd /d "%INSTALL_DIR%"
 set "REPO_URL=https://github.com/maxparez/electron_app.git"
 set "BRANCH=windows-install"
+if exist "%~dp0channel-config.json" (
+    for /f "usebackq delims=" %%i in (`powershell -NoProfile -Command "$cfg = Get-Content -Raw '%~dp0channel-config.json' | ConvertFrom-Json; if ($cfg.branch) { $cfg.branch } else { 'windows-install' }"`) do set "BRANCH=%%i"
+)
 echo Stahuji větev %BRANCH%...
 git clone -b %BRANCH% %REPO_URL% .
 if errorlevel 1 (

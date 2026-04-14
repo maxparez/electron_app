@@ -221,13 +221,20 @@
 
     <ol>
       <li>Přejděte do složky <code>C:\OPJAK\electron_app</code></li>
-      <li>Spusťte <code>update.bat</code> dvojklikem</li>
-      <li>Skript synchronizuje minimální větev <code>windows-install</code> a aktualizuje knihovny</li>
+      <li>Spusťte <code>update.bat</code> nebo <code>update-windows.bat</code> dvojklikem</li>
+      <li>Skript synchronizuje větev uloženou v <code>channel-config.json</code> a aktualizuje knihovny</li>
     </ol>
 
     <div class="callout success">
       <strong>✅ Rychlá aktualizace:</strong> Skript stahuje pouze curated obsah
-      z větve <code>windows-install</code>, takže se na počítače kolegů netahají vývojářské soubory.
+      z aktivního instalačního kanálu, takže se na počítače kolegů netahají vývojářské soubory.
+    </div>
+
+    <div class="callout">
+      <strong>🧪 Testovací kanál:</strong> Pokud vám kolega pošle testovací větev, můžete instalaci jednorázově přepnout příkazem
+      <code>powershell -ExecutionPolicy Bypass -File .\scripts\update_windows.ps1 -Branch windows-install-test</code>.
+      Návrat zpět proběhne stejným způsobem s větví <code>windows-install</code>.
+      Aktualizační logy najdete v <code>logs\update\</code>, start aplikace v testovacím kanálu zapisuje do <code>logs\launcher\</code>.
     </div>
 
     <h2>5️⃣ Řešení problémů</h2>

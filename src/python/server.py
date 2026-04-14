@@ -11,16 +11,16 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
 from tools.inv_vzd_processor import InvVzdProcessor
 from tools.zor_spec_dat_processor import ZorSpecDatProcessor
 from tools.plakat_generator import PlakatGenerator
+from tools.dvpp_report_processor import DvppReportProcessor
+from channel_config import load_channel_config, resolve_debug_mode
 
 # Initialize logging
 from logger import init_logging
 server_logger, tool_logger = init_logging()
+CHANNEL_CONFIG = load_channel_config()
 
-# DEBUG mode - set to False for production
-DEBUG_MODE = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
-
-# Force debug mode to be always on for debugging InvVzd issues
-DEBUG_MODE = True
+# DEBUG mode is controlled by env override or channel configuration
+DEBUG_MODE = resolve_debug_mode(CHANNEL_CONFIG, os.environ)
 print(f"[SERVER] DEBUG MODE ENABLED: {DEBUG_MODE}")
 
 def debug_print(*args, **kwargs):
@@ -40,6 +40,19 @@ if sys.platform == 'win32':
 # Create Flask app
 app = Flask(__name__)
 CORS(app)
+
+
+def convert_path_if_needed(path):
+    """Convert Windows path to WSL path when the backend runs on Linux/WSL."""
+    if path and isinstance(path, str):
+        import platform
+        if platform.system() == 'Linux' and len(path) >= 3 and path[1:3] == ':\\':
+            drive_letter = path[0].lower()
+            remaining_path = path[3:].replace('\\', '/')
+            converted = f'/mnt/{drive_letter}/{remaining_path}'
+            server_logger.info(f"Converting Windows path to WSL: {path} -> {converted}")
+            return converted
+    return path
 
 # Configure Flask logging
 import logging
@@ -615,18 +628,6 @@ def process_zor_spec_paths():
         auto_save = data.get('autoSave', False)  # Auto-save to source folder
         
         # Convert Windows paths to WSL paths if needed (only on Linux/WSL)
-        def convert_path_if_needed(path):
-            if path and isinstance(path, str):
-                # Only convert if we're on Linux/WSL and path is Windows format
-                import platform
-                if platform.system() == 'Linux' and len(path) >= 3 and path[1:3] == ':\\':
-                    drive_letter = path[0].lower()
-                    remaining_path = path[3:].replace('\\', '/')
-                    wsl_path = f'/mnt/{drive_letter}/{remaining_path}'
-                    server_logger.info(f"Converting Windows path to WSL: {path} -> {wsl_path}")
-                    return wsl_path
-            return path
-        
         # Convert paths
         file_paths = [convert_path_if_needed(fp) for fp in file_paths]
         
@@ -868,6 +869,86 @@ def process_plakat():
         server_logger.error(f"Error in plakat processing: {str(e)}")
         return jsonify({"error": f"Vnitřní chyba serveru: {str(e)}"}), 500
 
+
+@app.route('/api/scan/dvpp-directory', methods=['POST'])
+def scan_dvpp_directory():
+    """Scan a project directory for DVPP workbooks."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "success": False,
+                "message": "No data provided"
+            }), 400
+
+        project_dir = convert_path_if_needed(data.get('projectDir'))
+        if not project_dir:
+            return jsonify({
+                "success": False,
+                "message": "No project directory provided"
+            }), 400
+
+        processor = DvppReportProcessor(tool_logger)
+        matches = processor.scan_project_directory(project_dir)
+
+        return jsonify({
+            "success": True,
+            "message": f"Nalezeno {len(matches)} DVPP souborů",
+            "matches": matches
+        })
+
+    except Exception as e:
+        server_logger.error(f"Error scanning DVPP directory: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/process/dvpp-report', methods=['POST'])
+def process_dvpp_report():
+    """Generate a DVPP HTML report from selected workbook paths."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        project_dir = convert_path_if_needed(data.get('projectDir'))
+        file_paths = [convert_path_if_needed(path) for path in data.get('filePaths', [])]
+
+        processor = DvppReportProcessor(tool_logger)
+        result = processor.process(file_paths, {"project_dir": project_dir})
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "DVPP report byl úspěšně vygenerován",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", [])
+            })
+
+        return jsonify({
+            "status": "error",
+            "message": "Zpracování DVPP reportu selhalo",
+            "errors": result.get("errors", []),
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", [])
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error processing DVPP report: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
 @app.route('/api/config', methods=['GET'])
 def get_config():
     """Get application configuration"""
@@ -875,6 +956,9 @@ def get_config():
         "status": "success",
         "data": {
             "version": "1.0.0",
+            "channel": CHANNEL_CONFIG.channel,
+            "updateBranch": CHANNEL_CONFIG.branch,
+            "debugLogging": CHANNEL_CONFIG.debug_logging,
             "tools": [
                 {
                     "id": "inv-vzd",
@@ -890,6 +974,11 @@ def get_config():
                     "id": "plakat",
                     "name": "Generátor plakátů",
                     "description": "Generování PDF plakátů"
+                },
+                {
+                    "id": "dvpp",
+                    "name": "DVPP report",
+                    "description": "Souhrnný HTML report podpory DVPP"
                 }
             ]
         }
@@ -899,5 +988,6 @@ if __name__ == '__main__':
     # Run the Flask server
     port = int(os.environ.get('PORT', 5000))
     server_logger.info(f"Starting Flask server on port {port}")
+    server_logger.info(f"Active channel: {CHANNEL_CONFIG.channel} ({CHANNEL_CONFIG.branch})")
     server_logger.info(f"DEBUG MODE: {DEBUG_MODE}")
     app.run(host='127.0.0.1', port=port, debug=DEBUG_MODE)

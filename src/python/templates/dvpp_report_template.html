@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body { padding: 2rem; font-family: sans-serif; }
+        h1, h2 { margin-bottom: 1.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.5rem; }
+        h1 { font-size: 2rem; }
+        h2 { font-size: 1.5rem; }
+        .table { margin-bottom: 2.5rem; }
+        .table thead th {
+            background-color: #0056b3;
+            color: white;
+        }
+        .table td, .table th {
+            padding: 0.4rem;
+            vertical-align: middle;
+        }
+        .table-hover tbody tr { line-height: 1.2; }
+        .table-hover thead th { text-align: left; }
+        .copy-btn {
+            margin-left: 10px;
+            padding: 4px 12px;
+            font-size: 0.85rem;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .copy-btn:hover { background-color: #0056b3; }
+        .copy-btn:active { background-color: #004085; }
+        .copy-success {
+            margin-left: 10px;
+            color: #28a745;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .persons-count {
+            color: #6c757d;
+            font-size: 1.1rem;
+            margin-left: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">{{ title }}</h1>
+
+        <h2>Témata dle Šablon</h2>
+        {{ table1 | safe }}
+
+        <h2>
+            Souhrn podpory DVPP podle pedagogů
+            <span class="persons-count">({{ unique_persons_count }} osob)</span>
+            <button class="copy-btn" onclick="copyNamesToClipboard()">COPY</button>
+            <span class="copy-success" id="copySuccess">✓ Zkopírováno</span>
+        </h2>
+        {{ table2 | safe }}
+    </div>
+
+    <script>
+        function copyNamesToClipboard() {
+            const names = {{ names_list | tojson }};
+            const textToCopy = names.join('\n');
+
+            navigator.clipboard.writeText(textToCopy).then(function() {
+                const successMsg = document.getElementById('copySuccess');
+                successMsg.style.display = 'inline';
+                setTimeout(function() {
+                    successMsg.style.display = 'none';
+                }, 2000);
+            }).catch(function(err) {
+                alert('Chyba při kopírování: ' + err);
+            });
+        }
+    </script>
+</body>
+</html>
