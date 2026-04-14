@@ -4,7 +4,7 @@
 .DESCRIPTION
     Skript obnoví repozitář z aktivního update kanálu nebo z explicitně zadané
     větve, zaktualizuje Python i Node závislosti a uloží detailní transcript do
-    logs\update\.
+    logs\update\ bez kolize s git clean.
 #>
 param(
     [string]$Branch = "",
@@ -98,12 +98,12 @@ function Load-ChannelConfig {
 function Start-UpdateTranscript {
     param([string]$ResolvedRepoPath)
 
-    $logDir = Join-Path $ResolvedRepoPath "logs\update"
-    New-Item -ItemType Directory -Force -Path $logDir | Out-Null
     $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $logPath = Join-Path $logDir ("update_{0}.log" -f $timestamp)
-    Start-Transcript -Path $logPath -Append | Out-Null
-    return $logPath
+    $tempLogDir = Join-Path $env:TEMP "opjak-update-logs"
+    New-Item -ItemType Directory -Force -Path $tempLogDir | Out-Null
+    $tempLogPath = Join-Path $tempLogDir ("update_{0}.log" -f $timestamp)
+    Start-Transcript -Path $tempLogPath -Append | Out-Null
+    return $tempLogPath
 }
 
 function Stop-UpdateTranscriptSafely {
@@ -112,6 +112,23 @@ function Stop-UpdateTranscriptSafely {
     }
     catch {
     }
+}
+
+function Publish-UpdateTranscript {
+    param(
+        [string]$ResolvedRepoPath,
+        [string]$TempTranscriptPath
+    )
+
+    if (-not $TempTranscriptPath) {
+        return $null
+    }
+
+    $logDir = Join-Path $ResolvedRepoPath "logs\update"
+    New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+    $finalLogPath = Join-Path $logDir ([System.IO.Path]::GetFileName($TempTranscriptPath))
+    Copy-Item -Force -Path $TempTranscriptPath -Destination $finalLogPath
+    return $finalLogPath
 }
 
 Ensure-Command -CommandName "git" -DisplayName "Git for Windows" -DownloadUrl "https://git-scm.com/download/win"
@@ -124,7 +141,8 @@ if (-not (Test-Path (Join-Path $resolvedRepoPath ".git"))) {
     exit 1
 }
 
-$logPath = Start-UpdateTranscript -ResolvedRepoPath $resolvedRepoPath
+$tempTranscriptPath = Start-UpdateTranscript -ResolvedRepoPath $resolvedRepoPath
+$publishedLogPath = $null
 $locationPushed = $false
 
 try {
@@ -140,7 +158,7 @@ try {
     Write-Host ("Aktualizační kanál: {0}" -f $initialConfig.channel) -ForegroundColor Gray
     Write-Host ("Cílová větev: {0}" -f $Branch) -ForegroundColor Gray
     Write-Host ("Debug logging: {0}" -f $initialConfig.debug_logging) -ForegroundColor Gray
-    Write-Host ("Transcript: {0}" -f $logPath) -ForegroundColor Gray
+    Write-Host ("Dočasný transcript: {0}" -f $tempTranscriptPath) -ForegroundColor Gray
 
     Write-Step "Aktualizace zdrojového kódu"
     Push-Location $resolvedRepoPath
@@ -192,11 +210,15 @@ try {
     }
 
     Write-Step "Aktualizace dokončena"
-    Write-Host ("Aplikaci můžete spustit zástupcem nebo start-app.bat. Log aktualizace: {0}" -f $logPath) -ForegroundColor Green
+    Write-Host "Aplikaci můžete spustit zástupcem nebo start-app.bat." -ForegroundColor Green
 }
 finally {
     if ($locationPushed) {
         Pop-Location
     }
     Stop-UpdateTranscriptSafely
+    $publishedLogPath = Publish-UpdateTranscript -ResolvedRepoPath $resolvedRepoPath -TempTranscriptPath $tempTranscriptPath
+    if ($publishedLogPath) {
+        Write-Host ("Log aktualizace: {0}" -f $publishedLogPath) -ForegroundColor Green
+    }
 }
