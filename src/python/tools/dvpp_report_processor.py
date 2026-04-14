@@ -19,7 +19,7 @@ from .base_tool import BaseTool
 SUPPORTED_SUFFIXES = {".xlsx", ".xlsm", ".xltx", ".xltm"}
 TEMP_FILE_PREFIX = "~$"
 WORKBOOK_NS = {"main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
-CANDIDATE_SHEETS = {"podpory", "evidence"}
+REQUIRED_SCAN_SHEETS = {"postup vyplnovani", "podpory"}
 
 
 @dataclass(frozen=True)
@@ -96,10 +96,10 @@ class DvppReportProcessor(BaseTool):
         matches: List[WorkbookMatch] = []
 
         for file_path in self.iter_excel_files(root):
-            if not self.has_candidate_sheet_name(file_path):
+            if not self.has_required_sheet_names(file_path):
                 continue
             try:
-                match = self.inspect_workbook(file_path, root)
+                match = self.inspect_workbook(file_path, root, strict_headers=False)
             except Exception as exc:
                 self.add_warning(f"Soubor {file_path.name} nelze zpracovat: {exc}")
                 continue
@@ -137,19 +137,18 @@ class DvppReportProcessor(BaseTool):
                 files.append(path)
         return sorted(files)
 
-    def has_candidate_sheet_name(self, file_path: Path) -> bool:
+    def has_required_sheet_names(self, file_path: Path) -> bool:
         try:
             with zipfile.ZipFile(file_path) as archive:
                 workbook_xml = archive.read("xl/workbook.xml")
         except (KeyError, OSError, zipfile.BadZipFile):
-            return True
+            return False
 
         root = ElementTree.fromstring(workbook_xml)
+        normalized_names = set()
         for sheet in root.findall("main:sheets/main:sheet", WORKBOOK_NS):
-            name = self.normalize_text(sheet.attrib.get("name", ""))
-            if name in CANDIDATE_SHEETS:
-                return True
-        return False
+            normalized_names.add(self.normalize_text(sheet.attrib.get("name", "")))
+        return REQUIRED_SCAN_SHEETS.issubset(normalized_names)
 
     def find_header_mapping(self, sheet) -> tuple[int, dict[str, int]] | None:
         for row_index in range(1, min(sheet.max_row, 40) + 1):
@@ -204,18 +203,26 @@ class DvppReportProcessor(BaseTool):
                 count += 1
         return count
 
-    def inspect_workbook(self, file_path: Path, project_dir: Path) -> WorkbookMatch | None:
+    def inspect_workbook(self, file_path: Path, project_dir: Path, strict_headers: bool = True) -> WorkbookMatch | None:
         workbook = load_workbook(file_path, data_only=True, read_only=True)
         try:
             for sheet_name in workbook.sheetnames:
-                sheet = workbook[sheet_name]
-                header_info = self.find_header_mapping(sheet)
-                if header_info is None:
+                normalized_sheet_name = self.normalize_text(sheet_name)
+                if not strict_headers and normalized_sheet_name != "podpory":
                     continue
 
-                header_row, headers = header_info
+                sheet = workbook[sheet_name]
+                header_info = self.find_header_mapping(sheet)
+                if header_info is None and strict_headers:
+                    continue
+
+                header_row = 0
+                headers: dict[str, int] = {}
+                if header_info is not None:
+                    header_row, headers = header_info
+
                 project_number, report_number = self.extract_metadata(sheet)
-                participant_count = self.count_participant_rows(sheet, header_row, headers)
+                participant_count = self.count_participant_rows(sheet, header_row, headers) if header_info is not None else 0
                 return WorkbookMatch(
                     file_path=file_path,
                     relative_path=file_path.relative_to(project_dir).as_posix(),
@@ -368,7 +375,7 @@ class DvppReportProcessor(BaseTool):
         matches: List[WorkbookMatch] = []
         for file_path in files:
             normalized = self.normalize_input_path(str(file_path))
-            match = self.inspect_workbook(normalized, project_dir)
+            match = self.inspect_workbook(normalized, project_dir, strict_headers=True)
             if match is not None:
                 matches.append(match)
         matches.sort(key=lambda item: item.relative_path.lower())
