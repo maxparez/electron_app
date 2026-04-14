@@ -37,6 +37,18 @@ function Ensure-Command {
     }
 }
 
+function Invoke-Git {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    & git @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw ("git {0} failed with exit code {1}" -f ($Arguments -join " "), $LASTEXITCODE)
+    }
+}
+
 function Resolve-RepoPath {
     param(
         [string]$ExplicitRepoPath,
@@ -134,20 +146,23 @@ try {
     Push-Location $resolvedRepoPath
     $locationPushed = $true
 
-    git fetch origin
-    git ls-remote --exit-code --heads origin $Branch | Out-Null
-    git checkout -B $Branch ("origin/{0}" -f $Branch)
-    git clean -fd
+    Invoke-Git -Arguments @("fetch", "origin")
+    Invoke-Git -Arguments @("reset", "--hard", "HEAD")
+    Invoke-Git -Arguments @("clean", "-fd")
+    Invoke-Git -Arguments @("ls-remote", "--exit-code", "--heads", "origin", $Branch)
+    Invoke-Git -Arguments @("checkout", "--force", "-B", $Branch, ("origin/{0}" -f $Branch))
+    Invoke-Git -Arguments @("reset", "--hard", ("origin/{0}" -f $Branch))
+    Invoke-Git -Arguments @("clean", "-fd")
 
-    $currentBranch = (git rev-parse --abbrev-ref HEAD)
-    $currentCommit = (git rev-parse --short HEAD)
+    $currentBranch = (git rev-parse --abbrev-ref HEAD).Trim()
+    $currentCommit = (git rev-parse --short HEAD).Trim()
     Write-Host ("Aktualizováno na větev {0}, commit {1}" -f $currentBranch, $currentCommit) -ForegroundColor Green
 
     $activeConfig = Load-ChannelConfig -ResolvedRepoPath $resolvedRepoPath
     if ($activeConfig.debug_logging) {
         Write-Step "Debug snapshot repozitáře"
-        git status --short --branch
-        git log --oneline -5
+        Invoke-Git -Arguments @("status", "--short", "--branch")
+        Invoke-Git -Arguments @("log", "--oneline", "-5")
     }
 
     Write-Step "Python virtuální prostředí"
@@ -164,7 +179,7 @@ try {
     & $venvPython -m pip install -r (Join-Path $resolvedRepoPath "requirements-windows.txt")
 
     Write-Step "Node.js závislosti"
-    npm install --production
+    npm ci --omit=dev
 
     if (-not $SkipTests) {
         Write-Step "Test: students_16plus"
