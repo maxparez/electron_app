@@ -32,6 +32,32 @@ if [[ ${#MISSING_PATHS[@]} -gt 0 ]]; then
   exit 1
 fi
 
+mapfile -t FILE_PATHS < <(python3 - <<'PY' "$ROOT_DIR" "${INCLUDE_PATHS[@]}"
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "src" / "python"))
+from windows_branch_sync import classify_include_paths
+
+files, dirs = classify_include_paths(sys.argv[1], sys.argv[2:])
+for item in files:
+    print(item)
+PY
+)
+
+mapfile -t DIRECTORY_PATHS < <(python3 - <<'PY' "$ROOT_DIR" "${INCLUDE_PATHS[@]}"
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(sys.argv[1]) / "src" / "python"))
+from windows_branch_sync import classify_include_paths
+
+files, dirs = classify_include_paths(sys.argv[1], sys.argv[2:])
+for item in dirs:
+    print(item)
+PY
+)
+
 echo ">>> Preparing worktree for branch $BRANCH (base: $BASE_REF)"
 if git worktree list | awk '{print $1}' | grep -Fx "$WORKTREE_DIR" >/dev/null 2>&1; then
   git worktree remove --force "$WORKTREE_DIR"
@@ -44,7 +70,13 @@ else
 fi
 
 echo ">>> Copying whitelisted files"
-rsync -av --delete --prune-empty-dirs --files-from="$INCLUDE_FILE" "$ROOT_DIR"/ "$WORKTREE_DIR"/
+if [[ ${#FILE_PATHS[@]} -gt 0 ]]; then
+  printf '%s\n' "${FILE_PATHS[@]}" | rsync -av --delete --prune-empty-dirs --files-from=- "$ROOT_DIR"/ "$WORKTREE_DIR"/
+fi
+
+for rel_dir in "${DIRECTORY_PATHS[@]}"; do
+  rsync -av --delete "$ROOT_DIR/$rel_dir"/ "$WORKTREE_DIR/$rel_dir"/
+done
 
 echo ">>> Applying branch-specific channel config"
 python3 "$ROOT_DIR/src/python/channel_config.py" "$BRANCH" "$WORKTREE_DIR/channel-config.json"
