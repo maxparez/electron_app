@@ -45,6 +45,17 @@ def build_dvpp_workbook(path: Path, *, report_number: int, rows: list[tuple[str,
     workbook.save(path)
 
 
+def build_dvpp_candidate_workbook(path: Path) -> None:
+    workbook = Workbook()
+    default_sheet = workbook.active
+    default_sheet.title = "postup vyplňování"
+    workbook.create_sheet("podpory")
+    workbook.create_sheet("data")
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    workbook.save(path)
+
+
 class DvppReportProcessorTests(unittest.TestCase):
     def test_scan_project_directory_returns_matching_workbooks(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -69,6 +80,19 @@ class DvppReportProcessorTests(unittest.TestCase):
             self.assertEqual(1, matches[0]["report_number"])
             self.assertEqual(2, matches[1]["report_number"])
             self.assertEqual(2, matches[0]["participant_count"])
+
+    def test_scan_project_directory_lists_candidates_with_required_sheets_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir) / "Project_12968"
+            build_dvpp_candidate_workbook(project_dir / "1ZoR" / "candidate.xlsx")
+
+            processor = DvppReportProcessor()
+            matches = processor.scan_project_directory(str(project_dir))
+
+            self.assertEqual(1, len(matches))
+            self.assertEqual("1ZoR/candidate.xlsx", matches[0]["relative_path"])
+            self.assertEqual("podpory", matches[0]["sheet_name"])
+            self.assertEqual(0, matches[0]["participant_count"])
 
     def test_process_generates_html_report_in_project_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
