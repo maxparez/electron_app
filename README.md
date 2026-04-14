@@ -1,89 +1,71 @@
-# 📦 Nástroje OP JAK – Instalace pro Windows
+# Projektová dokumentace - Electron App
 
-Tato větev obsahuje minimální sadu souborů pro instalaci aplikace na Windows PC.
+Desktop aplikace pro zpracování školní projektové dokumentace (OP JAK).
 
-## 🚀 Rychlá instalace
+## Požadavky
 
-### Pro koncové uživatele:
+- Windows 10/11
+- MS Office (Excel)
+- Node.js 18+
+- Python 3.9+
 
-1. **Stáhněte instalátor** z [GitHub Releases](https://github.com/maxparez/electron_app/releases/latest)
-2. **Spusťte** `install.bat` dvojklikem
-3. **Hotovo** – aplikace se nainstaluje do `C:\OPJAK\electron_app`
-
-📖 **Podrobný návod:** [Instalační dokumentace](docs/windows_install.html)
-
-## 📋 Předpoklady
-
-Před instalací si připravte:
-
-- **Python 3.11-3.13** (64-bit) – [python.org](https://www.python.org/downloads/)
-- **Node.js 18+** – [nodejs.org](https://nodejs.org/)
-- **Git for Windows** – [git-scm.com](https://git-scm.com/download/win)
-- **Microsoft Office** (2019+ nebo Microsoft 365)
-- **VC++ Redistributable 2015-2022** – [Stáhnout](https://aka.ms/vs/17/release/vc_redist.x64.exe)
-
-⚠️ **Důležité:** Při instalaci Pythonu zaškrtněte "Add Python to PATH"!
-
-## 📁 Struktura větve
-
-Tato větev obsahuje pouze produkční soubory:
-
-```
-windows-install/
-├── src/                    # Zdrojový kód
-│   ├── electron/          # Frontend (Electron)
-│   └── python/            # Backend (Flask)
-├── templates/             # Excel šablony
-├── config/                # Konfigurace
-├── install.bat            # Instalační skript
-├── update.bat             # Aktualizační skript
-├── start-app.bat          # Spouštěcí skript
-├── package.json           # Node.js závislosti
-└── requirements-windows.txt  # Python závislosti
-```
-
-## 🔄 Aktualizace
-
-Po instalaci najdete ve složce aplikace `update.bat`:
-
-```cmd
-cd C:\OPJAK\electron_app
-update.bat
-```
-
-## 🛠️ Pro vývojáře
-
-**Tato větev není určena pro vývoj!**
-
-Pro vývoj použijte větev `feature/next-phase` nebo `main`.
-
-Synchronizace produkčních souborů do této větve:
+## Instalace pro vývoj
 
 ```bash
-# Na větvi feature/next-phase nebo main
-./scripts/sync-to-windows-install.sh
+# Klonování repozitáře
+git clone git@github.com:maxparez/electron_app.git
+cd electron_app
+
+# Instalace Node.js závislostí
+npm install
+
+# Vytvoření Python virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# nebo
+venv\Scripts\activate  # Windows
+
+# Instalace Python závislostí
+pip install -r requirements.txt
 ```
 
-## 📞 Podpora
+## Spuštění
 
-V případě problémů:
+```bash
+# Spuštění v development módu
+npm run dev
+```
 
-1. Zkontrolujte logy v `C:\OPJAK\electron_app\logs/`
-2. Otevřete [issue na GitHubu](https://github.com/maxparez/electron_app/issues)
-3. Kontaktujte IT podporu
+## Instalace pro Windows uživatele
 
-## 📄 Licence
+Pro jednoduchou instalaci klientské verze na Windows sledujte
+`docs/windows_install.html`, kde je popsána větev `windows-install`,
+požadované programy a skripty pro kontrolu závislostí a vytvoření zástupce.
 
-MIT License – viz hlavní větev projektu
+## Build
 
-## 🔗 Odkazy
+```bash
+# Vytvoření instalátoru pro Windows
+npm run make
+```
 
-- **Hlavní repozitář:** [github.com/maxparez/electron_app](https://github.com/maxparez/electron_app)
-- **Releases:** [GitHub Releases](https://github.com/maxparez/electron_app/releases)
-- **Dokumentace:** [docs/windows_install.html](docs/windows_install.html)
+## Struktura projektu
 
----
+```
+electron_app/
+├── src/
+│   ├── electron/      # Electron frontend
+│   │   ├── main.js    # Hlavní proces
+│   │   ├── preload.js # Preload script
+│   │   └── renderer/  # UI komponenty
+│   └── python/        # Python backend
+│       ├── server.py  # Flask server
+│       └── tools/     # Nástroje pro zpracování
+├── docs/              # Dokumentace
+├── tests/             # Testy
+└── legacy_code/       # Původní Python skripty
+```
 
-**Verze:** 1.1.0
-**Poslední aktualizace:** 2025-12-07
-**Autor:** Max Parez
+## Licence
+
+MIT
