@@ -613,12 +613,20 @@ async function selectDvppFolder() {
                 </div>
             `;
 
+            showLoading(true, {
+                text: 'Hledám DVPP soubory v projektové složce...'
+            });
+            setStatusMessage('Prohledávám projektovou složku pro DVPP soubory...');
+
             await loadDvppMatches(folderPath);
+            showLoading(false);
             elements.dvppRefreshBtn.style.display = 'inline-block';
         }
     } catch (error) {
+        showLoading(false);
         console.error('DVPP folder selection error:', error);
         showMessage('Chyba při výběru projektové složky', 'error');
+        setStatusMessage('Výběr projektové složky selhal', 4000);
     }
 }
 
@@ -630,10 +638,17 @@ async function refreshDvppFolder() {
     }
 
     try {
+        showLoading(true, {
+            text: 'Obnovuji seznam DVPP souborů...'
+        });
+        setStatusMessage('Znovu prohledávám projektovou složku...');
         await loadDvppMatches(folderPath);
+        showLoading(false);
     } catch (error) {
+        showLoading(false);
         console.error('DVPP folder refresh error:', error);
         showMessage('Chyba při obnovování DVPP seznamu', 'error');
+        setStatusMessage('Obnovení DVPP seznamu selhalo', 4000);
     }
 }
 
@@ -649,8 +664,10 @@ async function loadDvppMatches(folderPath) {
 
     if (state.dvppMatches.length > 0) {
         showMessage(`Nalezeno ${state.dvppMatches.length} vhodných DVPP souborů`, 'success');
+        setStatusMessage(`Nalezeno ${state.dvppMatches.length} DVPP souborů`, 4000);
     } else {
         showMessage('Ve vybrané složce nebyly nalezeny žádné vhodné DVPP soubory', 'warning');
+        setStatusMessage('Nebyly nalezeny žádné vhodné DVPP soubory', 4000);
     }
 }
 
