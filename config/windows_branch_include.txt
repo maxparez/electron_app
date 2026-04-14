@@ -1,5 +1,6 @@
 # Lista souborů, které se kopírují do větve windows-install.
 # Upravujte opatrně – rozhoduje, co koncový uživatel stáhne.
+.gitignore
 README.md
 channel-config.json
 docs/windows_install.html
