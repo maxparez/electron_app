@@ -385,7 +385,7 @@
 ## Repository & Paths
 - Repository: git@github.com-maxparez:maxparez/electron_app.git
 - Working directory: `/root/vyvoj_sw/electron_app/`
-- Production branch: `production` - Clean distribution ready
+- Distribution branch: `windows-install` - Curated install/update snapshot for colleagues
 - Development branch: `feature/next-phase` - Full development environment
 - Installation Path: `%LOCALAPPDATA%\zor_nastroje` (no admin needed)
-- User Manual: Clean installation via Git clone from production branch
+- User Manual: Clean installation via Git clone from windows-install branch

@@ -1,163 +1,57 @@
-# 🚀 Production Workflow - Jak z dev udělat prod
+# Windows-Install Workflow
 
 ## Kontext
-- **Development branch**: `feature/next-phase` (300+ souborů, všechny testy, docs, legacy kód)
-- **Production branch**: `production` (25 čistých souborů, jen aplikace)
-- **Uživatelé**: Stahují z production branch přes `install-windows-standalone.bat`
+- Vývoj probíhá v běžných vývojových větvích jako `main` nebo `feature/*`.
+- Větev `windows-install` je curated distribuční větev pro kolegy.
+- Kolegové instalují i aktualizují pouze z `windows-install`, aby se jim nestahovaly testy, interní dokumentace a další vývojářské soubory.
 
-## ⚠️ Důležité opravy (2025-06-07)
-**Před aktualizací production je třeba:**
-1. **CMD window fix** - oprava start-app.bat (commit [fix-062])
-2. **Backend lifecycle** - Electron správně ukončuje Python (commit [fix-062]) 
-3. **Production detection** - použití app.isPackaged (commit [fix-063])
-4. **Admin rights removal** - instalace do %LOCALAPPDATA% (commit [fix-070])
-5. **Icon rename** - icon.ico místo dlouhého názvu (commit [rename-069])
+## Cíl
+Po dokončení změn synchronizovat jen nutný runtime obsah do `windows-install` a ověřit, že first-time install i `update-windows.bat` používají stejný zdroj.
 
-## 📋 Postup: Dev → Prod
+## Doporučený postup
 
-### 1. Dokončení vývoje na dev branch
+### 1. Dokončete změny ve vývojové větvi
 ```bash
-# Práce na feature/next-phase
-git checkout feature/next-phase
-# ... vývoj, opravy, testy ...
-git add -A && git commit -m "[fix-XXX] Popis opravy"
-git push origin feature/next-phase
-```
-
-### 2. Přepnutí na production branch a merge
-```bash
-git checkout production
-git merge feature/next-phase
-
-# POZOR: Po merge budou opět všechny dev soubory!
-# Nutné vyčistit podle bodu 3.
-```
-
-### 3. Vyčištění nepotřebných souborů
-```bash
-# Smazání vývojářských složek
-rm -rf legacy_code/ docs/ logs/ tests/ _img/ out/ venv/ node_modules/ dist/
-
-# Smazání test/debug skriptů
-rm -f test_*.py debug_*.py inspect_*.py simple_test.py create_test_template.py
-
-# Smazání dokumentace (kromě README.md)
-find . -name "*.md" -not -name "README.md" -delete
-
-# Smazání dev batch souborů
-rm -f build-windows*.bat debug-*.bat sandbox-*.bat test-*.bat quick-*.bat
-rm -f python-backend-install*.bat start-backend.bat start-frontend.bat start-with-python.bat
-
-# Smazání dalších dev souborů
-rm -f *.html *.sh create-desktop-shortcut.ps1 standalone-backend.py
-rm -rf scripts/ config/ 
-
-# Vyčištění Python cache a logs
-find src/python -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
-find src/python -name "*.log" -delete
-
-# Smazání backup souborů
-rm -f src/electron/updater.js.bak
-rm -rf src/electron/main/ src/python/api/
-
-# Smazání xlsx šablon (uživatel má vlastní)
-rm -f template_*.xlsx src/python/templates/template_*.xlsx
-```
-
-### 4. Kontrola čistoty
-```bash
-# Počet souborů (mělo by být ~25)
-find . -type f -not -path "./.git/*" -not -path "./node_modules/*" | wc -l
-
-# Velikost (mělo by být ~11MB)
-du -sh .
-
-# Seznam podstatných souborů
-find . -name "*.js" -o -name "*.py" -o -name "*.bat" -o -name "*.json" -o -name "*.md" | wc -l
-```
-
-### 5. Commit a push production
-```bash
+git checkout feature/my-change
+# ... implementace, testy, ověření ...
 git add -A
-git commit -m "[prod-XXX] Update production from dev - clean build"
-git push origin production
+git commit -m "[fix-XXX] Popis změny"
+git push origin feature/my-change
 ```
 
-## 📁 Co má zůstat v production
+### 2. Synchronizujte `windows-install`
+Použijte jeden z připravených skriptů:
 
-### ✅ Nutné soubory (25x):
-```
-├── README.md                     # Návod pro uživatele
-├── package.json, package-lock.json  # NPM závislosti
-├── requirements-windows.txt      # Python závislosti  
-├── forge.config.js              # Electron build config
-├── install-windows-standalone.bat  # Hlavní instalátor
-├── install-windows.bat          # Lokální instalátor
-├── start-app.bat                # Spuštění aplikace
-├── update-windows.bat           # Aktualizace
-├── icon.ico                     # Ikona pro shortcuts
-└── src/
-    ├── electron/                # Frontend (10 souborů)
-    │   ├── main.js, preload.js, backend-manager.js, config.js
-    │   ├── renderer/ (5 souborů: html, js, css)
-    │   ├── assets/ (ikony)
-    │   └── locales/cs.json
-    └── python/                  # Backend (8 souborů)
-        ├── server.py, logger.py
-        ├── tools/ (5 .py souborů)
-        └── templates/ (prázdná)
-```
-
-### ❌ Co smazat (300+ souborů):
-- `legacy_code/`, `docs/`, `logs/`, `tests/`, `_img/`, `out/`, `venv/`
-- Všechny `test_*.py`, `debug_*.py`, `inspect_*.py` 
-- Všechny `.md` soubory kromě `README.md`
-- Dev batch soubory (`build-*.bat`, `debug-*.bat`, atd.)
-- `scripts/`, `config/`, `*.html`, `*.sh`
-- Python `__pycache__`, `*.log`
-- `template_*.xlsx` (uživatel má vlastní)
-
-## 🔄 Automatizace (budoucnost)
-
-### Vytvoření build scriptu:
 ```bash
-# create-production.bat
-@echo off
-echo Creating production build...
-git checkout production
-git merge feature/next-phase
-call clean-production.bat
-git add -A
-git commit -m "[prod-auto] Automated production build"
-git push origin production
-echo Production build complete!
+./scripts/sync_windows_branch.sh
 ```
 
-## 🎯 Klíčové body
-1. **Production branch = jen nutné soubory pro uživatele**
-2. **install-windows-standalone.bat stahuje z production branch**
-3. **Vždy testovat production build před pushnutím**
-4. **README.md aktualizovat pro uživatele, ne vývojáře**
-5. **Po merge dev→prod vždy vyčistit nepotřebné soubory!**
+nebo
 
-## 🔧 Poslední kritické opravy
-- **[fix-062]**: CMD okno zůstávalo otevřené → Electron správně řídí Python lifecycle
-- **[fix-063]**: Špatná detekce prostředí → app.isPackaged místo --dev flag
-- **[fix-066]**: Python CMD okno skryto → windowsHide: true pro Windows
-- **[fix-067]**: Robustní ukončování → taskkill místo SIGTERM na Windows
-- **[fix-068]**: Permission fallback → Node.js kill pokud taskkill selže
-- **[fix-070]**: Admin práva odstraněna → %LOCALAPPDATA% místo %PROGRAMFILES%
-- **[rename-069]**: Ikona přejmenována → icon.ico pro jednoduchost
+```bash
+./scripts/sync-to-windows-install.sh
+```
 
-## 📝 Rychlý checklist před aktualizací production:
-- [ ] Všechny opravy v dev branch commitnuty a otestovány
-- [ ] Přepnutí na production branch
-- [ ] Merge z feature/next-phase
-- [ ] Spuštění clean-up skriptů (bod 3)
-- [ ] Kontrola počtu souborů (~25)
-- [ ] Test spuštění aplikace
-- [ ] Commit a push production
+Oba workflow mají za cíl zkopírovat jen whitelistovaný/minimální obsah do `windows-install`.
 
----
-*Návod vytvořen: 2025-06-07*
-*Poslední aktualizace: 2025-06-13 - přidány admin práva fix + ikona rename*
+### 3. Zkontrolujte, co se do větve dostalo
+- instalační skripty: `install.bat`, `install-windows-standalone.bat`, `update.bat`, `update-windows.bat`
+- runtime soubory: `src/`, `package*.json`, `requirements-windows.txt`, `forge.config.js`
+- uživatelská dokumentace: `README.md` nebo `README-windows-install.md`
+
+Do `windows-install` nepatří `tests/`, `legacy_code/`, interní plánovací dokumentace ani pomocné vývojářské skripty.
+
+### 4. Ověřte instalační a update flow
+- čistá instalace z `install.bat` nebo `install-windows-standalone.bat`
+- následný update přes `update-windows.bat`
+- spuštění aplikace přes `start-app.bat`
+- základní smoke test na Windows s Excelem
+
+## Klíčová pravidla
+1. `windows-install` je jediná větev pro kolegy.
+2. First-time install i update musí používat stejnou větev: `windows-install`.
+3. Dokumentace pro kolegy nesmí odkazovat na `production`, `main` ani `feature/*` jako instalační zdroj.
+4. Pokud se změní instalační nebo update skript, otestujte obě cesty: nová instalace i aktualizace existující instalace.
+
+## Poznámka k historii
+Starší dokumentace pracovala s větví `production`. Aktuální workflow tuto roli nahrazuje větví `windows-install`, která slouží jako minimální distribuční snapshot pro Windows počítače kolegů.

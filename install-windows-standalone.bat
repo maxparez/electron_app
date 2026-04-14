@@ -67,11 +67,14 @@ if exist "%INSTALL_DIR%" (
 mkdir "%INSTALL_DIR%"
 echo ✅ Složka vytvořena: %INSTALL_DIR%
 
-REM Git clone z správné větve
+REM Git clone z curated větve pro kolegy
 echo.
 echo [5/6] Stahuji aplikaci z GitHubu...
 cd /d "%INSTALL_DIR%"
-git clone -b feature/next-phase https://github.com/maxparez/electron_app.git .
+set "REPO_URL=https://github.com/maxparez/electron_app.git"
+set "BRANCH=windows-install"
+echo Stahuji větev %BRANCH%...
+git clone -b %BRANCH% %REPO_URL% .
 if errorlevel 1 (
     echo ❌ CHYBA: Nepodařilo se stáhnout aplikaci z GitHubu!
     echo Zkontrolujte připojení k internetu.

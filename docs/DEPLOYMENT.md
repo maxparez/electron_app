@@ -38,10 +38,10 @@ Uživatelská konfigurace: `%APPDATA%/NastrojeOPJAK/config.json`
 
 ### 4. Update mechanismus
 
-- Automatická kontrola aktualizací při startu
-- Stažení z GitHub releases
-- Uživatel může odložit nebo nainstalovat
-- Manuální kontrola přes menu
+- Kolegové instalují a aktualizují aplikaci ze zjednodušené větve `windows-install`
+- Instalace probíhá přes `install.bat` / `install-windows-standalone.bat`
+- Aktualizace probíhá manuálně přes `update.bat` / `update-windows.bat`
+- Skripty synchronizují pouze curated obsah a následně zkontrolují Python a Node.js závislosti
 
 ## Instalace
 
@@ -136,8 +136,8 @@ $env:FLASK_DEBUG="true"
 ### Aktualizace se nestahuje
 
 1. Zkontrolujte internetové připojení
-2. Ověřte proxy nastavení
-3. Stáhněte manuálně z GitHub releases
+2. Ověřte, že instalace pochází z git clone větve `windows-install`
+3. Spusťte `update-windows.bat` z instalační složky znovu
 
 ## Monitorování
 
@@ -157,23 +157,17 @@ Sledujte:
 
 ## Aktualizace
 
-### Automatické
+### Aktuální postup pro kolegy
 
-1. Aplikace kontroluje aktualizace při startu
-2. Uživatel je notifikován o nové verzi
-3. Stažení a instalace na pozadí
-4. Restart aplikace pro dokončení
-
-### Manuální
-
-1. Stáhněte nejnovější verzi z GitHub
-2. Spusťte instalátor
-3. Aplikace se automaticky zavře a aktualizuje
+1. Otevřete instalační složku aplikace
+2. Spusťte `update-windows.bat` nebo `update.bat`
+3. Skript synchronizuje větev `windows-install`
+4. Skript podle potřeby aktualizuje Python a Node.js závislosti
 
 ## Bezpečnost
 
 - Aplikace běží pouze lokálně (localhost:5000)
-- Žádná externí komunikace kromě kontroly aktualizací
+- Žádná externí komunikace kromě instalace a ruční aktualizace z GitHubu
 - Logy neobsahují citlivá data
 - Uživatelská data zůstávají lokální
 

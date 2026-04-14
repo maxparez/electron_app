@@ -21,18 +21,15 @@ Stáhněte a nainstalujte:
 
 #### Varianta A - S Gitem (doporučeno):
 ```cmd
-git clone -b feature/next-phase https://github.com/maxparez/electron_app.git
+git clone -b windows-install https://github.com/maxparez/electron_app.git
 cd electron_app
 install-windows.bat
 ```
 
-**Poznámka:** Po dokončení testování bude vše v hlavní větvi a použijete:
-```cmd
-git clone https://github.com/maxparez/electron_app.git
-```
+Tato větev obsahuje jen instalační soubory a minimální runtime obsah pro kolegy.
 
 #### Varianta B - Bez Gitu:
-1. Stáhněte ZIP z: https://github.com/maxparez/electron_app
+1. Stáhněte ZIP nebo release balíček z: https://github.com/maxparez/electron_app
 2. Rozbalte do složky (např. `C:\electron_app`)
 3. Otevřete složku a spusťte `install-windows.bat`
 
@@ -47,6 +44,8 @@ git clone https://github.com/maxparez/electron_app.git
 ```cmd
 update-windows.bat
 ```
+
+Skript synchronizuje lokální instalaci s větví `windows-install` a poté zkontroluje závislosti.
 
 ### Bez Gitu:
 1. Stáhněte novou verzi ZIP

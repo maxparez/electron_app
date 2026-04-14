@@ -93,7 +93,7 @@ if (-not (Test-Path $venvPython)) {
 & $venvPython -m pip install --upgrade pip
 & $venvPython -m pip install -r (Join-Path $repoPath "requirements-windows.txt")
 
-Write-Step "Instalace Node modulů (production)"
+Write-Step "Instalace Node modulů (runtime)"
 Push-Location $repoPath
 npm install --production
 Pop-Location

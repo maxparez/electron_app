@@ -21,19 +21,41 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/3] Stahuji nejnovější verzi z GitHubu...
-git pull origin production
+echo [1/3] Synchronizuji větev windows-install z GitHubu...
+git fetch origin
+if errorlevel 1 (
+    echo ❌ CHYBA: Nepodařilo se stáhnout metadata z GitHubu!
+    echo Zkontrolujte připojení k internetu a zkuste to znovu.
+    pause
+    exit /b 1
+)
+
+git checkout windows-install
+if errorlevel 1 (
+    echo ❌ CHYBA: Nepodařilo se přepnout na větev windows-install!
+    pause
+    exit /b 1
+)
+
+git reset --hard origin/windows-install
+if errorlevel 1 (
+    echo ❌ CHYBA: Nepodařilo se synchronizovat větev windows-install!
+    pause
+    exit /b 1
+)
+
+git clean -fd
 if errorlevel 1 (
     echo ❌ CHYBA: Nepodařilo se stáhnout aktualizace!
     echo Možné příčiny:
     echo - Nemáte připojení k internetu
-    echo - Máte lokální změny v souborech
+    echo - Instalace není git clone z větve windows-install
     echo.
     echo Zkuste: git status
     pause
     exit /b 1
 )
-echo ✅ Kód aktualizován
+echo ✅ Kód aktualizován z větve windows-install
 
 echo.
 echo [2/3] Kontroluji Python závislosti...

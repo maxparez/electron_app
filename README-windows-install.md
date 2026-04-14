@@ -1,6 +1,6 @@
 # 📦 Nástroje OP JAK – Instalace pro Windows
 
-Tato větev obsahuje minimální sadu souborů pro instalaci aplikace na Windows PC.
+Tato větev obsahuje minimální sadu souborů pro instalaci a aktualizace aplikace na Windows PC.
 
 ## 🚀 Rychlá instalace
 
@@ -9,6 +9,8 @@ Tato větev obsahuje minimální sadu souborů pro instalaci aplikace na Windows
 1. **Stáhněte instalátor** z [GitHub Releases](https://github.com/maxparez/electron_app/releases/latest)
 2. **Spusťte** `install.bat` dvojklikem
 3. **Hotovo** – aplikace se nainstaluje do `C:\OPJAK\electron_app`
+
+Instalační i aktualizační skripty pracují pouze s větví `windows-install`, takže se na počítače kolegů nestahují vývojářské soubory, testy ani interní dokumentace.
 
 📖 **Podrobný návod:** [Instalační dokumentace](docs/windows_install.html)
 
@@ -50,6 +52,8 @@ Po instalaci najdete ve složce aplikace `update.bat`:
 cd C:\OPJAK\electron_app
 update.bat
 ```
+
+Skript přepne repozitář na `windows-install`, stáhne poslední změny a případně doinstaluje Python a Node.js závislosti.
 
 ## 🛠️ Pro vývojáře
 
