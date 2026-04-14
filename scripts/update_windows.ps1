@@ -197,7 +197,7 @@ try {
     & $venvPython -m pip install -r (Join-Path $resolvedRepoPath "requirements-windows.txt")
 
     Write-Step "Node.js závislosti"
-    npm ci --omit=dev
+    npm ci
 
     if (-not $SkipTests) {
         Write-Step "Test: students_16plus"
