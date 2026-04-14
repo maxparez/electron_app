@@ -118,7 +118,7 @@ if (-not (Test-Path $venvPython)) {
 
 Write-Step "Instalace Node modulů (runtime)"
 Push-Location $repoPath
-npm install --production
+npm ci --omit=dev
 Pop-Location
 
 Write-Step "Rychlá kontrola backendu"

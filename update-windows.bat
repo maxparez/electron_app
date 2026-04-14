@@ -10,6 +10,7 @@ echo.
 set "SCRIPT_DIR=%~dp0"
 set "REPO_DIR=%SCRIPT_DIR:~0,-1%"
 set "UPDATE_SCRIPT=%SCRIPT_DIR%scripts\update_windows.ps1"
+set "TEMP_SCRIPT=%TEMP%\opjak_update_windows.ps1"
 
 if not exist "%UPDATE_SCRIPT%" (
     echo ❌ CHYBA: Nenalezen skript %UPDATE_SCRIPT%
@@ -18,8 +19,16 @@ if not exist "%UPDATE_SCRIPT%" (
     exit /b 1
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%UPDATE_SCRIPT%" -RepoPath "%REPO_DIR%" %*
+copy /Y "%UPDATE_SCRIPT%" "%TEMP_SCRIPT%" >nul
+if errorlevel 1 (
+    echo ❌ CHYBA: Nepodařilo se připravit dočasný update skript.
+    pause
+    exit /b 1
+)
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%TEMP_SCRIPT%" -RepoPath "%REPO_DIR%" %*
 set "EXIT_CODE=%ERRORLEVEL%"
+del /Q "%TEMP_SCRIPT%" >nul 2>&1
 
 echo.
 if not "%EXIT_CODE%"=="0" (
