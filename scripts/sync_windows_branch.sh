@@ -46,6 +46,9 @@ fi
 echo ">>> Copying whitelisted files"
 rsync -av --delete --prune-empty-dirs --files-from="$INCLUDE_FILE" "$ROOT_DIR"/ "$WORKTREE_DIR"/
 
+echo ">>> Applying branch-specific channel config"
+python3 "$ROOT_DIR/src/python/channel_config.py" "$BRANCH" "$WORKTREE_DIR/channel-config.json"
+
 pushd "$WORKTREE_DIR" >/dev/null
 
 SYNC_SOURCE_COMMIT="$(git -C "$ROOT_DIR" rev-parse HEAD)"

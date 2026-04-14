@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src" / "python"))
 
-from channel_config import ChannelConfig, load_channel_config, resolve_debug_mode
+from channel_config import ChannelConfig, config_for_branch, load_channel_config, resolve_debug_mode
 
 
 class ChannelConfigTests(unittest.TestCase):
@@ -50,6 +50,13 @@ class ChannelConfigTests(unittest.TestCase):
         self.assertFalse(resolve_debug_mode(stable_config, {}))
         self.assertTrue(resolve_debug_mode(stable_config, {"FLASK_DEBUG": "true"}))
         self.assertFalse(resolve_debug_mode(test_config, {"FLASK_DEBUG": "false"}))
+
+    def test_config_for_branch_returns_test_channel_for_windows_install_test(self) -> None:
+        stable = config_for_branch("windows-install")
+        test = config_for_branch("windows-install-test")
+
+        self.assertEqual(ChannelConfig(channel="stable", branch="windows-install", debug_logging=False), stable)
+        self.assertEqual(ChannelConfig(channel="test", branch="windows-install-test", debug_logging=True), test)
 
 
 if __name__ == "__main__":
