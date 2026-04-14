@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from openpyxl import Workbook
 
@@ -57,6 +58,14 @@ def build_dvpp_candidate_workbook(path: Path) -> None:
 
 
 class DvppReportProcessorTests(unittest.TestCase):
+    def test_normalize_input_path_keeps_windows_paths_on_windows(self) -> None:
+        processor = DvppReportProcessor()
+
+        with patch("platform.system", return_value="Windows"):
+            normalized = processor.normalize_input_path(r"D:\JAK2024\Projects\Test")
+
+        self.assertEqual(Path(r"D:\JAK2024\Projects\Test"), normalized)
+
     def test_scan_project_directory_returns_matching_workbooks(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             project_dir = Path(temp_dir) / "Project_12968"
