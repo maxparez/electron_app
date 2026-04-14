@@ -119,7 +119,7 @@ echo ✅ Python knihovny nainstalovány
 REM Node.js moduly
 echo.
 echo Instaluji Node.js moduly...
-call npm ci --omit=dev
+call npm ci
 if errorlevel 1 (
     echo ❌ CHYBA: Nepodařilo se nainstalovat Node.js moduly!
     pause
