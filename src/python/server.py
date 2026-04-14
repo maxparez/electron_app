@@ -18,6 +18,8 @@ from channel_config import load_channel_config, resolve_debug_mode
 from logger import init_logging
 server_logger, tool_logger = init_logging()
 CHANNEL_CONFIG = load_channel_config()
+BACKEND_INSTANCE_TOKEN = os.environ.get("ELECTRON_APP_INSTANCE_TOKEN", "")
+BACKEND_PORT = int(os.environ.get("FLASK_PORT") or os.environ.get("PORT") or 5000)
 
 # DEBUG mode is controlled by env override or channel configuration
 DEBUG_MODE = resolve_debug_mode(CHANNEL_CONFIG, os.environ)
@@ -40,6 +42,18 @@ if sys.platform == 'win32':
 # Create Flask app
 app = Flask(__name__)
 CORS(app)
+
+
+def build_backend_metadata():
+    """Return identity metadata so Electron can verify it talks to the expected backend instance."""
+    return {
+        "pid": os.getpid(),
+        "channel": CHANNEL_CONFIG.channel,
+        "branch": CHANNEL_CONFIG.branch,
+        "debugLogging": CHANNEL_CONFIG.debug_logging,
+        "instanceToken": BACKEND_INSTANCE_TOKEN,
+        "port": BACKEND_PORT,
+    }
 
 
 def convert_path_if_needed(path):
@@ -70,7 +84,8 @@ def health_check():
     """Health check endpoint"""
     return jsonify({
         "status": "healthy",
-        "message": "Python backend is running"
+        "message": "Python backend is running",
+        **build_backend_metadata(),
     })
 
 @app.route('/api/detect/template-version', methods=['POST'])
@@ -959,6 +974,7 @@ def get_config():
             "channel": CHANNEL_CONFIG.channel,
             "updateBranch": CHANNEL_CONFIG.branch,
             "debugLogging": CHANNEL_CONFIG.debug_logging,
+            "backend": build_backend_metadata(),
             "tools": [
                 {
                     "id": "inv-vzd",
@@ -986,8 +1002,8 @@ def get_config():
 
 if __name__ == '__main__':
     # Run the Flask server
-    port = int(os.environ.get('PORT', 5000))
-    server_logger.info(f"Starting Flask server on port {port}")
+    server_logger.info(f"Starting Flask server on port {BACKEND_PORT}")
     server_logger.info(f"Active channel: {CHANNEL_CONFIG.channel} ({CHANNEL_CONFIG.branch})")
     server_logger.info(f"DEBUG MODE: {DEBUG_MODE}")
-    app.run(host='127.0.0.1', port=port, debug=DEBUG_MODE)
+    server_logger.info(f"Backend instance token: {BACKEND_INSTANCE_TOKEN or 'none'}")
+    app.run(host='127.0.0.1', port=BACKEND_PORT, debug=DEBUG_MODE)

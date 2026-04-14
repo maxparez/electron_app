@@ -79,17 +79,30 @@ function startPythonServer() {
 
 // Wait for the Python server to be ready
 async function waitForServer(retries = 30) {
+    const expectedToken = backendManager.getInstanceToken();
+    let lastIdentity = null;
+
     for (let i = 0; i < retries; i++) {
         try {
             const response = await axios.get('http://localhost:5000/api/health');
-            if (response.data.status === 'healthy') {
-                console.log('Python server is ready');
+            if (response.data.status === 'healthy' && response.data.instanceToken === expectedToken) {
+                console.log(`Python server is ready (pid=${response.data.pid}, token=${expectedToken})`);
                 return true;
             }
+            lastIdentity = response.data;
+            console.log(
+                '[BackendManager] Waiting for expected backend instance. ' +
+                `Expected token=${expectedToken}, got token=${response.data.instanceToken || 'none'}`
+            );
         } catch (error) {
             // Server not ready yet
         }
         await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    if (lastIdentity) {
+        throw new Error(
+            `Python server identity mismatch (expected token ${expectedToken}, got ${lastIdentity.instanceToken || 'none'})`
+        );
     }
     throw new Error('Python server failed to start');
 }
@@ -308,8 +321,12 @@ ipcMain.handle('folder:open', async (event, folderPath) => {
 app.whenReady().then(async () => {
     try {
         // Start Python server first
-        await startPythonServer();
-        
+        const started = await startPythonServer();
+        if (!started) {
+            throw new Error('Python backend process failed to start');
+        }
+        await waitForServer();
+
         // Then create the window
         createWindow();
         
@@ -377,7 +394,12 @@ ipcMain.handle('backend:restart', async () => {
     backendManager.resetRestartAttempts();
     backendManager.stop();
     await new Promise(resolve => setTimeout(resolve, 1000));
-    return await backendManager.start();
+    const started = await backendManager.start();
+    if (!started) {
+        return false;
+    }
+    await waitForServer();
+    return true;
 });
 
 // IPC handlers for updater
