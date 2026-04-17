@@ -17,6 +17,19 @@ REPO_ROOT = Path(__file__).resolve().parent
 
 
 class RuntimeConsistencyTests(unittest.TestCase):
+    def test_preload_does_not_import_main_process_config_module(self) -> None:
+        preload_path = REPO_ROOT / "src" / "electron" / "preload.js"
+        content = preload_path.read_text(encoding="utf-8")
+
+        self.assertNotIn("require('./config')", content)
+        self.assertIn("config:get", content)
+
+    def test_renderer_html_declares_content_security_policy(self) -> None:
+        index_path = REPO_ROOT / "src" / "electron" / "renderer" / "index.html"
+        content = index_path.read_text(encoding="utf-8")
+
+        self.assertIn('http-equiv="Content-Security-Policy"', content)
+
     def test_electron_runtime_does_not_hardcode_backend_port(self) -> None:
         runtime_files = [
             REPO_ROOT / "src" / "electron" / "main.js",

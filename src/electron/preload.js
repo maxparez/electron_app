@@ -1,7 +1,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
-const config = require('./config');
 
-const backendBaseUrl = `http://127.0.0.1:${config.get('python.port', 5000)}/api`;
+async function getBackendBaseUrl() {
+    const port = await ipcRenderer.invoke('config:get', 'python.port');
+    return `http://127.0.0.1:${port || 5000}/api`;
+}
 
 // Backend recovery event listener
 ipcRenderer.on('backend-failed', (event, data) => {
@@ -28,6 +30,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // API calls to Python backend
     apiCall: async (endpoint, method = 'GET', data = null) => {
+        const backendBaseUrl = await getBackendBaseUrl();
         const url = `${backendBaseUrl}/${endpoint}`;
         
         const options = {
@@ -80,6 +83,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
             formData.append('options', JSON.stringify(options));
         }
         
+        const backendBaseUrl = await getBackendBaseUrl();
         const url = `${backendBaseUrl}/${endpoint}`;
         
         try {
@@ -103,6 +107,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // Upload form data directly
     uploadFormData: async (endpoint, formData) => {
+        const backendBaseUrl = await getBackendBaseUrl();
         const url = `${backendBaseUrl}/${endpoint}`;
         
         try {
