@@ -1020,11 +1020,12 @@ def import_dvpp_certificates_gemini():
                 "info": result.get("info", []),
             })
 
+        error_messages = result.get("errors", [])
         return jsonify({
             "status": "error",
-            "message": "Vytěžení DVPP certifikátů selhalo",
+            "message": error_messages[0] if error_messages else "Vytěžení DVPP certifikátů selhalo",
             "data": result.get("data"),
-            "errors": result.get("errors", []),
+            "errors": error_messages,
             "warnings": result.get("warnings", []),
             "info": result.get("info", []),
         }), 400
@@ -1035,6 +1036,41 @@ def import_dvpp_certificates_gemini():
             "status": "error",
             "message": str(e)
         }), 500
+
+
+@app.route('/api/dvpp-certificates/scan', methods=['POST'])
+def scan_dvpp_certificates_folder():
+    """Scan a selected folder for supported DVPP certificate files."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        folder_path = convert_path_if_needed(data.get('folderPath'))
+        if not folder_path:
+            return jsonify({
+                "status": "error",
+                "message": "Nebyla zadána složka s certifikáty"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        matches = processor.scan_folder(folder_path)
+
+        return jsonify({
+            "status": "success",
+            "message": "Podporované certifikáty byly načteny",
+            "matches": matches,
+        })
+    except Exception as e:
+        server_logger.error(f"Error scanning DVPP certificate folder: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
 
 
 @app.route('/api/dvpp-certificates/import/raw-text', methods=['POST'])

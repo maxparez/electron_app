@@ -19,6 +19,26 @@ class DvppCertificateProcessor(BaseTool):
         super().__init__(logger)
         self.importer = importer or GeminiCertificateImporter()
 
+    def scan_folder(self, folder_path: str) -> list[dict[str, str]]:
+        folder = Path(str(folder_path)).expanduser()
+        if not folder.exists() or not folder.is_dir():
+            raise FileNotFoundError(f"Složka s certifikáty neexistuje: {folder_path}")
+
+        try:
+            matches = collect_input_files(folder)
+        except ValueError as exc:
+            if str(exc).startswith("No supported input files found in directory:"):
+                return []
+            raise
+
+        return [
+            {
+                "file_path": str(path),
+                "relative_path": path.relative_to(folder).as_posix(),
+            }
+            for path in matches
+        ]
+
     def validate_inputs(self, files: List[str], options: Dict[str, Any]) -> bool:
         self.clear_messages()
 

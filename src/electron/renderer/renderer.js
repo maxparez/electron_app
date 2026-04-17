@@ -22,6 +22,7 @@ const state = {
         mode: 'gemini',
         folderPath: null,
         modelName: 'gemini-3-flash-preview',
+        matches: [],
         records: [],
         diagnostics: [],
         rawText: '',
@@ -86,6 +87,7 @@ const elements = {
     certFolderBtn: document.getElementById('select-cert-folder'),
     certFolderRefreshBtn: document.getElementById('refresh-cert-folder'),
     certFolderName: document.getElementById('cert-folder-name'),
+    certFilesList: document.getElementById('cert-files-list'),
     certProcessGeminiBtn: document.getElementById('process-cert-gemini'),
     certSystemPrompt: document.getElementById('cert-system-prompt'),
     certUserPrompt: document.getElementById('cert-user-prompt'),
@@ -248,6 +250,7 @@ async function init() {
     elements.certUserPrompt.value = CERT_USER_PROMPT;
     elements.certTemplatePath.value = state.certificateExtraction.exportMetadata.template_path;
     await refreshGeminiApiKeyStatus();
+    renderCertificateFilesList();
     updateCertificateActions();
     
     // Setup character counter for plakat common text
@@ -1050,9 +1053,12 @@ async function selectCertificateFolder() {
         state.certificateExtraction.folderPath = folderPath;
         state.selectedFolder['dvpp-certificates'] = folderPath;
         elements.certFolderName.textContent = wslToWindowsPath(folderPath);
+        showLoading(true, { text: 'Načítám certifikáty ve vybrané složce...' });
+        await loadCertificateMatches(folderPath);
+        showLoading(false);
         elements.certFolderRefreshBtn.style.display = 'inline-block';
-        updateCertificateActions();
     } catch (error) {
+        showLoading(false);
         console.error('Certificate folder selection error:', error);
         showMessage('Chyba při výběru složky s certifikáty.', 'error');
     }
@@ -1063,9 +1069,90 @@ async function refreshCertificateFolder() {
         showMessage('Není vybraná žádná složka s certifikáty.', 'warning');
         return;
     }
-    elements.certFolderName.textContent = wslToWindowsPath(state.certificateExtraction.folderPath);
+
+    try {
+        showLoading(true, { text: 'Obnovuji seznam certifikátů...' });
+        elements.certFolderName.textContent = wslToWindowsPath(state.certificateExtraction.folderPath);
+        await loadCertificateMatches(state.certificateExtraction.folderPath);
+        showLoading(false);
+    } catch (error) {
+        showLoading(false);
+        console.error('Certificate folder refresh error:', error);
+        showMessage(`Chyba při načítání certifikátů: ${error.message}`, 'error');
+    }
+}
+
+async function loadCertificateMatches(folderPath) {
+    const result = await window.electronAPI.apiCall('dvpp-certificates/scan', 'POST', {
+        folderPath
+    });
+
+    state.certificateExtraction.matches = result.matches || [];
+    state.selectedFiles['dvpp-certificates'] = state.certificateExtraction.matches.map((match) => match.file_path);
+    renderCertificateFilesList();
     updateCertificateActions();
-    showMessage('Složka s certifikáty je připravená ke zpracování.', 'success');
+
+    if (state.certificateExtraction.matches.length > 0) {
+        showMessage(`Nalezeno ${state.certificateExtraction.matches.length} podporovaných certifikátů.`, 'success');
+    } else {
+        showMessage('Ve vybrané složce nebyly nalezeny žádné podporované certifikáty.', 'warning');
+    }
+}
+
+function renderCertificateFilesList() {
+    elements.certFilesList.innerHTML = '';
+
+    if (!state.certificateExtraction.folderPath) {
+        elements.certFilesList.innerHTML = '<p class="file-item">Nejprve vyberte složku s certifikáty.</p>';
+        return;
+    }
+
+    if (state.certificateExtraction.matches.length === 0) {
+        elements.certFilesList.innerHTML = '<p class="file-item">Žádné podporované soubory PDF/JPG/JPEG/PNG nebyly nalezeny.</p>';
+        return;
+    }
+
+    state.certificateExtraction.matches.forEach((match, index) => {
+        const fileDiv = document.createElement('div');
+        fileDiv.className = 'file-item dvpp-file-item';
+        const isChecked = state.selectedFiles['dvpp-certificates'].includes(match.file_path);
+
+        fileDiv.innerHTML = `
+            <label class="checkbox-row">
+                <input
+                    type="checkbox"
+                    class="dvpp-checkbox"
+                    ${isChecked ? 'checked' : ''}
+                    onchange="toggleCertificateFile('${match.file_path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', this.checked)"
+                >
+                <div class="checkbox-row-content">
+                    <div class="file-path">
+                        <strong>${index + 1}. ${escapeHtml(match.relative_path)}</strong>
+                    </div>
+                    <div class="dvpp-file-meta">
+                        <span>${escapeHtml(wslToWindowsPath(match.file_path))}</span>
+                    </div>
+                </div>
+            </label>
+        `;
+
+        elements.certFilesList.appendChild(fileDiv);
+    });
+}
+
+function toggleCertificateFile(filePath, checked) {
+    const selected = state.selectedFiles['dvpp-certificates'];
+    const index = selected.indexOf(filePath);
+
+    if (checked && index === -1) {
+        selected.push(filePath);
+    }
+
+    if (!checked && index !== -1) {
+        selected.splice(index, 1);
+    }
+
+    updateCertificateActions();
 }
 
 async function processCertificatesWithGemini() {
@@ -1076,7 +1163,7 @@ async function processCertificatesWithGemini() {
 
         const result = await window.electronAPI.apiCall('dvpp-certificates/import/gemini', 'POST', {
             folderPath: state.certificateExtraction.folderPath,
-            selectedFiles: [],
+            selectedFiles: state.selectedFiles['dvpp-certificates'],
             modelName: state.certificateExtraction.modelName,
             apiKey
         });
@@ -1197,7 +1284,8 @@ function removeCertificateRecord(index) {
 }
 
 function updateCertificateActions() {
-    elements.certProcessGeminiBtn.disabled = !state.certificateExtraction.folderPath;
+    const hasSelectedFiles = state.selectedFiles['dvpp-certificates'].length > 0;
+    elements.certProcessGeminiBtn.disabled = !state.certificateExtraction.folderPath || !hasSelectedFiles;
     const hasRecords = state.certificateExtraction.records.length > 0;
     elements.certCopyTsvBtn.disabled = !hasRecords;
     elements.certSaveTsvBtn.disabled = !hasRecords;

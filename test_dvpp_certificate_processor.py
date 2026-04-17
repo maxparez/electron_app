@@ -44,6 +44,24 @@ class RecordingImporter:
 
 
 class DvppCertificateProcessorTests(unittest.TestCase):
+    def test_scan_folder_lists_supported_certificate_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir)
+            first = project_dir / "a.pdf"
+            second = project_dir / "nested" / "b.png"
+            ignored = project_dir / "notes.txt"
+            first.write_bytes(b"%PDF-1.4")
+            second.parent.mkdir(parents=True)
+            second.write_bytes(b"PNG")
+            ignored.write_text("ignore", encoding="utf-8")
+
+            processor = DvppCertificateProcessor(importer=RecordingImporter())
+            matches = processor.scan_folder(str(project_dir))
+
+            self.assertEqual(2, len(matches))
+            self.assertEqual("a.pdf", matches[0]["relative_path"])
+            self.assertEqual("nested/b.png", matches[1]["relative_path"])
+
     def test_process_imports_directory_as_one_file_per_request(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             project_dir = Path(temp_dir)
@@ -182,6 +200,69 @@ class DvppCertificateProcessorTests(unittest.TestCase):
         self.assertEqual("success", payload["status"])
         self.assertEqual(1, payload["data"]["processedFiles"])
         self.assertEqual("gemini-3-flash-preview", payload["data"]["modelName"])
+
+    def test_server_scan_endpoint_returns_matches(self) -> None:
+        class FakeProcessor:
+            def __init__(self, logger, importer=None) -> None:
+                self.logger = logger
+
+            def scan_folder(self, folder_path):
+                return [
+                    {
+                        "file_path": f"{folder_path}/a.pdf",
+                        "relative_path": "a.pdf",
+                    }
+                ]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir)
+
+            with patch.object(server, "DvppCertificateProcessor", FakeProcessor):
+                response = server.app.test_client().post(
+                    "/api/dvpp-certificates/scan",
+                    json={"folderPath": str(project_dir)},
+                )
+
+        self.assertEqual(200, response.status_code)
+        payload = response.get_json()
+        self.assertEqual("success", payload["status"])
+        self.assertEqual("a.pdf", payload["matches"][0]["relative_path"])
+
+    def test_server_endpoint_surfaces_first_processing_error_message(self) -> None:
+        class FakeProcessor:
+            def __init__(self, logger, importer=None) -> None:
+                self.logger = logger
+
+            def process(self, files, options):
+                return {
+                    "success": False,
+                    "data": None,
+                    "errors": ["Nepodarilo se nacist zadne podporovane soubory"],
+                    "warnings": [],
+                    "info": [],
+                }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir)
+
+            with patch.object(server, "DvppCertificateProcessor", FakeProcessor):
+                response = server.app.test_client().post(
+                    "/api/dvpp-certificates/import/gemini",
+                    json={
+                        "folderPath": str(project_dir),
+                        "selectedFiles": [],
+                        "modelName": "gemini-3-flash-preview",
+                        "apiKey": "test-key",
+                    },
+                )
+
+        self.assertEqual(400, response.status_code)
+        payload = response.get_json()
+        self.assertEqual("error", payload["status"])
+        self.assertEqual(
+            "Nepodarilo se nacist zadne podporovane soubory",
+            payload["message"],
+        )
 
     def test_import_raw_text_returns_shared_batch_payload(self) -> None:
         processor = DvppCertificateProcessor(importer=RecordingImporter())
