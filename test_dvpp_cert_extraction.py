@@ -549,6 +549,12 @@ class DvppCertExtractionTests(unittest.TestCase):
 
         self.assertIn("pydantic-ai-slim[google]==1.84.0", requirements_lines)
 
+    def test_windows_requirements_pin_pydantic_ai_version(self) -> None:
+        requirements_path = Path(__file__).resolve().parent / "requirements-windows.txt"
+        requirements_lines = requirements_path.read_text(encoding="utf-8").splitlines()
+
+        self.assertIn("pydantic-ai-slim[google]==1.84.0", requirements_lines)
+
 
 if __name__ == "__main__":
     unittest.main()
