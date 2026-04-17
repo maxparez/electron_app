@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+import importlib.util
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -14,10 +16,20 @@ from dvpp_cert_extraction import (
     normalize_date,
     normalize_topic,
     strip_titles,
+    validate_input_file,
 )
 
 
 class DvppCertExtractionTests(unittest.TestCase):
+    def _load_cli_module(self):
+        module_path = Path(__file__).resolve().parent / "scripts" / "dvpp_cert_extract.py"
+        spec = importlib.util.spec_from_file_location("dvpp_cert_extract_cli", module_path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("Unable to load CLI module")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
     def test_format_tsv_row_uses_expected_field_order(self) -> None:
         record = {
             "surname": "Novakova",
@@ -42,6 +54,23 @@ class DvppCertExtractionTests(unittest.TestCase):
         self.assertEqual("07.03.2024", normalize_date("2024-03-07"))
         self.assertEqual("07.03.2024", normalize_date("7.3.2024"))
         self.assertEqual("07.03.2024", normalize_date("07/03/2024"))
+
+    def test_validate_input_file_accepts_supported_extensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            base_dir = Path(temp_dir)
+            for extension in ("pdf", "jpg", "jpeg", "png"):
+                input_path = base_dir / f"certificate.{extension}"
+                input_path.write_text("sample", encoding="utf-8")
+
+                self.assertEqual(input_path.resolve(), validate_input_file(input_path))
+
+    def test_validate_input_file_rejects_unsupported_extension(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "certificate.txt"
+            input_path.write_text("sample", encoding="utf-8")
+
+            with self.assertRaises(ValueError):
+                validate_input_file(input_path)
 
     def test_strip_titles_removes_academic_prefixes_and_suffixes(self) -> None:
         self.assertEqual("Jana", strip_titles("Mgr. Jana, Ph.D."))
@@ -167,6 +196,44 @@ class DvppCertExtractionTests(unittest.TestCase):
         self.assertIn("pedagogicka diagnostika", prompt)
         self.assertIn("well-being a psychohygiena", prompt)
         self.assertIn("podpora uvadejicich/provazejicich ucitelu", prompt)
+
+    def test_cli_parse_args_supports_required_and_optional_arguments(self) -> None:
+        cli_module = self._load_cli_module()
+
+        parsed = cli_module.parse_args(
+            [
+                "--input",
+                "sample.pdf",
+                "--model",
+                "gemini-3-flash-preview",
+                "--output-json",
+                "result.json",
+                "--output-tsv",
+                "result.tsv",
+            ]
+        )
+
+        self.assertEqual(Path("sample.pdf"), parsed.input)
+        self.assertEqual("gemini-3-flash-preview", parsed.model)
+        self.assertEqual(Path("result.json"), parsed.output_json)
+        self.assertEqual(Path("result.tsv"), parsed.output_tsv)
+
+    def test_cli_parse_args_defaults_optional_output_paths_to_none(self) -> None:
+        cli_module = self._load_cli_module()
+
+        parsed = cli_module.parse_args(
+            [
+                "--input",
+                "sample.png",
+                "--model",
+                "gemini-3.1-pro-preview",
+            ]
+        )
+
+        self.assertEqual(Path("sample.png"), parsed.input)
+        self.assertEqual("gemini-3.1-pro-preview", parsed.model)
+        self.assertIsNone(parsed.output_json)
+        self.assertIsNone(parsed.output_tsv)
 
 
 if __name__ == "__main__":

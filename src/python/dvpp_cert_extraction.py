@@ -4,9 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Mapping
 import re
 
+
+SUPPORTED_EXTENSIONS = frozenset({".pdf", ".jpg", ".jpeg", ".png"})
+SUPPORTED_MODELS = (
+    "gemini-3-flash-preview",
+    "gemini-3.1-pro-preview",
+)
 
 TOPIC_CATALOG = (
     "pedagogicka diagnostika",
@@ -185,6 +192,16 @@ def normalize_topic(value: str) -> str:
     if stripped in TOPIC_WHITELIST:
         return stripped
     return ""
+
+
+def validate_input_file(path: str | Path) -> Path:
+    input_path = Path(path).expanduser()
+    if not input_path.exists() or not input_path.is_file():
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+    if input_path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+        supported = ", ".join(sorted(ext.lstrip(".") for ext in SUPPORTED_EXTENSIONS))
+        raise ValueError(f"Unsupported input file type: {input_path.suffix}. Supported: {supported}")
+    return input_path.resolve()
 
 
 def build_extraction_prompt() -> str:
