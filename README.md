@@ -2,6 +2,12 @@
 
 Desktop aplikace pro zpracování školní projektové dokumentace (OP JAK).
 
+Aktuální aplikace obsahuje čtyři nástroje:
+- Inovativní vzdělávání
+- Specifické datové položky do ZoR
+- Generátor plakátů
+- DVPP report
+
 ## Požadavky
 
 - Windows 10/11
@@ -65,6 +71,12 @@ electron_app/
 ├── tests/             # Testy
 └── legacy_code/       # Původní Python skripty
 ```
+
+## Poznámky k provozu
+
+- Electron komunikuje s lokálním Flask backendem na `127.0.0.1` přes konfigurovatelný port, výchozí je `5000`.
+- Generátor plakátů používá externí službu `publicita.dotaceeu.cz`, takže vyžaduje síťové připojení.
+- Praktické smoke testy jsou v tomto repozitáři převážně root-level Python skripty, například `test_inv_vzd.py`, `test_zor_spec_dat.py` a `test_complete_processing.py`.
 
 ## Licence
 

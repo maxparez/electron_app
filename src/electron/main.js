@@ -81,10 +81,11 @@ function startPythonServer() {
 async function waitForServer(retries = 30) {
     const expectedToken = backendManager.getInstanceToken();
     let lastIdentity = null;
+    const healthUrl = `${backendManager.getBaseUrl()}/api/health`;
 
     for (let i = 0; i < retries; i++) {
         try {
-            const response = await axios.get('http://localhost:5000/api/health');
+            const response = await axios.get(healthUrl);
             if (response.data.status === 'healthy' && response.data.instanceToken === expectedToken) {
                 console.log(`Python server is ready (pid=${response.data.pid}, token=${expectedToken})`);
                 return true;
