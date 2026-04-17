@@ -254,6 +254,10 @@ async function init() {
     loadLastFolder();
     elements.certSystemPrompt.value = CERT_SYSTEM_PROMPT;
     elements.certUserPrompt.value = CERT_USER_PROMPT;
+    elements.certProjectNumber.value = state.certificateExtraction.exportMetadata.project_number;
+    elements.certRecipientName.value = state.certificateExtraction.exportMetadata.recipient_name;
+    elements.certZorNumber.value = state.certificateExtraction.exportMetadata.zor_number;
+    elements.certFillHeader.checked = !!state.certificateExtraction.exportMetadata.fill_header;
     elements.certTemplatePath.value = state.certificateExtraction.exportMetadata.template_path;
     await refreshGeminiApiKeyStatus();
     await autoLoadStoredGeminiApiKey();
@@ -1419,6 +1423,13 @@ async function saveCertificateTsv() {
 
 async function saveCertificateExcel() {
     try {
+        const metadataValidationError = validateCertificateExportMetadata();
+        if (metadataValidationError) {
+            showMessage(metadataValidationError, 'error');
+            setStatusMessage(metadataValidationError, 5000);
+            return;
+        }
+
         const outputPath = await window.electronAPI.saveFile('dvpp_certificates.xlsx');
         if (!outputPath) {
             return;
@@ -1435,6 +1446,28 @@ async function saveCertificateExcel() {
         console.error('Save Excel error:', error);
         showMessage(`Chyba při vytváření Excelu: ${error.message}`, 'error');
     }
+}
+
+function validateCertificateExportMetadata() {
+    const exportMetadata = state.certificateExtraction.exportMetadata;
+    if (!exportMetadata.fill_header) {
+        return '';
+    }
+
+    const requiredFields = [
+        ['project_number', 'Registrační číslo projektu'],
+        ['recipient_name', 'Příjemce podpory'],
+        ['zor_number', 'Číslo ZoR']
+    ];
+    const missingFields = requiredFields
+        .filter(([fieldName]) => !String(exportMetadata[fieldName] || '').trim())
+        .map(([, label]) => label);
+
+    if (!missingFields.length) {
+        return '';
+    }
+
+    return `Vyplnění hlavičky evidence DVPP vyžaduje doplnit pole: ${missingFields.join(', ')}`;
 }
 
 async function selectCertificateTemplate() {

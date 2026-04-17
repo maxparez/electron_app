@@ -237,6 +237,39 @@ class DvppCertificateExportersTests(unittest.TestCase):
         self.assertEqual("success", payload["status"])
         self.assertEqual("/tmp/output.xlsx", payload["data"]["output_path"])
 
+    def test_server_excel_export_endpoint_prefers_specific_processor_error(self) -> None:
+        class FakeProcessor:
+            def __init__(self, logger, importer=None) -> None:
+                self.logger = logger
+
+            def export_excel(self, records_payload, export_metadata_payload, template_path=None, output_path=None):
+                return {
+                    "success": False,
+                    "data": None,
+                    "errors": ["Missing required export metadata: project_number"],
+                    "warnings": [],
+                    "info": [],
+                }
+
+        with patch.object(server, "DvppCertificateProcessor", FakeProcessor):
+            response = server.app.test_client().post(
+                "/api/dvpp-certificates/export/excel",
+                json={
+                    "records": [build_working_record_payload()],
+                    "exportMetadata": asdict(build_export_metadata(project_number="")),
+                    "templatePath": "/tmp/template.xlsx",
+                    "outputPath": "/tmp/output.xlsx",
+                },
+            )
+
+        self.assertEqual(400, response.status_code)
+        payload = response.get_json()
+        self.assertEqual("error", payload["status"])
+        self.assertEqual(
+            "Missing required export metadata: project_number",
+            payload["message"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

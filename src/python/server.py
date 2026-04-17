@@ -1195,10 +1195,12 @@ def export_dvpp_certificates_excel():
                 "info": result.get("info", []),
             })
 
+        error_messages = result.get("errors", [])
+        message = error_messages[0] if error_messages else "Excel export selhal"
         return jsonify({
             "status": "error",
-            "message": "Excel export selhal",
-            "errors": result.get("errors", []),
+            "message": message,
+            "errors": error_messages,
             "warnings": result.get("warnings", []),
             "info": result.get("info", []),
         }), 400
