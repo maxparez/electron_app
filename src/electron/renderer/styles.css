@@ -1438,6 +1438,97 @@ h3.error {
     background: #2980b9;
 }
 
+.file-link {
+    color: #1565c0;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.file-link:hover {
+    color: #0d47a1;
+    text-decoration: underline;
+}
+
+.dvpp-file-item {
+    padding: 0;
+    overflow: hidden;
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    width: 100%;
+    padding: 14px 16px;
+    cursor: pointer;
+}
+
+.dvpp-checkbox {
+    margin-top: 2px;
+    width: 18px;
+    height: 18px;
+    accent-color: #3498db;
+    flex-shrink: 0;
+}
+
+.checkbox-row-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+
+.dvpp-file-item .file-path {
+    color: #2c3e50;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.dvpp-file-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.dvpp-file-meta span {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #eaf4fb;
+    color: #456b84;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.dvpp-stats {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.info-messages {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.output-section .info-messages {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.output-section .info-messages li {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: #495057;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
 .output-footer {
     background: #f8f9fa;
     border-top: 1px solid #e0e0e0;
@@ -1457,12 +1548,29 @@ h3.error {
         grid-template-columns: 1fr;
     }
 
+    .dvpp-stats {
+        grid-template-columns: 1fr;
+    }
+
     .school-stats {
         grid-template-columns: 1fr;
     }
 
     .stat-value {
         font-size: 24px;
+    }
+
+    .checkbox-row {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .dvpp-file-meta {
+        gap: 6px;
+    }
+
+    .dvpp-file-meta span {
+        font-size: 11px;
     }
 
     .output-header {

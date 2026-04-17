@@ -1,7 +1,8 @@
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
+const axios = require('axios');
 
 class BackendManager {
     constructor() {
@@ -15,13 +16,80 @@ class BackendManager {
         const config = require('./config');
         this.maxRestartAttempts = config.get('backend.maxRestartAttempts', 5);
         this.restartDelay = config.get('backend.restartDelay', 3000);
+        this.port = config.get('python.port', 5000);
+        this.instanceToken = null;
+    }
+
+    getBaseUrl() {
+        return `http://127.0.0.1:${this.port}`;
+    }
+
+    getInstanceToken() {
+        return this.instanceToken;
+    }
+
+    sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    async fetchHealth(timeout = 1000) {
+        const response = await axios.get(`${this.getBaseUrl()}/api/health`, { timeout });
+        return response.data;
+    }
+
+    execCommand(command) {
+        return new Promise((resolve, reject) => {
+            exec(command, { windowsHide: true }, (error, stdout, stderr) => {
+                if (error) {
+                    reject(new Error(stderr || stdout || error.message));
+                    return;
+                }
+                resolve({ stdout, stderr });
+            });
+        });
+    }
+
+    async killProcessOnPort() {
+        if (process.platform !== 'win32') {
+            return false;
+        }
+
+        try {
+            await this.execCommand(`for /f "tokens=5" %a in ('netstat -ano ^| findstr :${this.port}') do taskkill /F /PID %a`);
+            return true;
+        } catch (error) {
+            console.warn(`[BackendManager] Failed to kill process on port ${this.port}: ${error.message}`);
+            return false;
+        }
+    }
+
+    async ensureNoConflictingBackend() {
+        try {
+            const health = await this.fetchHealth();
+            if (health.status === 'healthy' && health.instanceToken !== this.instanceToken) {
+                console.warn(
+                    `[BackendManager] Conflicting backend detected on port ${this.port}. ` +
+                    `PID=${health.pid || 'unknown'}, token=${health.instanceToken || 'none'}`
+                );
+                const killed = await this.killProcessOnPort();
+                if (killed) {
+                    await this.sleep(1000);
+                }
+            }
+        } catch (error) {
+            // Fresh start: nothing healthy is listening yet.
+        }
     }
 
     async start() {
         console.log('[BackendManager] Starting Python backend...');
+        this.isShuttingDown = false;
         this.lastStartTime = Date.now();
+        this.instanceToken = `${Date.now()}-${process.pid}-${Math.random().toString(16).slice(2)}`;
         
         try {
+            await this.ensureNoConflictingBackend();
+
             // Better production detection - check if we're in packaged app
             const isProd = app.isPackaged;
             const appPath = isProd ? process.resourcesPath : app.getAppPath();
@@ -110,6 +178,7 @@ class BackendManager {
             
             console.log('[BackendManager] Python path:', pythonPath);
             console.log('[BackendManager] Script path:', scriptPath);
+            console.log('[BackendManager] Instance token:', this.instanceToken);
             
             // Set environment variables
             const config = require('./config');
@@ -120,7 +189,9 @@ class BackendManager {
                 PYTHONPATH: isProd 
                     ? path.join(process.resourcesPath, 'app.asar.unpacked', 'src', 'python')
                     : path.join(appPath, 'src', 'python'),
-                FLASK_PORT: config.get('python.port', 5000)
+                FLASK_PORT: String(this.port),
+                PORT: String(this.port),
+                ELECTRON_APP_INSTANCE_TOKEN: this.instanceToken
             };
             
             // Windows-specific options to hide CMD window

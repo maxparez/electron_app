@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <title>Nástroje OP JAK – Instalace na Windows</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 2rem auto;
+        max-width: 960px;
+        line-height: 1.6;
+        color: #0f172a;
+      }
+      h1,
+      h2,
+      h3 {
+        color: #0b3b7e;
+      }
+      code {
+        background: #f4f4f5;
+        padding: 0.15rem 0.35rem;
+        border-radius: 4px;
+        font-family: "Consolas", "Monaco", monospace;
+      }
+      .callout {
+        border-left: 4px solid #2563eb;
+        padding: 0.75rem 1rem;
+        background: #eff6ff;
+        margin: 1.5rem 0;
+      }
+      .callout.warning {
+        border-left-color: #f59e0b;
+        background: #fffbeb;
+      }
+      .callout.success {
+        border-left-color: #10b981;
+        background: #f0fdf4;
+      }
+      ol li {
+        margin-bottom: 0.5rem;
+      }
+      ul {
+        margin-top: 0.25rem;
+      }
+      footer {
+        margin-top: 3rem;
+        font-size: 0.9rem;
+        color: #475569;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 1.5rem;
+      }
+      .step-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+      }
+      .step-number {
+        display: inline-block;
+        background: #2563eb;
+        color: white;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 2rem;
+        font-weight: bold;
+        margin-right: 0.5rem;
+      }
+      .download-btn {
+        display: inline-block;
+        background: #2563eb;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        margin: 0.5rem 0;
+      }
+      .download-btn:hover {
+        background: #1d4ed8;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+      }
+      th, td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      th {
+        background: #f8fafc;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>📦 Instalace aplikace Nástroje OP JAK (Windows)</h1>
+    <p>
+      Jednoduchý návod pro instalaci aplikace na Windows PC.
+      Celý proces trvá cca <strong>10-15 minut</strong> a vše běží lokálně
+      na vašem počítači.
+    </p>
+
+    <div class="callout success">
+      <strong>✅ Bezpečnost:</strong> Aplikace běží kompletně offline na vašem
+      počítači. Žádná data se neodesílají na internet.
+    </div>
+
+    <h2>1️⃣ Co budete potřebovat</h2>
+
+    <p>Před instalací si připravte tyto programy:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Program</th>
+          <th>Verze</th>
+          <th>Odkaz ke stažení</th>
+          <th>Poznámka</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Python</strong></td>
+          <td>3.11 – 3.13 (64-bit)</td>
+          <td><a href="https://www.python.org/downloads/">python.org/downloads</a></td>
+          <td>⚠️ Zaškrtněte "Add Python to PATH"</td>
+        </tr>
+        <tr>
+          <td><strong>Node.js</strong></td>
+          <td>18 LTS nebo novější</td>
+          <td><a href="https://nodejs.org/">nodejs.org</a></td>
+          <td>Nainstaluje i npm</td>
+        </tr>
+        <tr>
+          <td><strong>Git for Windows</strong></td>
+          <td>Nejnovější</td>
+          <td><a href="https://git-scm.com/download/win">git-scm.com</a></td>
+          <td>Pro stažení a aktualizace</td>
+        </tr>
+        <tr>
+          <td><strong>Microsoft Office</strong></td>
+          <td>2019+ nebo Microsoft 365</td>
+          <td>Váš systém</td>
+          <td>Nutný Excel pro zpracování</td>
+        </tr>
+        <tr>
+          <td><strong>VC++ Redistributable</strong></td>
+          <td>2015-2022 (x64)</td>
+          <td><a href="https://aka.ms/vs/17/release/vc_redist.x64.exe">Stáhnout</a></td>
+          <td>Závislost pro Node moduly</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout warning">
+      <strong>⚠️ Důležité:</strong> Při instalaci Pythonu <strong>musíte</strong>
+      zaškrtnout volbu "<em>Add Python to PATH</em>", jinak instalace nebude fungovat!
+    </div>
+
+    <h2>2️⃣ Instalace – 3 jednoduché kroky</h2>
+
+    <div class="step-card">
+      <h3><span class="step-number">1</span>Stáhněte instalátor</h3>
+      <p>Stáhněte si soubor <code>install.bat</code> z GitHubu:</p>
+      <a href="https://github.com/maxparez/electron_app/releases/latest/download/install.bat" class="download-btn">
+        ⬇️ Stáhnout install.bat
+      </a>
+      <p style="margin-top:1rem;">
+        Nebo navštivte:
+        <a href="https://github.com/maxparez/electron_app/releases/latest">
+          github.com/maxparez/electron_app/releases/latest
+        </a>
+      </p>
+    </div>
+
+    <div class="step-card">
+      <h3><span class="step-number">2</span>Spusťte instalaci</h3>
+      <p>Dvojklikem spusťte stažený soubor <code>install.bat</code></p>
+      <ul>
+        <li>Skript zkontroluje, zda máte nainstalované všechny potřebné programy</li>
+        <li>Pokud něco chybí, zobrazí se seznam s odkazy ke stažení</li>
+        <li>Po dokončení kontrol spustí automatickou instalaci</li>
+      </ul>
+    </div>
+
+    <div class="step-card">
+      <h3><span class="step-number">3</span>Hotovo!</h3>
+      <p>Po dokončení instalace najdete na ploše zástupce <strong>"Nástroje OP JAK"</strong></p>
+      <ul>
+        <li>Dvojklik spustí aplikaci</li>
+        <li>Při prvním spuštění potvrďte oprávnění firewallu (pokud se zobrazí)</li>
+        <li>Aplikace je připravena k použití</li>
+      </ul>
+    </div>
+
+    <h2>3️⃣ Co instalační skript udělá</h2>
+
+    <p>Instalátor automaticky provede tyto kroky:</p>
+
+    <ol>
+      <li><strong>Kontrola závislostí</strong> – ověří Python, Node.js, npm, Git</li>
+      <li><strong>Stažení aplikace</strong> – naklonuje z GitHubu do <code>C:\OPJAK\electron_app</code></li>
+      <li><strong>Python prostředí</strong> – vytvoří virtuální prostředí a nainstaluje knihovny</li>
+      <li><strong>Node.js moduly</strong> – nainstaluje potřebné moduly pro Electron</li>
+      <li><strong>Zástupce</strong> – vytvoří ikonu na ploše pro snadné spuštění</li>
+    </ol>
+
+    <div class="callout">
+      <strong>💡 Tip:</strong> Celý proces instalace trvá 5-10 minut, v závislosti
+      na rychlosti vašeho připojení k internetu.
+    </div>
+
+    <h2>4️⃣ Aktualizace aplikace</h2>
+
+      <p>Po instalaci najdete ve složce aplikace soubor <code>update.bat</code>:</p>
+
+    <ol>
+      <li>Přejděte do složky <code>C:\OPJAK\electron_app</code></li>
+      <li>Spusťte <code>update.bat</code> nebo <code>update-windows.bat</code> dvojklikem</li>
+      <li>Skript synchronizuje větev uloženou v <code>channel-config.json</code> a aktualizuje knihovny</li>
+    </ol>
+
+    <div class="callout success">
+      <strong>✅ Rychlá aktualizace:</strong> Skript stahuje pouze curated obsah
+      z aktivního instalačního kanálu, takže se na počítače kolegů netahají vývojářské soubory.
+    </div>
+
+    <div class="callout">
+      <strong>🧪 Testovací kanál:</strong> Pokud vám kolega pošle testovací větev, můžete instalaci jednorázově přepnout příkazem
+      <code>powershell -ExecutionPolicy Bypass -File .\scripts\update_windows.ps1 -Branch windows-install-test</code>.
+      Návrat zpět proběhne stejným způsobem s větví <code>windows-install</code>.
+      Aktualizační logy najdete v <code>logs\update\</code>, start aplikace v testovacím kanálu zapisuje do <code>logs\launcher\</code>.
+    </div>
+
+    <h2>5️⃣ Řešení problémů</h2>
+
+    <h3>❌ "Python není nainstalován"</h3>
+    <ul>
+      <li>Zkontrolujte, že Python je nainstalován: otevřete CMD a napište <code>python --version</code></li>
+      <li>Pokud nevidíte verzi, přeinstalujte Python a <strong>zaškrtněte "Add Python to PATH"</strong></li>
+      <li>Po přeinstalaci <strong>restartujte počítač</strong></li>
+    </ul>
+
+    <h3>❌ "Git není nainstalován"</h3>
+    <ul>
+      <li>Stáhněte a nainstalujte <a href="https://git-scm.com/download/win">Git for Windows</a></li>
+      <li>Při instalaci ponechte výchozí nastavení</li>
+      <li>Po instalaci restartujte CMD nebo instalátor</li>
+    </ul>
+
+    <h3>❌ "Nepodařilo se nainstalovat Python knihovny"</h3>
+    <ul>
+      <li>Zkontrolujte připojení k internetu</li>
+      <li>Vypněte dočasně antivirus/firewall</li>
+      <li>Zkuste spustit instalátor jako <strong>správce</strong> (pravým tlačítkem → "Spustit jako správce")</li>
+    </ul>
+
+    <h3>❌ "Aplikace se nespustí"</h3>
+    <ul>
+      <li>Zkontrolujte, že máte nainstalovaný Microsoft Excel</li>
+      <li>Přejděte do <code>C:\OPJAK\electron_app\logs</code></li>
+      <li>Otevřete <code>backend.log</code> a <code>electron.log</code></li>
+      <li>Pošlete tyto logy kolegovi, který poskytuje podporu</li>
+    </ul>
+
+    <h2>6️⃣ Odinstalace</h2>
+
+    <p>Pokud chcete aplikaci odinstalovat:</p>
+
+    <ol>
+      <li>Ukončete aplikaci (pokud běží)</li>
+      <li>Smažte složku <code>C:\OPJAK</code></li>
+      <li>Smažte zástupce z plochy</li>
+    </ol>
+
+    <p>Python, Node.js a Git můžete ponechat – využijete je i pro jiné aplikace.</p>
+
+    <div class="callout">
+      <strong>📞 Potřebujete pomoc?</strong><br>
+      V případě problémů kontaktujte IT podporu nebo kolegu, který aplikaci
+      spravuje. Přiložte případně logy ze složky <code>logs/</code>.
+    </div>
+
+    <footer>
+      <strong>Verze dokumentace:</strong> 1.1.0 · 2025-12-07<br>
+      <strong>Autor aplikace:</strong> Max Parez<br>
+      <strong>GitHub:</strong> <a href="https://github.com/maxparez/electron_app">github.com/maxparez/electron_app</a>
+    </footer>
+  </body>
+</html>

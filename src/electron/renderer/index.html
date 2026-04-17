@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:*; object-src 'none'; base-uri 'self'; form-action 'self';">
     <title>Nástroje pro ŠI a ŠII OP JAK</title>
     <link rel="stylesheet" href="styles.css">
     <script src="i18n.js"></script>
@@ -28,6 +29,10 @@
                 <i class="icon">🖼️</i>
                 <span>Generátor plakátů</span>
             </div>
+            <div class="nav-item" data-tool="dvpp">
+                <i class="icon">📚</i>
+                <span>DVPP report</span>
+            </div>
         </nav>
         
         <!-- Main Content Area -->
@@ -48,6 +53,10 @@
                     <div class="feature clickable-feature" data-tool="plakat">
                         <h3>🖼️ Generátor plakátů</h3>
                         <p>Vytvoření PDF plakátů povinné publicity.</p>
+                    </div>
+                    <div class="feature clickable-feature" data-tool="dvpp">
+                        <h3>📚 DVPP report</h3>
+                        <p>Souhrnný HTML report DVPP ze zvolených workbooků v projektové složce.</p>
                     </div>
                 </div>
             </div>
@@ -166,6 +175,39 @@
                 </form>
                 
                 <div id="plakat-results" class="results-container"></div>
+            </div>
+
+            <!-- DVPP Tool -->
+            <div id="dvpp-tool" class="tool-content">
+                <h2>DVPP report</h2>
+                <div class="tool-description">
+                    <p>Vyberte projektovou složku, zkontrolujte nalezené DVPP workbooky a vytvořte souhrnný HTML report.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Projektová složka:</label>
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="select-dvpp-folder">Vybrat projektovou složku</button>
+                        <button class="btn btn-secondary" id="refresh-dvpp-folder" style="display: none;">🔄 Obnovit seznam</button>
+                        <span class="form-hint">💡 Report se uloží přímo do této projektové složky</span>
+                    </div>
+                    <div id="dvpp-folder-name" class="file-item"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Nalezené DVPP soubory:</label>
+                    <div class="button-group">
+                        <button class="btn btn-secondary" id="dvpp-select-all" disabled>Vybrat vše</button>
+                        <button class="btn btn-secondary" id="dvpp-clear-selection" disabled>Zrušit výběr</button>
+                    </div>
+                    <div id="dvpp-files-list" class="files-list"></div>
+                </div>
+
+                <div class="form-group">
+                    <button class="btn btn-success" id="process-dvpp" disabled>Vytvořit HTML report</button>
+                </div>
+
+                <div id="dvpp-results" class="results-container"></div>
             </div>
         </main>
     </div>

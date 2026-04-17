@@ -1,0 +1,5 @@
+{
+  "channel": "stable",
+  "branch": "windows-install",
+  "debug_logging": false
+}

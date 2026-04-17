@@ -5,14 +5,17 @@ const state = {
     currentTool: 'welcome',
     selectedFiles: {
         'inv-vzd': [],
-        'zor-spec': []
+        'zor-spec': [],
+        'dvpp': []
     },
     selectedTemplate: {
         'inv-vzd': null
     },
     selectedFolder: {
-        'inv-vzd': null
+        'inv-vzd': null,
+        'dvpp': null
     },
+    dvppMatches: [],
     detectedTemplateVersion: null
 };
 
@@ -39,7 +42,17 @@ const elements = {
     zorFilesList: document.getElementById('zor-files-list'),
     zorProcessBtn: document.getElementById('process-zor-spec'),
     zorResults: document.getElementById('zor-spec-results'),
-    
+
+    // DVPP elements
+    dvppFolderBtn: document.getElementById('select-dvpp-folder'),
+    dvppRefreshBtn: document.getElementById('refresh-dvpp-folder'),
+    dvppFolderName: document.getElementById('dvpp-folder-name'),
+    dvppFilesList: document.getElementById('dvpp-files-list'),
+    dvppSelectAllBtn: document.getElementById('dvpp-select-all'),
+    dvppClearSelectionBtn: document.getElementById('dvpp-clear-selection'),
+    dvppProcessBtn: document.getElementById('process-dvpp'),
+    dvppResults: document.getElementById('dvpp-results'),
+
     // Plakat elements
     plakatForm: document.getElementById('plakat-form'),
     plakatResults: document.getElementById('plakat-results')
@@ -99,6 +112,11 @@ async function init() {
     // Setup process buttons
     elements.invProcessBtn.addEventListener('click', processInvVzd);
     elements.zorProcessBtn.addEventListener('click', processZorSpec);
+    elements.dvppFolderBtn.addEventListener('click', selectDvppFolder);
+    elements.dvppRefreshBtn.addEventListener('click', refreshDvppFolder);
+    elements.dvppSelectAllBtn.addEventListener('click', () => setDvppSelection(true));
+    elements.dvppClearSelectionBtn.addEventListener('click', () => setDvppSelection(false));
+    elements.dvppProcessBtn.addEventListener('click', processDvppReport);
     
     // Setup plakat form
     elements.plakatForm.addEventListener('submit', generatePlakat);
@@ -567,6 +585,256 @@ function checkZorSpecReady() {
         const errorMsg = document.getElementById('zor-version-error');
         if (errorMsg) errorMsg.remove();
         elements.zorProcessBtn.disabled = false;
+    }
+}
+
+function checkDvppReady() {
+    const hasFolder = !!state.selectedFolder['dvpp'];
+    const selectedCount = state.selectedFiles['dvpp'].length;
+    const hasMatches = state.dvppMatches.length > 0;
+
+    elements.dvppProcessBtn.disabled = !(hasFolder && selectedCount > 0);
+    elements.dvppSelectAllBtn.disabled = !hasMatches;
+    elements.dvppClearSelectionBtn.disabled = !hasMatches;
+}
+
+async function selectDvppFolder() {
+    try {
+        const folderPath = await window.electronAPI.selectFolder({
+            configKey: 'lastDvppFolder',
+            title: 'Vyberte projektovou složku pro DVPP report'
+        });
+
+        if (folderPath) {
+            state.selectedFolder['dvpp'] = folderPath;
+            elements.dvppFolderName.innerHTML = `
+                <div class="template-path">
+                    <strong>Cesta:</strong> ${wslToWindowsPath(folderPath)}
+                </div>
+            `;
+
+            showLoading(true, {
+                text: 'Hledám DVPP soubory v projektové složce...'
+            });
+            setStatusMessage('Prohledávám projektovou složku pro DVPP soubory...');
+
+            await loadDvppMatches(folderPath);
+            showLoading(false);
+            elements.dvppRefreshBtn.style.display = 'inline-block';
+        }
+    } catch (error) {
+        showLoading(false);
+        console.error('DVPP folder selection error:', error);
+        showMessage('Chyba při výběru projektové složky', 'error');
+        setStatusMessage('Výběr projektové složky selhal', 4000);
+    }
+}
+
+async function refreshDvppFolder() {
+    const folderPath = state.selectedFolder['dvpp'];
+    if (!folderPath) {
+        showMessage('Není vybrána žádná projektová složka', 'warning');
+        return;
+    }
+
+    try {
+        showLoading(true, {
+            text: 'Obnovuji seznam DVPP souborů...'
+        });
+        setStatusMessage('Znovu prohledávám projektovou složku...');
+        await loadDvppMatches(folderPath);
+        showLoading(false);
+    } catch (error) {
+        showLoading(false);
+        console.error('DVPP folder refresh error:', error);
+        showMessage('Chyba při obnovování DVPP seznamu', 'error');
+        setStatusMessage('Obnovení DVPP seznamu selhalo', 4000);
+    }
+}
+
+async function loadDvppMatches(folderPath) {
+    const result = await window.electronAPI.apiCall('scan/dvpp-directory', 'POST', {
+        projectDir: folderPath
+    });
+
+    state.dvppMatches = result.matches || [];
+    state.selectedFiles['dvpp'] = state.dvppMatches.map(match => match.file_path);
+    renderDvppFilesList();
+    checkDvppReady();
+
+    if (state.dvppMatches.length > 0) {
+        showMessage(`Nalezeno ${state.dvppMatches.length} vhodných DVPP souborů`, 'success');
+        setStatusMessage(`Nalezeno ${state.dvppMatches.length} DVPP souborů`, 4000);
+    } else {
+        showMessage('Ve vybrané složce nebyly nalezeny žádné vhodné DVPP soubory', 'warning');
+        setStatusMessage('Nebyly nalezeny žádné vhodné DVPP soubory', 4000);
+    }
+}
+
+function renderDvppFilesList() {
+    elements.dvppFilesList.innerHTML = '';
+
+    if (state.dvppMatches.length === 0) {
+        elements.dvppFilesList.innerHTML = '<p class="file-item">Žádné DVPP soubory nebyly nalezeny</p>';
+        return;
+    }
+
+    state.dvppMatches.forEach((match, index) => {
+        const fileDiv = document.createElement('div');
+        fileDiv.className = 'file-item dvpp-file-item';
+
+        const isChecked = state.selectedFiles['dvpp'].includes(match.file_path);
+        const reportInfo = match.report_number ? `ZoR ${match.report_number}` : 'ZoR neuvedeno';
+
+        fileDiv.innerHTML = `
+            <label class="checkbox-row">
+                <input
+                    type="checkbox"
+                    class="dvpp-checkbox"
+                    ${isChecked ? 'checked' : ''}
+                    onchange="toggleDvppFile('${match.file_path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', this.checked)"
+                >
+                <div class="checkbox-row-content">
+                    <div class="file-path">
+                        <strong>${index + 1}. ${match.relative_path}</strong>
+                    </div>
+                    <div class="dvpp-file-meta">
+                        <span>${reportInfo}</span>
+                        <span>${match.participant_count} účastníků</span>
+                        <span>List: ${match.sheet_name}</span>
+                    </div>
+                </div>
+            </label>
+        `;
+
+        elements.dvppFilesList.appendChild(fileDiv);
+    });
+}
+
+function toggleDvppFile(filePath, checked) {
+    const selected = state.selectedFiles['dvpp'];
+    const index = selected.indexOf(filePath);
+
+    if (checked && index === -1) {
+        selected.push(filePath);
+    }
+
+    if (!checked && index !== -1) {
+        selected.splice(index, 1);
+    }
+
+    checkDvppReady();
+}
+
+function setDvppSelection(selectAll) {
+    state.selectedFiles['dvpp'] = selectAll ? state.dvppMatches.map(match => match.file_path) : [];
+    renderDvppFilesList();
+    checkDvppReady();
+}
+
+async function processDvppReport() {
+    try {
+        showLoading(true);
+        setStatusMessage('Generuji DVPP report...');
+
+        const result = await window.electronAPI.apiCall('process/dvpp-report', 'POST', {
+            projectDir: state.selectedFolder['dvpp'],
+            filePaths: state.selectedFiles['dvpp']
+        });
+
+        showLoading(false);
+
+        if (result.status === 'success') {
+            const reportPath = wslToWindowsPath(result.data.report_path);
+            const processedFiles = result.data.selected_files || [];
+            const reportCount = (result.data.report_numbers || []).length;
+
+            let resultHtml = `
+                <div class="status-banner">
+                    <div class="status-content">
+                        <div class="status-icon">✓</div>
+                        <div class="status-text">
+                            <h3>DVPP report vygenerován</h3>
+                            <p>HTML report byl uložen do projektové složky a je připraven k otevření.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid dvpp-stats">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <div class="stat-header">
+                                <div class="stat-label">ZPRACOVANÉ SOUBORY</div>
+                            </div>
+                            <div class="stat-value">${result.data.files_processed}</div>
+                        </div>
+                        <div class="stat-icon">📄</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <div class="stat-header">
+                                <div class="stat-label">UNIKÁTNÍ PEDAGOGOVÉ</div>
+                            </div>
+                            <div class="stat-value">${result.data.unique_participants}</div>
+                        </div>
+                        <div class="stat-icon">👥</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <div class="stat-header">
+                                <div class="stat-label">ZAHRNUTÉ ZOR</div>
+                            </div>
+                            <div class="stat-value">${reportCount}</div>
+                        </div>
+                        <div class="stat-icon">📚</div>
+                    </div>
+                </div>
+
+                <div class="output-section">
+                    <h4>Výstupní report</h4>
+                    <p>
+                        <a href="#" onclick="openFile('${reportPath.replace(/\\/g, '\\\\')}'); return false;" class="file-link">
+                            ${result.data.report_filename}
+                        </a>
+                    </p>
+                </div>
+            `;
+
+            if (processedFiles.length > 0) {
+                resultHtml += `
+                    <div class="output-section">
+                        <h4>Zpracované soubory</h4>
+                        <ul class="info-messages">
+                            ${processedFiles.map(file => `<li>${file}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            elements.dvppResults.innerHTML = resultHtml;
+            elements.dvppResults.classList.add('show');
+            showMessage(`DVPP report uložen: ${result.data.report_filename}`, 'success');
+        } else {
+            let errorHtml = `
+                <h3 class="error">Zpracování selhalo ❌</h3>
+                <p><strong>Hlavní zpráva:</strong> ${result.message || 'Neznámá chyba'}</p>
+            `;
+
+            if (result.errors && result.errors.length > 0) {
+                errorHtml += '<h4>Detailní chyby:</h4><ul class="error-messages">';
+                result.errors.forEach(error => {
+                    errorHtml += `<li class="error-item">${error}</li>`;
+                });
+                errorHtml += '</ul>';
+            }
+
+            elements.dvppResults.innerHTML = errorHtml;
+            elements.dvppResults.classList.add('show');
+        }
+    } catch (error) {
+        showLoading(false);
+        console.error('DVPP processing error:', error);
+        showMessage('Chyba při generování DVPP reportu: ' + error.message, 'error');
     }
 }
 

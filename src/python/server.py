@@ -1,8 +1,11 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+import json
 import os
 import sys
 import tempfile
+from pathlib import Path
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 # Add tools directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
@@ -11,16 +14,19 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
 from tools.inv_vzd_processor import InvVzdProcessor
 from tools.zor_spec_dat_processor import ZorSpecDatProcessor
 from tools.plakat_generator import PlakatGenerator
+from tools.dvpp_report_processor import DvppReportProcessor
+from channel_config import load_channel_config, resolve_debug_mode
 
 # Initialize logging
 from logger import init_logging
 server_logger, tool_logger = init_logging()
+CHANNEL_CONFIG = load_channel_config()
+BACKEND_INSTANCE_TOKEN = os.environ.get("ELECTRON_APP_INSTANCE_TOKEN", "")
+BACKEND_PORT = int(os.environ.get("FLASK_PORT") or os.environ.get("PORT") or 5000)
+PACKAGE_JSON_PATH = Path(__file__).resolve().parents[2] / "package.json"
 
-# DEBUG mode - set to False for production
-DEBUG_MODE = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
-
-# Force debug mode to be always on for debugging InvVzd issues
-DEBUG_MODE = True
+# DEBUG mode is controlled by env override or channel configuration
+DEBUG_MODE = resolve_debug_mode(CHANNEL_CONFIG, os.environ)
 print(f"[SERVER] DEBUG MODE ENABLED: {DEBUG_MODE}")
 
 def debug_print(*args, **kwargs):
@@ -41,6 +47,40 @@ if sys.platform == 'win32':
 app = Flask(__name__)
 CORS(app)
 
+
+def build_backend_metadata():
+    """Return identity metadata so Electron can verify it talks to the expected backend instance."""
+    return {
+        "pid": os.getpid(),
+        "channel": CHANNEL_CONFIG.channel,
+        "branch": CHANNEL_CONFIG.branch,
+        "debugLogging": CHANNEL_CONFIG.debug_logging,
+        "instanceToken": BACKEND_INSTANCE_TOKEN,
+        "port": BACKEND_PORT,
+    }
+
+
+def get_app_version():
+    """Load the application version from package.json when available."""
+    try:
+        package_data = json.loads(PACKAGE_JSON_PATH.read_text(encoding="utf-8"))
+        return str(package_data.get("version") or "1.0.0")
+    except Exception:
+        return "1.0.0"
+
+
+def convert_path_if_needed(path):
+    """Convert Windows path to WSL path when the backend runs on Linux/WSL."""
+    if path and isinstance(path, str):
+        import platform
+        if platform.system() == 'Linux' and len(path) >= 3 and path[1:3] == ':\\':
+            drive_letter = path[0].lower()
+            remaining_path = path[3:].replace('\\', '/')
+            converted = f'/mnt/{drive_letter}/{remaining_path}'
+            server_logger.info(f"Converting Windows path to WSL: {path} -> {converted}")
+            return converted
+    return path
+
 # Configure Flask logging
 import logging
 app.logger.handlers = []
@@ -57,7 +97,8 @@ def health_check():
     """Health check endpoint"""
     return jsonify({
         "status": "healthy",
-        "message": "Python backend is running"
+        "message": "Python backend is running",
+        **build_backend_metadata(),
     })
 
 @app.route('/api/detect/template-version', methods=['POST'])
@@ -615,18 +656,6 @@ def process_zor_spec_paths():
         auto_save = data.get('autoSave', False)  # Auto-save to source folder
         
         # Convert Windows paths to WSL paths if needed (only on Linux/WSL)
-        def convert_path_if_needed(path):
-            if path and isinstance(path, str):
-                # Only convert if we're on Linux/WSL and path is Windows format
-                import platform
-                if platform.system() == 'Linux' and len(path) >= 3 and path[1:3] == ':\\':
-                    drive_letter = path[0].lower()
-                    remaining_path = path[3:].replace('\\', '/')
-                    wsl_path = f'/mnt/{drive_letter}/{remaining_path}'
-                    server_logger.info(f"Converting Windows path to WSL: {path} -> {wsl_path}")
-                    return wsl_path
-            return path
-        
         # Convert paths
         file_paths = [convert_path_if_needed(fp) for fp in file_paths]
         
@@ -829,44 +858,128 @@ def process_plakat():
             'output_dir': temp_dir
         }
         
-        result = processor.process([], options)
-        
-        if result['success']:
-            # Read output files and prepare response
-            output_files = []
-            for file_path in result['data'].get('output_files', []):
-                with open(file_path, 'rb') as f:
-                    output_content = f.read()
-                    output_files.append({
-                        'filename': os.path.basename(file_path),
-                        'content': output_content.hex(),  # Convert to hex for JSON
-                        'size': len(output_content)
-                    })
+        try:
+            result = processor.process([], options)
             
-            return jsonify({
-                "status": "success", 
-                "message": result.get('message', 'Generování dokončeno'),
-                "data": {
-                    "successful_projects": result['data'].get('successful_projects', 0),
-                    "failed_projects": result['data'].get('failed_projects', 0),
-                    "total_projects": result['data'].get('total_projects', 0),
-                    "output_files": output_files
-                },
-                "errors": result.get('errors', []),
-                "warnings": result.get('warnings', []),
-                "info": result.get('info', [])
-            })
-        else:
+            if result['success']:
+                # Read output files and prepare response
+                output_files = []
+                for file_path in result['data'].get('output_files', []):
+                    with open(file_path, 'rb') as f:
+                        output_content = f.read()
+                        output_files.append({
+                            'filename': os.path.basename(file_path),
+                            'content': output_content.hex(),  # Convert to hex for JSON
+                            'size': len(output_content)
+                        })
+                
+                return jsonify({
+                    "status": "success", 
+                    "message": result.get('message', 'Generování dokončeno'),
+                    "data": {
+                        "successful_projects": result['data'].get('successful_projects', 0),
+                        "failed_projects": result['data'].get('failed_projects', 0),
+                        "total_projects": result['data'].get('total_projects', 0),
+                        "output_files": output_files
+                    },
+                    "errors": result.get('errors', []),
+                    "warnings": result.get('warnings', []),
+                    "info": result.get('info', [])
+                })
+
             return jsonify({
                 "status": "error",
                 "message": result.get('message', 'Generování selhalo'),
                 "errors": result.get('errors', []),
                 "warnings": result.get('warnings', [])
             }), 400
+        finally:
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
             
     except Exception as e:
         server_logger.error(f"Error in plakat processing: {str(e)}")
         return jsonify({"error": f"Vnitřní chyba serveru: {str(e)}"}), 500
+
+
+@app.route('/api/scan/dvpp-directory', methods=['POST'])
+def scan_dvpp_directory():
+    """Scan a project directory for DVPP workbooks."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "success": False,
+                "message": "No data provided"
+            }), 400
+
+        project_dir = convert_path_if_needed(data.get('projectDir'))
+        if not project_dir:
+            return jsonify({
+                "success": False,
+                "message": "No project directory provided"
+            }), 400
+
+        processor = DvppReportProcessor(tool_logger)
+        matches = processor.scan_project_directory(project_dir)
+
+        return jsonify({
+            "success": True,
+            "message": f"Nalezeno {len(matches)} DVPP souborů",
+            "matches": matches
+        })
+
+    except Exception as e:
+        server_logger.error(f"Error scanning DVPP directory: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/process/dvpp-report', methods=['POST'])
+def process_dvpp_report():
+    """Generate a DVPP HTML report from selected workbook paths."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        project_dir = convert_path_if_needed(data.get('projectDir'))
+        file_paths = [convert_path_if_needed(path) for path in data.get('filePaths', [])]
+
+        processor = DvppReportProcessor(tool_logger)
+        result = processor.process(file_paths, {"project_dir": project_dir})
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "DVPP report byl úspěšně vygenerován",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", [])
+            })
+
+        return jsonify({
+            "status": "error",
+            "message": "Zpracování DVPP reportu selhalo",
+            "errors": result.get("errors", []),
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", [])
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error processing DVPP report: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 @app.route('/api/config', methods=['GET'])
 def get_config():
@@ -874,7 +987,11 @@ def get_config():
     return jsonify({
         "status": "success",
         "data": {
-            "version": "1.0.0",
+            "version": get_app_version(),
+            "channel": CHANNEL_CONFIG.channel,
+            "updateBranch": CHANNEL_CONFIG.branch,
+            "debugLogging": CHANNEL_CONFIG.debug_logging,
+            "backend": build_backend_metadata(),
             "tools": [
                 {
                     "id": "inv-vzd",
@@ -890,6 +1007,11 @@ def get_config():
                     "id": "plakat",
                     "name": "Generátor plakátů",
                     "description": "Generování PDF plakátů"
+                },
+                {
+                    "id": "dvpp",
+                    "name": "DVPP report",
+                    "description": "Souhrnný HTML report podpory DVPP"
                 }
             ]
         }
@@ -897,7 +1019,8 @@ def get_config():
 
 if __name__ == '__main__':
     # Run the Flask server
-    port = int(os.environ.get('PORT', 5000))
-    server_logger.info(f"Starting Flask server on port {port}")
+    server_logger.info(f"Starting Flask server on port {BACKEND_PORT}")
+    server_logger.info(f"Active channel: {CHANNEL_CONFIG.channel} ({CHANNEL_CONFIG.branch})")
     server_logger.info(f"DEBUG MODE: {DEBUG_MODE}")
-    app.run(host='127.0.0.1', port=port, debug=DEBUG_MODE)
+    server_logger.info(f"Backend instance token: {BACKEND_INSTANCE_TOKEN or 'none'}")
+    app.run(host='127.0.0.1', port=BACKEND_PORT, debug=DEBUG_MODE)
