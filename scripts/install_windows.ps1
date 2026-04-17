@@ -124,7 +124,7 @@ Pop-Location
 Write-Step "Rychlá kontrola backendu"
 try {
     Push-Location $repoPath
-    & $venvPython -m pytest tests/test_students_16plus.py
+    & $venvPython -m pytest test_students_16plus.py
     Pop-Location
 }
 catch {
