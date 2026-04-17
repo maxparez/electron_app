@@ -31,6 +31,7 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         content = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
 
         self.assertIn("'dvpp-certificates': []", content)
+        self.assertIn("TEMPLATE_OPTIONS", content)
         self.assertIn("loadCertificateMatches", content)
         self.assertIn("processCertificatesWithGemini", content)
         self.assertIn("processCertificatesFromRawText", content)
@@ -58,6 +59,13 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("error.errors = result.errors || [];", preload)
         self.assertIn("if (error.data && error.data.batch)", renderer)
         self.assertIn("applyCertificateBatchResult(error.data.batch, error.data.diagnostics || []);", renderer)
+
+    def test_renderer_supports_template_select_and_copy_feedback(self) -> None:
+        renderer = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
+
+        self.assertIn("data-cert-record-field=\"sablona\"", renderer)
+        self.assertIn("TSV obsah byl zkopírován do schránky.", renderer)
+        self.assertIn("setStatusMessage(successMessage, 4000);", renderer)
 
 
 if __name__ == "__main__":

@@ -38,6 +38,7 @@ def build_working_record_payload() -> dict:
         completion_date="15.03.2024",
         hours="16",
         topic="well-being a psychohygiena",
+        sablona="vzdělávání ZŠ_2_II_4",
     )
     return {
         "extracted_record": {
@@ -47,6 +48,7 @@ def build_working_record_payload() -> dict:
             "course_name": extracted.course_name,
             "completion_date": extracted.completion_date,
             "hours": extracted.hours,
+            "sablona": extracted.sablona,
             "topic": extracted.topic,
             "uncertainty_notes": extracted.uncertainty_notes,
             "origin": None,
@@ -58,6 +60,7 @@ def build_working_record_payload() -> dict:
             "course_name": working.course_name,
             "completion_date": working.completion_date,
             "hours": working.hours,
+            "sablona": working.sablona,
             "topic": working.topic,
             "uncertainty_notes": working.uncertainty_notes,
             "origin": None,
@@ -113,6 +116,7 @@ class DvppCertificateExportersTests(unittest.TestCase):
             self.assertEqual(b"template-bytes", template_path.read_bytes())
             self.assertEqual(1, len(writer_calls))
             self.assertEqual(output_path, writer_calls[0][0])
+            self.assertEqual("vzdělávání ZŠ_2_II_4", writer_calls[0][1][0].sablona)
 
     def test_export_records_to_excel_requires_metadata_before_write_when_header_enabled(self) -> None:
         record = build_working_record_payload()

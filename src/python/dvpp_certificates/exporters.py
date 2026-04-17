@@ -145,7 +145,7 @@ def _write_records_with_xlwings(
                 [
                     record.surname,
                     record.name,
-                    "",
+                    record.sablona,
                     record.course_name,
                     record.completion_date,
                     record.hours,

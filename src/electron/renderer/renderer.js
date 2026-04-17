@@ -143,6 +143,14 @@ Vynech tituly.
 Datum narození i datum ukončení musí být ve tvaru dd.mm.yyyy.
 Finální výstup vlož do jednoho bloku kódu \`\`\`text.`;
 
+const TEMPLATE_OPTIONS = [
+    'vzdělávání MŠ_2_I_5',
+    'vzdělávání ZŠ_2_II_4',
+    'vzdělávání ŠD_SK_2_V_1',
+    'vzdělávání SVČ_2_V_1',
+    'vzdělávání ZUŠ_2_VII_1'
+];
+
 // Status bar functions
 function setStatusMessage(message, duration = 0) {
     const statusElement = document.getElementById('status-message');
@@ -1239,11 +1247,18 @@ function renderCertificateRecordsTable() {
     }
 
     elements.certRecordsTable.className = 'cert-records-table';
+    const templateOptionsHtml = TEMPLATE_OPTIONS.map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('');
     const rowsHtml = state.certificateExtraction.records.map((record, index) => `
         <tr>
             <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="surname" value="${escapeHtml(record.working_record.surname || '')}"></td>
             <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="name" value="${escapeHtml(record.working_record.name || '')}"></td>
             <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="birth_date" value="${escapeHtml(record.working_record.birth_date || '')}"></td>
+            <td>
+                <select data-cert-record-index="${index}" data-cert-record-field="sablona">
+                    <option value="">Vyberte šablonu</option>
+                    ${templateOptionsHtml}
+                </select>
+            </td>
             <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="course_name" value="${escapeHtml(record.working_record.course_name || '')}"></td>
             <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="completion_date" value="${escapeHtml(record.working_record.completion_date || '')}"></td>
             <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="hours" value="${escapeHtml(record.working_record.hours || '')}"></td>
@@ -1259,6 +1274,7 @@ function renderCertificateRecordsTable() {
                     <th>Příjmení</th>
                     <th>Jméno</th>
                     <th>Datum narození</th>
+                    <th>Šablona</th>
                     <th>Název kurzu</th>
                     <th>Datum ukončení</th>
                     <th>Hodiny</th>
@@ -1269,6 +1285,13 @@ function renderCertificateRecordsTable() {
             <tbody>${rowsHtml}</tbody>
         </table>
     `;
+
+    state.certificateExtraction.records.forEach((record, index) => {
+        const select = elements.certRecordsTable.querySelector(`select[data-cert-record-index="${index}"][data-cert-record-field="sablona"]`);
+        if (select) {
+            select.value = record.working_record.sablona || '';
+        }
+    });
 }
 
 function bindCertificateInteractionHandlers() {
@@ -1289,11 +1312,15 @@ function bindCertificateInteractionHandlers() {
         if (!(target instanceof HTMLInputElement)) {
             return;
         }
-        const { certRecordIndex, certRecordField } = target.dataset;
-        if (certRecordIndex === undefined || !certRecordField) {
+        handleCertificateRecordFieldChange(target);
+    });
+
+    elements.certRecordsTable.addEventListener('change', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) {
             return;
         }
-        updateCertificateField(Number(certRecordIndex), certRecordField, target.value);
+        handleCertificateRecordFieldChange(target);
     });
 
     elements.certRecordsTable.addEventListener('click', (event) => {
@@ -1307,6 +1334,14 @@ function bindCertificateInteractionHandlers() {
         }
         removeCertificateRecord(Number(button.getAttribute('data-cert-remove-index')));
     });
+}
+
+function handleCertificateRecordFieldChange(target) {
+    const { certRecordIndex, certRecordField } = target.dataset;
+    if (certRecordIndex === undefined || !certRecordField) {
+        return;
+    }
+    updateCertificateField(Number(certRecordIndex), certRecordField, target.value);
 }
 
 function renderCertificateDiagnostics() {
@@ -1424,6 +1459,7 @@ async function copyTextToClipboard(text, successMessage) {
         await navigator.clipboard.writeText(text);
         if (successMessage) {
             showMessage(successMessage, 'success');
+            setStatusMessage(successMessage, 4000);
         }
     } catch (error) {
         console.error('Clipboard error:', error);

@@ -42,6 +42,7 @@ class DvppCertificatesDomainTests(unittest.TestCase):
         self.assertEqual("14.03.2024", record.completion_date)
         self.assertEqual("8", record.hours)
         self.assertEqual("umela inteligence", record.topic)
+        self.assertEqual("", record.sablona)
         self.assertEqual("birth date read from low-quality scan", record.uncertainty_notes)
         self.assertIs(record.origin, origin)
 
