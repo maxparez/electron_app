@@ -109,6 +109,7 @@ def _format_tsv_row(record: CertificateRecord) -> str:
         payload.get("surname", ""),
         payload.get("name", ""),
         payload.get("birth_date", ""),
+        payload.get("sablona", ""),
         payload.get("course_name", ""),
         payload.get("completion_date", ""),
         payload.get("hours", ""),

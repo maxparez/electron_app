@@ -91,6 +91,7 @@ class DvppCertificateExportersTests(unittest.TestCase):
             self.assertTrue(output_path.exists())
             self.assertIn("Kurz AI ve vyuce - upraveno", output_path.read_text(encoding="utf-8"))
             self.assertIn("15.03.2024", result["content"])
+            self.assertIn("vzdělávání ZŠ_2_II_4", result["content"])
 
     def test_export_records_to_excel_copies_template_without_overwriting_source(self) -> None:
         record = build_working_record_payload()

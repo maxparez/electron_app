@@ -25,7 +25,9 @@ class DvppCertificatesNormalizationTests(unittest.TestCase):
         self.assertEqual("07.03.2024?", normalize_date("07/03/2024?"))
 
     def test_normalize_topic_enforces_whitelist(self) -> None:
-        self.assertEqual("umela inteligence", normalize_topic("umela inteligence"))
+        self.assertEqual("umělá inteligence", normalize_topic("umela inteligence"))
+        self.assertEqual("formativní hodnocení", normalize_topic("formativní hodnocení"))
+        self.assertEqual("formativní hodnocení", normalize_topic("formativni hodnoceni"))
         self.assertEqual("", normalize_topic("finance a ucetnictvi"))
 
     def test_normalize_certificate_fields_returns_canonical_record(self) -> None:
@@ -43,6 +45,7 @@ class DvppCertificatesNormalizationTests(unittest.TestCase):
                 "course_name": "Kurz AI ve vyuce",
                 "completion_date": "14/03/2024",
                 "hours": " 8 ",
+                "sablona": "vzdělávání ZŠ_2_II_4",
                 "topic": "umela inteligence",
                 "uncertainty_notes": "  low-confidence surname  ",
             },
@@ -55,7 +58,8 @@ class DvppCertificatesNormalizationTests(unittest.TestCase):
         self.assertEqual("05.09.1980", record.birth_date)
         self.assertEqual("14.03.2024", record.completion_date)
         self.assertEqual("8", record.hours)
-        self.assertEqual("umela inteligence", record.topic)
+        self.assertEqual("vzdělávání ZŠ_2_II_4", record.sablona)
+        self.assertEqual("umělá inteligence", record.topic)
         self.assertEqual("low-confidence surname", record.uncertainty_notes)
         self.assertIs(record.origin, origin)
 

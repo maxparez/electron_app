@@ -3,48 +3,50 @@ from __future__ import annotations
 from datetime import datetime
 import re
 from typing import TYPE_CHECKING, Mapping
+import unicodedata
 
 if TYPE_CHECKING:
     from dvpp_certificates.domain import RecordOrigin
 
 
 TOPIC_CATALOG = (
-    "pedagogicka diagnostika",
-    "individualizace vzdelavani",
-    "formativni hodnoceni",
-    "podpora nadani/talentu",
-    "recova vychova",
+    "pedagogická diagnostika",
+    "individualizace vzdělávání",
+    "formativní hodnocení",
+    "podpora nadání/talentu",
+    "řečová výchova",
     "grafomotorika",
-    "rozvoj gramotnosti",
-    "rozvoj digitalnich kompetenci",
+    "rozvoj gramotností",
+    "rozvoj digitálních kompetencí",
     "podpora polytechniky",
     (
-        "vzdelavani pro udrzitelny rozvoj - napr. EVVO "
-        "(environmentalni vzdelavani, vychova a osveta), klimaticke vzdelavani, "
-        "principy mistne zakotveneho uceni"
+        "vzdělávání pro udržitelný rozvoj – např. EVVO "
+        "(environmentální vzdělávání, výchova a osvěta), klimatické vzdělávání, "
+        "principy místně zakotveného učení"
     ),
     "well-being a psychohygiena",
-    "genderova tematika v obsahu vzdelavani",
-    "vyuka modernich dejin",
-    "medialni gramotnost",
-    "prevence kybersikany",
-    "chovani na socialnich sitich",
-    "umela inteligence",
-    "pohybove aktivity",
+    "genderová tematika v obsahu vzdělávání",
+    "výuka moderních dějin",
+    "mediální gramotnost",
+    "prevence kyberšikany",
+    "chování na sociálních sítích",
+    "umělá inteligence",
+    "pohybové aktivity",
     (
-        "prace s detmi/zaky se specialnimi vzdelavacimi potrebami; "
-        "vzdelavani heterogennich kolektivu"
+        "práce s dětmi/žáky se speciálními vzdělávacími potřebami; "
+        "vzdělávání heterogenních kolektivů"
     ),
-    "vzdelavani deti/zaku cizincu a deti/zaku s potrebou jazykove podpory",
-    "rozvoj pedagogickych kompetenci v oblasti metod a forem vzdelavani",
-    "komunikace se zakonnymi zastupci",
-    "management skol",
-    "rizeni organizace",
-    "leadership a rizeni pedagogickeho procesu",
-    "vzdelavani deti a zaku z marginalizovanych skupin, jako jsou Romove",
-    "podpora uvadejicich/provazejicich ucitelu",
+    "vzdělávání dětí/žáků cizinců a dětí/žáků s potřebou jazykové podpory",
+    "rozvoj pedagogických kompetencí v oblasti metod a forem vzdělávání",
+    "komunikace se zákonnými zástupci",
+    "management škol",
+    "řízení organizace",
+    "leadership a řízení pedagogického procesu",
+    "vzdělávání dětí a žáků z marginalizovaných skupin, jako jsou Romové",
+    "podpora uvádějících/provázejících učitelů",
 )
 TOPIC_WHITELIST = frozenset(TOPIC_CATALOG)
+TOPIC_LOOKUP = {}
 DATE_FORMATS = ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y")
 TITLE_PATTERNS = (
     r"Bc\.",
@@ -60,6 +62,20 @@ TITLE_PATTERNS = (
 LEADING_TITLES_RE = re.compile(rf"^(?:{'|'.join(TITLE_PATTERNS)})\s*")
 TRAILING_TITLES_RE = re.compile(rf"\s*,?\s*(?:{'|'.join(TITLE_PATTERNS)})$")
 NORMALIZED_DATE_RE = re.compile(r"^\d{2}\.\d{2}\.\d{4}$")
+
+
+def _normalize_topic_key(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value.strip().lower())
+    without_diacritics = "".join(
+        character for character in normalized if not unicodedata.combining(character)
+    )
+    ascii_dash = without_diacritics.replace("–", "-").replace("—", "-")
+    collapsed = re.sub(r"\s+", " ", ascii_dash)
+    return collapsed.strip()
+
+
+for topic_name in TOPIC_CATALOG:
+    TOPIC_LOOKUP[_normalize_topic_key(topic_name)] = topic_name
 
 
 def strip_titles(value: str) -> str:
@@ -119,9 +135,9 @@ def validate_record_date(value: str, field_name: str) -> str:
 
 def normalize_topic(value: str) -> str:
     stripped = value.strip()
-    if stripped in TOPIC_WHITELIST:
-        return stripped
-    return ""
+    if not stripped:
+        return ""
+    return TOPIC_LOOKUP.get(_normalize_topic_key(stripped), "")
 
 
 def _require_string_field(raw_record: Mapping[str, object], field_name: str) -> str:
@@ -153,6 +169,7 @@ def normalize_certificate_fields(
         "course_name": _require_string_field(raw_record, "course_name"),
         "completion_date": _require_string_field(raw_record, "completion_date"),
         "hours": _require_string_field(raw_record, "hours"),
+        "sablona": _optional_string_field(raw_record, "sablona"),
         "topic": _optional_string_field(raw_record, "topic"),
         "uncertainty_notes": _optional_string_field(raw_record, "uncertainty_notes"),
         "origin": origin,

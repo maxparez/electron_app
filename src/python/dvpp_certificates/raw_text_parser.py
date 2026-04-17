@@ -4,7 +4,8 @@ from dvpp_certificates.domain import ExtractionBatch, RecordOrigin, WorkingRecor
 from dvpp_certificates.normalization import normalize_certificate_fields
 
 
-EXPECTED_COLUMN_COUNT = 8
+LEGACY_COLUMN_COUNT = 8
+CURRENT_COLUMN_COUNT = 9
 
 
 def parse_raw_text_batch(text: str) -> ExtractionBatch:
@@ -15,12 +16,28 @@ def parse_raw_text_batch(text: str) -> ExtractionBatch:
             continue
 
         columns = line.split("\t")
-        if len(columns) != EXPECTED_COLUMN_COUNT:
+        if len(columns) not in (LEGACY_COLUMN_COUNT, CURRENT_COLUMN_COUNT):
             raise ValueError(
                 "Malformed raw text row at line "
-                f"{line_number}: wrong column count, expected 8 tab-separated columns"
+                f"{line_number}: wrong column count, expected 8 or 9 tab-separated columns"
             )
-        if columns[6] != "":
+
+        if len(columns) == CURRENT_COLUMN_COUNT:
+            sablona = columns[3]
+            course_name = columns[4]
+            completion_date = columns[5]
+            hours = columns[6]
+            spacer = columns[7]
+            topic = columns[8]
+        else:
+            sablona = ""
+            course_name = columns[3]
+            completion_date = columns[4]
+            hours = columns[5]
+            spacer = columns[6]
+            topic = columns[7]
+
+        if spacer != "":
             raise ValueError(
                 f"Malformed raw text row at line {line_number}: spacer column must be empty"
             )
@@ -35,10 +52,11 @@ def parse_raw_text_batch(text: str) -> ExtractionBatch:
                 "surname": columns[0],
                 "name": columns[1],
                 "birth_date": columns[2],
-                "course_name": columns[3],
-                "completion_date": columns[4],
-                "hours": columns[5],
-                "topic": columns[7],
+                "sablona": sablona,
+                "course_name": course_name,
+                "completion_date": completion_date,
+                "hours": hours,
+                "topic": topic,
             },
             origin=origin,
         )

@@ -333,6 +333,10 @@ class DvppCertificateProcessorTests(unittest.TestCase):
         self.assertEqual("raw_text", result["data"]["batch"]["input_mode"])
         self.assertEqual(1, len(result["data"]["batch"]["records"]))
         self.assertEqual(1, result["data"]["processedRows"])
+        self.assertEqual(
+            "umělá inteligence",
+            result["data"]["batch"]["records"][0]["working_record"]["topic"],
+        )
 
     def test_server_raw_text_endpoint_returns_processor_payload(self) -> None:
         class FakeProcessor:
