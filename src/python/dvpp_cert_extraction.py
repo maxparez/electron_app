@@ -114,15 +114,16 @@ def extract_certificates(
     input_path: str | Path,
     model_name: str,
     *,
+    api_key: str | None = None,
     env: Mapping[str, str] | None = None,
     agent_factory: Callable[..., object] | None = None,
     binary_content_factory: Callable[[Path], object] | None = None,
 ) -> ExtractionResult:
     validated_input = validate_input_file(input_path)
-    api_key = load_api_key(env)
+    resolved_api_key = api_key.strip() if isinstance(api_key, str) and api_key.strip() else load_api_key(env)
     agent_builder = create_agent if agent_factory is None else agent_factory
     binary_loader = _binary_content_from_path if binary_content_factory is None else binary_content_factory
-    agent = agent_builder(model_name=model_name, api_key=api_key)
+    agent = agent_builder(model_name=model_name, api_key=resolved_api_key)
     prompt = f"{build_extraction_prompt()}\n\nNyni zpracuj prilozeny soubor."
     response = agent.run_sync([prompt, binary_loader(validated_input)])
     output = response.output

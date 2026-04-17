@@ -15,6 +15,7 @@ from tools.inv_vzd_processor import InvVzdProcessor
 from tools.zor_spec_dat_processor import ZorSpecDatProcessor
 from tools.plakat_generator import PlakatGenerator
 from tools.dvpp_report_processor import DvppReportProcessor
+from tools.dvpp_certificate_processor import DvppCertificateProcessor
 from channel_config import load_channel_config, resolve_debug_mode
 
 # Initialize logging
@@ -976,6 +977,60 @@ def process_dvpp_report():
 
     except Exception as e:
         server_logger.error(f"Error processing DVPP report: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/dvpp-certificates/import/gemini', methods=['POST'])
+def import_dvpp_certificates_gemini():
+    """Import DVPP certificates from selected files through Gemini."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        folder_path = convert_path_if_needed(data.get('folderPath'))
+        file_paths = [convert_path_if_needed(path) for path in data.get('selectedFiles', [])]
+        model_name = data.get('modelName')
+        api_key = data.get('apiKey')
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.process(
+            file_paths,
+            {
+                "folder_path": folder_path,
+                "model_name": model_name,
+                "api_key": api_key,
+            }
+        )
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "DVPP certifikáty byly úspěšně vytěženy",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        return jsonify({
+            "status": "error",
+            "message": "Vytěžení DVPP certifikátů selhalo",
+            "data": result.get("data"),
+            "errors": result.get("errors", []),
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error importing DVPP certificates via Gemini: {str(e)}")
         return jsonify({
             "status": "error",
             "message": str(e)
