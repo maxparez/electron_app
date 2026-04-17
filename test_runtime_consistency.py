@@ -53,6 +53,8 @@ class RuntimeConsistencyTests(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         payload = response.get_json()
         self.assertEqual(package_json["version"], payload["data"]["version"])
+        tool_ids = [tool["id"] for tool in payload["data"]["tools"]]
+        self.assertIn("dvpp-certificates", tool_ids)
 
     def test_install_windows_script_uses_existing_smoke_test_path(self) -> None:
         script_path = REPO_ROOT / "scripts" / "install_windows.ps1"

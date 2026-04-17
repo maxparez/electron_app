@@ -1037,6 +1037,47 @@ def import_dvpp_certificates_gemini():
         }), 500
 
 
+@app.route('/api/dvpp-certificates/import/raw-text', methods=['POST'])
+def import_dvpp_certificates_raw_text():
+    """Import DVPP certificates from pasted raw TSV text."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.import_raw_text(data.get("rawText", ""))
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "DVPP certifikáty byly úspěšně načteny z textu",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        return jsonify({
+            "status": "error",
+            "message": "Načtení DVPP certifikátů z textu selhalo",
+            "errors": result.get("errors", []),
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error importing DVPP certificates raw text: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
 @app.route('/api/dvpp-certificates/export/tsv', methods=['POST'])
 def export_dvpp_certificates_tsv():
     try:
@@ -1155,6 +1196,11 @@ def get_config():
                     "id": "dvpp",
                     "name": "DVPP report",
                     "description": "Souhrnný HTML report podpory DVPP"
+                },
+                {
+                    "id": "dvpp-certificates",
+                    "name": "Vytěžování certifikátů",
+                    "description": "Import certifikátů DVPP přes Gemini API nebo raw text"
                 }
             ]
         }

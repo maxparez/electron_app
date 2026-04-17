@@ -183,6 +183,53 @@ class DvppCertificateProcessorTests(unittest.TestCase):
         self.assertEqual(1, payload["data"]["processedFiles"])
         self.assertEqual("gemini-3-flash-preview", payload["data"]["modelName"])
 
+    def test_import_raw_text_returns_shared_batch_payload(self) -> None:
+        processor = DvppCertificateProcessor(importer=RecordingImporter())
+
+        result = processor.import_raw_text(
+            "Novakova\tJana\t05.09.1980\tKurz AI ve vyuce\t14.03.2024\t8\t\tumela inteligence"
+        )
+
+        self.assertTrue(result["success"])
+        self.assertEqual("raw_text", result["data"]["batch"]["input_mode"])
+        self.assertEqual(1, len(result["data"]["batch"]["records"]))
+        self.assertEqual(1, result["data"]["processedRows"])
+
+    def test_server_raw_text_endpoint_returns_processor_payload(self) -> None:
+        class FakeProcessor:
+            def __init__(self, logger, importer=None) -> None:
+                self.logger = logger
+
+            def import_raw_text(self, raw_text):
+                return {
+                    "success": True,
+                    "data": {
+                        "batch": {
+                            "input_mode": "raw_text",
+                            "source_folder": "",
+                            "records": [],
+                            "warnings": [],
+                            "errors": [],
+                            "export_metadata": {},
+                        },
+                        "processedRows": 1,
+                    },
+                    "errors": [],
+                    "warnings": [],
+                    "info": [],
+                }
+
+        with patch.object(server, "DvppCertificateProcessor", FakeProcessor):
+            response = server.app.test_client().post(
+                "/api/dvpp-certificates/import/raw-text",
+                json={"rawText": "Novakova\tJana\t05.09.1980\tKurz\t14.03.2024\t8\t\tumela inteligence"},
+            )
+
+        self.assertEqual(200, response.status_code)
+        payload = response.get_json()
+        self.assertEqual("success", payload["status"])
+        self.assertEqual(1, payload["data"]["processedRows"])
+
 
 if __name__ == "__main__":
     unittest.main()

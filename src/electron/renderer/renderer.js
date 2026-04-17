@@ -13,10 +13,29 @@ const state = {
     },
     selectedFolder: {
         'inv-vzd': null,
-        'dvpp': null
+        'dvpp': null,
+        'dvpp-certificates': null
     },
     dvppMatches: [],
-    detectedTemplateVersion: null
+    detectedTemplateVersion: null,
+    certificateExtraction: {
+        mode: 'gemini',
+        folderPath: null,
+        modelName: 'gemini-3-flash-preview',
+        records: [],
+        diagnostics: [],
+        rawText: '',
+        hasStoredApiKey: false,
+        exportMetadata: {
+            project_number: '',
+            recipient_name: '',
+            zor_number: '',
+            sablona: '',
+            forma: '',
+            qualification_split: '',
+            template_path: 'D:\\JAK2024\\Dokumenty\\Evidence_podpor_poskytnutych_ucastnikum_vzdelavani_MS_ZS_upravene_DVPP.xlsx'
+        }
+    }
 };
 
 // DOM elements
@@ -53,10 +72,77 @@ const elements = {
     dvppProcessBtn: document.getElementById('process-dvpp'),
     dvppResults: document.getElementById('dvpp-results'),
 
+    // DVPP certificate extraction elements
+    certModeGeminiBtn: document.getElementById('cert-mode-gemini'),
+    certModeRawBtn: document.getElementById('cert-mode-raw'),
+    certGeminiPanel: document.getElementById('cert-gemini-panel'),
+    certRawPanel: document.getElementById('cert-raw-panel'),
+    certApiKeyInput: document.getElementById('cert-gemini-api-key'),
+    certRememberKey: document.getElementById('cert-remember-key'),
+    certApiKeyStatus: document.getElementById('cert-api-key-status'),
+    certLoadStoredKeyBtn: document.getElementById('cert-load-stored-key'),
+    certDeleteStoredKeyBtn: document.getElementById('cert-delete-stored-key'),
+    certModelSelect: document.getElementById('cert-model-select'),
+    certFolderBtn: document.getElementById('select-cert-folder'),
+    certFolderRefreshBtn: document.getElementById('refresh-cert-folder'),
+    certFolderName: document.getElementById('cert-folder-name'),
+    certProcessGeminiBtn: document.getElementById('process-cert-gemini'),
+    certSystemPrompt: document.getElementById('cert-system-prompt'),
+    certUserPrompt: document.getElementById('cert-user-prompt'),
+    certCopySystemPromptBtn: document.getElementById('copy-cert-system-prompt'),
+    certCopyUserPromptBtn: document.getElementById('copy-cert-user-prompt'),
+    certRawText: document.getElementById('cert-raw-text'),
+    certProcessRawBtn: document.getElementById('process-cert-raw'),
+    certRecordsTable: document.getElementById('cert-records-table'),
+    certDiagnostics: document.getElementById('cert-diagnostics'),
+    certProjectNumber: document.getElementById('cert-project-number'),
+    certRecipientName: document.getElementById('cert-recipient-name'),
+    certZorNumber: document.getElementById('cert-zor-number'),
+    certSablona: document.getElementById('cert-sablona'),
+    certForma: document.getElementById('cert-forma'),
+    certQualificationSplit: document.getElementById('cert-qualification-split'),
+    certTemplatePath: document.getElementById('cert-template-path'),
+    certSelectTemplateBtn: document.getElementById('select-cert-template'),
+    certCopyTsvBtn: document.getElementById('copy-cert-tsv'),
+    certSaveTsvBtn: document.getElementById('save-cert-tsv'),
+    certSaveExcelBtn: document.getElementById('save-cert-excel'),
+    certResults: document.getElementById('cert-results'),
+
     // Plakat elements
     plakatForm: document.getElementById('plakat-form'),
     plakatResults: document.getElementById('plakat-results')
 };
+
+const CERT_SYSTEM_PROMPT = `### ROLE A CÍL ###
+Jsi "Certifikátor v2.1", ultra-přesný AI asistent specializovaný na OCR extrakci dat z certifikátů a osvědčení o dalším vzdělávání pedagogických pracovníků (DVPP). Tvým jediným cílem je bezchybně extrahovat klíčové údaje z dodaných dokumentů a zformátovat je pro přímé vložení do tabulkového procesoru.
+
+### KLÍČOVÝ KONTEXT A ZNALOSTI ###
+* Jsi expert na terminologii v oblasti českého školství a DVPP.
+* Rozumíš kontextu českých jmen a příjmení a jejich skloňování.
+* Přiřazení kategorie "Téma" se řídí výhradně následujícím závazným číselníkem. Musíš dodržet přesné znění a malá písmena.
+
+**ZÁVAZNÝ ČÍSELNÍK TÉMAT:**
+* pedagogická diagnostika, individualizace vzdělávání, formativní hodnocení, podpora nadání/talentu, řečová výchova, grafomotorika, rozvoj gramotností, rozvoj digitálních kompetencí, podpora polytechniky, vzdělávání pro udržitelný rozvoj – např. EVVO (environmentální vzdělávání, výchova a osvěta), klimatické vzdělávání, principy místně zakotveného učení, well-being a psychohygiena, genderová tematika v obsahu vzdělávání, výuka moderních dějin, mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence, pohybové aktivity, práce s dětmi/žáky se speciálními vzdělávacími potřebami; vzdělávání heterogenních kolektivů, vzdělávání dětí/žáků cizinců a dětí/žáků s potřebou jazykové podpory, rozvoj pedagogických kompetencí v oblasti metod a forem vzdělávání, komunikace se zákonnými zástupci, management škol, řízení organizace, leadership a řízení pedagogického procesu, vzdělávání dětí a žáků z marginalizovaných skupin, jako jsou Romové, podpora uvádějících/provázejících učitelů
+
+### ZÁSADY KOMUNIKACE ###
+* Styl: Strojový, datově orientovaný. Žádné pozdravy, úvody ani komentáře.
+* Tón: Absolutně neutrální a objektivní.
+
+### OMEZENÍ, PRAVIDLA A LOGIKA ZPRACOVÁNÍ ###
+* Dávkové zpracování: Pokud obdržíš více souborů najednou nebo vícestránkový dokument, považuj každý certifikát za samostatnou položku.
+* Nejistota: Pokud si jakýmkoli údajem nejsi jistý na 100 %, připoj za něj otazník.
+* Logika pro pole 'Téma': Pole vyplňuj pouze hodnotou ze závazného číselníku a jen při jistotě nad 90 %.
+* Logika pro pole 'Datum ukončení vzdělávání': Pokud je vzdělávání více dnů, použij nejvyšší datum.
+* Striktní formát: Dodrž skutečné tabulátory.`;
+
+const CERT_USER_PROMPT = `Proveď extrakci dat z následujícího textu nebo dokumentů. Zaměř se na identifikaci certifikátů nebo osvědčení o absolvování kurzů.
+Formát výstupu: čistý raw text.
+Pro každý certifikát vygeneruj jeden samostatný řádek bez nadpisů a markdownu.
+Struktura polí:
+Příjmení<TAB>Jméno<TAB>Datum narození<TAB>Název kurzu<TAB>Datum ukončení vzdělávání<TAB>Počet hodin<TAB><TAB>Téma
+Vynech tituly.
+Datum narození i datum ukončení musí být ve tvaru dd.mm.yyyy.
+Finální výstup vlož do jednoho bloku kódu \`\`\`text.`;
 
 // Status bar functions
 function setStatusMessage(message, duration = 0) {
@@ -117,6 +203,25 @@ async function init() {
     elements.dvppSelectAllBtn.addEventListener('click', () => setDvppSelection(true));
     elements.dvppClearSelectionBtn.addEventListener('click', () => setDvppSelection(false));
     elements.dvppProcessBtn.addEventListener('click', processDvppReport);
+
+    elements.certModeGeminiBtn.addEventListener('click', () => switchCertificateMode('gemini'));
+    elements.certModeRawBtn.addEventListener('click', () => switchCertificateMode('raw'));
+    elements.certLoadStoredKeyBtn.addEventListener('click', loadStoredGeminiApiKey);
+    elements.certDeleteStoredKeyBtn.addEventListener('click', deleteStoredGeminiApiKey);
+    elements.certFolderBtn.addEventListener('click', selectCertificateFolder);
+    elements.certFolderRefreshBtn.addEventListener('click', refreshCertificateFolder);
+    elements.certProcessGeminiBtn.addEventListener('click', processCertificatesWithGemini);
+    elements.certProcessRawBtn.addEventListener('click', processCertificatesFromRawText);
+    elements.certCopySystemPromptBtn.addEventListener('click', () => copyTextToClipboard(CERT_SYSTEM_PROMPT, 'Systemový prompt byl zkopírován.'));
+    elements.certCopyUserPromptBtn.addEventListener('click', () => copyTextToClipboard(CERT_USER_PROMPT, 'Uživatelský prompt byl zkopírován.'));
+    elements.certCopyTsvBtn.addEventListener('click', copyCertificateTsv);
+    elements.certSaveTsvBtn.addEventListener('click', saveCertificateTsv);
+    elements.certSaveExcelBtn.addEventListener('click', saveCertificateExcel);
+    elements.certSelectTemplateBtn.addEventListener('click', selectCertificateTemplate);
+    elements.certModelSelect.addEventListener('change', (event) => {
+        state.certificateExtraction.modelName = event.target.value;
+    });
+    bindCertificateMetadataInputs();
     
     // Setup plakat form
     elements.plakatForm.addEventListener('submit', generatePlakat);
@@ -139,6 +244,11 @@ async function init() {
     
     // Load last selected folder
     loadLastFolder();
+    elements.certSystemPrompt.value = CERT_SYSTEM_PROMPT;
+    elements.certUserPrompt.value = CERT_USER_PROMPT;
+    elements.certTemplatePath.value = state.certificateExtraction.exportMetadata.template_path;
+    await refreshGeminiApiKeyStatus();
+    updateCertificateActions();
     
     // Setup character counter for plakat common text
     const commonTextArea = document.getElementById('common-text');
@@ -836,6 +946,350 @@ async function processDvppReport() {
         console.error('DVPP processing error:', error);
         showMessage('Chyba při generování DVPP reportu: ' + error.message, 'error');
     }
+}
+
+function switchCertificateMode(mode) {
+    state.certificateExtraction.mode = mode;
+    elements.certModeGeminiBtn.classList.toggle('active', mode === 'gemini');
+    elements.certModeGeminiBtn.classList.toggle('btn-primary', mode === 'gemini');
+    elements.certModeGeminiBtn.classList.toggle('btn-secondary', mode !== 'gemini');
+    elements.certModeRawBtn.classList.toggle('active', mode === 'raw');
+    elements.certModeRawBtn.classList.toggle('btn-primary', mode === 'raw');
+    elements.certModeRawBtn.classList.toggle('btn-secondary', mode !== 'raw');
+    elements.certGeminiPanel.classList.toggle('active', mode === 'gemini');
+    elements.certRawPanel.classList.toggle('active', mode === 'raw');
+}
+
+function bindCertificateMetadataInputs() {
+    const bindings = [
+        ['project_number', elements.certProjectNumber],
+        ['recipient_name', elements.certRecipientName],
+        ['zor_number', elements.certZorNumber],
+        ['sablona', elements.certSablona],
+        ['forma', elements.certForma],
+        ['qualification_split', elements.certQualificationSplit],
+        ['template_path', elements.certTemplatePath]
+    ];
+
+    bindings.forEach(([key, input]) => {
+        input.addEventListener('input', (event) => {
+            state.certificateExtraction.exportMetadata[key] = event.target.value;
+        });
+    });
+}
+
+async function refreshGeminiApiKeyStatus() {
+    try {
+        const result = await window.electronAPI.getGeminiApiKeyStatus();
+        state.certificateExtraction.hasStoredApiKey = !!(result && result.stored);
+        elements.certApiKeyStatus.textContent = state.certificateExtraction.hasStoredApiKey
+            ? 'Uložený Gemini API key je k dispozici v zabezpečeném úložišti.'
+            : 'Zatím není uložen žádný Gemini API key.';
+    } catch (error) {
+        console.error('Gemini key status error:', error);
+        elements.certApiKeyStatus.textContent = 'Nepodařilo se ověřit stav uloženého Gemini API klíče.';
+    }
+}
+
+async function loadStoredGeminiApiKey() {
+    try {
+        const apiKey = await window.electronAPI.getGeminiApiKey();
+        if (!apiKey) {
+            showMessage('V zabezpečeném úložišti není uložen žádný Gemini API key.', 'warning');
+            return;
+        }
+        elements.certApiKeyInput.value = apiKey;
+        showMessage('Uložený Gemini API key byl načten.', 'success');
+    } catch (error) {
+        console.error('Load stored Gemini key error:', error);
+        showMessage('Nepodařilo se načíst uložený Gemini API key.', 'error');
+    }
+}
+
+async function deleteStoredGeminiApiKey() {
+    try {
+        await window.electronAPI.deleteGeminiApiKey();
+        elements.certApiKeyInput.value = '';
+        elements.certRememberKey.checked = false;
+        await refreshGeminiApiKeyStatus();
+        showMessage('Uložený Gemini API key byl odstraněn.', 'success');
+    } catch (error) {
+        console.error('Delete stored Gemini key error:', error);
+        showMessage('Nepodařilo se odstranit uložený Gemini API key.', 'error');
+    }
+}
+
+async function resolveGeminiApiKey() {
+    const typedKey = elements.certApiKeyInput.value.trim();
+    if (typedKey) {
+        if (elements.certRememberKey.checked) {
+            await window.electronAPI.saveGeminiApiKey(typedKey);
+            await refreshGeminiApiKeyStatus();
+        }
+        return typedKey;
+    }
+
+    if (state.certificateExtraction.hasStoredApiKey) {
+        return await window.electronAPI.getGeminiApiKey();
+    }
+
+    throw new Error('Zadejte Gemini API key nebo použijte uložený klíč.');
+}
+
+async function selectCertificateFolder() {
+    try {
+        const folderPath = await window.electronAPI.selectFolder({
+            configKey: 'lastDvppCertificateFolder',
+            title: 'Vyberte složku s certifikáty DVPP'
+        });
+
+        if (!folderPath) {
+            return;
+        }
+
+        state.certificateExtraction.folderPath = folderPath;
+        state.selectedFolder['dvpp-certificates'] = folderPath;
+        elements.certFolderName.textContent = wslToWindowsPath(folderPath);
+        elements.certFolderRefreshBtn.style.display = 'inline-block';
+        updateCertificateActions();
+    } catch (error) {
+        console.error('Certificate folder selection error:', error);
+        showMessage('Chyba při výběru složky s certifikáty.', 'error');
+    }
+}
+
+async function refreshCertificateFolder() {
+    if (!state.certificateExtraction.folderPath) {
+        showMessage('Není vybraná žádná složka s certifikáty.', 'warning');
+        return;
+    }
+    elements.certFolderName.textContent = wslToWindowsPath(state.certificateExtraction.folderPath);
+    updateCertificateActions();
+    showMessage('Složka s certifikáty je připravená ke zpracování.', 'success');
+}
+
+async function processCertificatesWithGemini() {
+    try {
+        const apiKey = await resolveGeminiApiKey();
+        showLoading(true, { text: 'Vytěžuji certifikáty přes Gemini...' });
+        setStatusMessage('Probíhá vytěžování certifikátů přes Gemini...');
+
+        const result = await window.electronAPI.apiCall('dvpp-certificates/import/gemini', 'POST', {
+            folderPath: state.certificateExtraction.folderPath,
+            selectedFiles: [],
+            modelName: state.certificateExtraction.modelName,
+            apiKey
+        });
+
+        showLoading(false);
+        applyCertificateBatchResult(result.data.batch, result.data.diagnostics || []);
+        showMessage(`Vytěženo ${state.certificateExtraction.records.length} certifikátů.`, 'success');
+    } catch (error) {
+        showLoading(false);
+        console.error('Gemini certificate import error:', error);
+        showMessage(`Chyba při vytěžování certifikátů: ${error.message}`, 'error');
+    }
+}
+
+async function processCertificatesFromRawText() {
+    try {
+        const rawText = elements.certRawText.value.trim();
+        if (!rawText) {
+            showMessage('Vložte raw text z Google AI Studia.', 'warning');
+            return;
+        }
+
+        showLoading(true, { text: 'Načítám raw text certifikátů...' });
+        const result = await window.electronAPI.apiCall('dvpp-certificates/import/raw-text', 'POST', {
+            rawText
+        });
+        showLoading(false);
+
+        applyCertificateBatchResult(result.data.batch, []);
+        showMessage(`Načteno ${state.certificateExtraction.records.length} certifikátů z raw textu.`, 'success');
+    } catch (error) {
+        showLoading(false);
+        console.error('Raw text certificate import error:', error);
+        showMessage(`Chyba při načítání raw textu: ${error.message}`, 'error');
+    }
+}
+
+function applyCertificateBatchResult(batch, diagnostics) {
+    state.certificateExtraction.records = Array.isArray(batch.records) ? batch.records : [];
+    state.certificateExtraction.diagnostics = diagnostics;
+    renderCertificateRecordsTable();
+    renderCertificateDiagnostics();
+    updateCertificateActions();
+}
+
+function renderCertificateRecordsTable() {
+    if (state.certificateExtraction.records.length === 0) {
+        elements.certRecordsTable.className = 'cert-records-table empty-state';
+        elements.certRecordsTable.textContent = 'Zatím nejsou načtené žádné certifikáty.';
+        return;
+    }
+
+    elements.certRecordsTable.className = 'cert-records-table';
+    const rowsHtml = state.certificateExtraction.records.map((record, index) => `
+        <tr>
+            <td><input type="text" value="${escapeHtml(record.working_record.surname || '')}" onchange="updateCertificateField(${index}, 'surname', this.value)"></td>
+            <td><input type="text" value="${escapeHtml(record.working_record.name || '')}" onchange="updateCertificateField(${index}, 'name', this.value)"></td>
+            <td><input type="text" value="${escapeHtml(record.working_record.birth_date || '')}" onchange="updateCertificateField(${index}, 'birth_date', this.value)"></td>
+            <td><input type="text" value="${escapeHtml(record.working_record.course_name || '')}" onchange="updateCertificateField(${index}, 'course_name', this.value)"></td>
+            <td><input type="text" value="${escapeHtml(record.working_record.completion_date || '')}" onchange="updateCertificateField(${index}, 'completion_date', this.value)"></td>
+            <td><input type="text" value="${escapeHtml(record.working_record.hours || '')}" onchange="updateCertificateField(${index}, 'hours', this.value)"></td>
+            <td><input type="text" value="${escapeHtml(record.working_record.topic || '')}" onchange="updateCertificateField(${index}, 'topic', this.value)"></td>
+            <td class="cert-row-actions"><button class="btn-remove" onclick="removeCertificateRecord(${index})">✕</button></td>
+        </tr>
+    `).join('');
+
+    elements.certRecordsTable.innerHTML = `
+        <table class="cert-records-grid">
+            <thead>
+                <tr>
+                    <th>Příjmení</th>
+                    <th>Jméno</th>
+                    <th>Datum narození</th>
+                    <th>Název kurzu</th>
+                    <th>Datum ukončení</th>
+                    <th>Hodiny</th>
+                    <th>Téma</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+        </table>
+    `;
+}
+
+function renderCertificateDiagnostics() {
+    if (!state.certificateExtraction.diagnostics.length) {
+        elements.certDiagnostics.className = 'cert-diagnostics empty-state';
+        elements.certDiagnostics.textContent = 'Diagnostika se zobrazí po importu.';
+        return;
+    }
+
+    elements.certDiagnostics.className = 'cert-diagnostics';
+    elements.certDiagnostics.innerHTML = `
+        <ul class="cert-diagnostics-list">
+            ${state.certificateExtraction.diagnostics.map((item) => `
+                <li class="cert-diagnostic-item ${item.success ? 'success' : 'error'}">
+                    <strong>${escapeHtml(wslToWindowsPath(item.source_file || 'text'))}</strong><br>
+                    ${item.success ? `Vytěženo záznamů: ${item.record_count}` : escapeHtml((item.errors || []).join(', '))}
+                </li>
+            `).join('')}
+        </ul>
+    `;
+}
+
+function updateCertificateField(index, field, value) {
+    const record = state.certificateExtraction.records[index];
+    if (!record) {
+        return;
+    }
+    record.working_record[field] = value;
+}
+
+function removeCertificateRecord(index) {
+    state.certificateExtraction.records.splice(index, 1);
+    renderCertificateRecordsTable();
+    updateCertificateActions();
+}
+
+function updateCertificateActions() {
+    elements.certProcessGeminiBtn.disabled = !state.certificateExtraction.folderPath;
+    const hasRecords = state.certificateExtraction.records.length > 0;
+    elements.certCopyTsvBtn.disabled = !hasRecords;
+    elements.certSaveTsvBtn.disabled = !hasRecords;
+    elements.certSaveExcelBtn.disabled = !hasRecords;
+}
+
+async function copyCertificateTsv() {
+    try {
+        const result = await window.electronAPI.apiCall('dvpp-certificates/export/tsv', 'POST', {
+            records: state.certificateExtraction.records
+        });
+        await copyTextToClipboard(result.data.content, 'TSV obsah byl zkopírován do schránky.');
+    } catch (error) {
+        console.error('Copy TSV error:', error);
+        showMessage(`Chyba při kopírování TSV: ${error.message}`, 'error');
+    }
+}
+
+async function saveCertificateTsv() {
+    try {
+        const outputPath = await window.electronAPI.saveFile('dvpp_certificates.tsv');
+        if (!outputPath) {
+            return;
+        }
+
+        await window.electronAPI.apiCall('dvpp-certificates/export/tsv', 'POST', {
+            records: state.certificateExtraction.records,
+            outputPath
+        });
+        showMessage(`TSV export byl uložen: ${wslToWindowsPath(outputPath)}`, 'success');
+    } catch (error) {
+        console.error('Save TSV error:', error);
+        showMessage(`Chyba při ukládání TSV: ${error.message}`, 'error');
+    }
+}
+
+async function saveCertificateExcel() {
+    try {
+        const outputPath = await window.electronAPI.saveFile('dvpp_certificates.xlsx');
+        if (!outputPath) {
+            return;
+        }
+
+        const result = await window.electronAPI.apiCall('dvpp-certificates/export/excel', 'POST', {
+            records: state.certificateExtraction.records,
+            exportMetadata: state.certificateExtraction.exportMetadata,
+            templatePath: state.certificateExtraction.exportMetadata.template_path,
+            outputPath
+        });
+        showMessage(`Excel export byl vytvořen: ${wslToWindowsPath(result.data.output_path)}`, 'success');
+    } catch (error) {
+        console.error('Save Excel error:', error);
+        showMessage(`Chyba při vytváření Excelu: ${error.message}`, 'error');
+    }
+}
+
+async function selectCertificateTemplate() {
+    try {
+        const filePaths = await window.electronAPI.openFile({
+            multiple: false,
+            filters: [{ name: 'Excel Files', extensions: ['xlsx', 'xlsm', 'xltx', 'xltm'] }]
+        });
+        if (!filePaths || filePaths.length === 0) {
+            return;
+        }
+        state.certificateExtraction.exportMetadata.template_path = filePaths[0];
+        elements.certTemplatePath.value = filePaths[0];
+    } catch (error) {
+        console.error('Select certificate template error:', error);
+        showMessage('Chyba při výběru Excel šablony.', 'error');
+    }
+}
+
+async function copyTextToClipboard(text, successMessage) {
+    try {
+        await navigator.clipboard.writeText(text);
+        if (successMessage) {
+            showMessage(successMessage, 'success');
+        }
+    } catch (error) {
+        console.error('Clipboard error:', error);
+        showMessage('Nepodařilo se zkopírovat text do schránky.', 'error');
+    }
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // Detect mixed versions in file list

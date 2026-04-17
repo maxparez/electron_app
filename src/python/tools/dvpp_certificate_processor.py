@@ -9,6 +9,7 @@ from dvpp_certificates.domain import ExtractionBatch, RecordOrigin, WorkingRecor
 from dvpp_certificates.exporters import export_records_to_excel, export_records_to_tsv
 from dvpp_certificates.importers import GeminiCertificateImporter
 from dvpp_certificates.normalization import normalize_certificate_fields
+from dvpp_certificates.raw_text_parser import parse_raw_text_batch
 
 from .base_tool import BaseTool
 
@@ -188,6 +189,21 @@ class DvppCertificateProcessor(BaseTool):
                 {
                     "output_path": exported_path,
                     "template_path": template_path,
+                },
+            )
+        except Exception as exc:
+            self.add_error(str(exc))
+            return self.get_result(False)
+
+    def import_raw_text(self, raw_text: str) -> Dict[str, Any]:
+        self.clear_messages()
+        try:
+            batch = parse_raw_text_batch(raw_text)
+            return self.get_result(
+                True,
+                {
+                    "batch": self._serialize_batch(batch),
+                    "processedRows": len(batch.records),
                 },
             )
         except Exception as exc:
