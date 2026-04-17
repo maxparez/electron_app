@@ -5,12 +5,17 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 import json
 import os
-from datetime import datetime
 from pathlib import Path
 from typing import Callable, Mapping
-import re
 
 from dvpp_certificates.domain import CertificateRecord
+from dvpp_certificates.normalization import (
+    TOPIC_CATALOG,
+    normalize_certificate_fields,
+    normalize_date,
+    normalize_topic,
+    strip_titles,
+)
 
 
 SUPPORTED_EXTENSIONS = frozenset({".pdf", ".jpg", ".jpeg", ".png"})
@@ -25,70 +30,6 @@ MODEL_NAME_MAPPING = {
 PRIMARY_API_KEY_ENV = "GEMINI_API_KEY"
 FALLBACK_API_KEY_ENV = "GOOGLE_API_KEY"
 
-TOPIC_CATALOG = (
-    "pedagogicka diagnostika",
-    "individualizace vzdelavani",
-    "formativni hodnoceni",
-    "podpora nadani/talentu",
-    "recova vychova",
-    "grafomotorika",
-    "rozvoj gramotnosti",
-    "rozvoj digitalnich kompetenci",
-    "podpora polytechniky",
-    (
-        "vzdelavani pro udrzitelny rozvoj - napr. EVVO "
-        "(environmentalni vzdelavani, vychova a osveta), klimaticke vzdelavani, "
-        "principy mistne zakotveneho uceni"
-    ),
-    "well-being a psychohygiena",
-    "genderova tematika v obsahu vzdelavani",
-    "vyuka modernich dejin",
-    "medialni gramotnost",
-    "prevence kybersikany",
-    "chovani na socialnich sitich",
-    "umela inteligence",
-    "pohybove aktivity",
-    (
-        "prace s detmi/zaky se specialnimi vzdelavacimi potrebami; "
-        "vzdelavani heterogennich kolektivu"
-    ),
-    (
-        "vzdelavani deti/zaku cizincu a deti/zaku s potrebou jazykove podpory"
-    ),
-    "rozvoj pedagogickych kompetenci v oblasti metod a forem vzdelavani",
-    "komunikace se zakonnymi zastupci",
-    "management skol",
-    "rizeni organizace",
-    "leadership a rizeni pedagogickeho procesu",
-    "vzdelavani deti a zaku z marginalizovanych skupin, jako jsou Romove",
-    "podpora uvadejicich/provazejicich ucitelu",
-)
-
-TOPIC_WHITELIST = frozenset(TOPIC_CATALOG)
-
-_DATE_FORMATS = (
-    "%Y-%m-%d",
-    "%d.%m.%Y",
-    "%d/%m/%Y",
-)
-
-_TITLE_PATTERNS = (
-    r"Bc\.",
-    r"Mgr\.",
-    r"Ing\.",
-    r"RNDr\.",
-    r"JUDr\.",
-    r"MUDr\.",
-    r"PhDr\.",
-    r"Ph\.D\.",
-    r"DiS\.",
-)
-
-_LEADING_TITLES_RE = re.compile(rf"^(?:{'|'.join(_TITLE_PATTERNS)})\s*")
-_TRAILING_TITLES_RE = re.compile(rf"\s*,?\s*(?:{'|'.join(_TITLE_PATTERNS)})$")
-_NORMALIZED_DATE_RE = re.compile(r"^\d{2}\.\d{2}\.\d{4}$")
-
-
 @dataclass(slots=True)
 class ExtractionResult:
     certificates: list[CertificateRecord]
@@ -99,66 +40,6 @@ class ExtractionResult:
         for certificate in self.certificates:
             if not isinstance(certificate, CertificateRecord):
                 raise TypeError("certificates must contain CertificateRecord items")
-
-
-def strip_titles(value: str) -> str:
-    cleaned = value.strip()
-    while cleaned:
-        updated = _LEADING_TITLES_RE.sub("", cleaned).strip(" ,")
-        if updated == cleaned:
-            break
-        cleaned = updated
-
-    while cleaned:
-        updated = _TRAILING_TITLES_RE.sub("", cleaned).strip(" ,")
-        if updated == cleaned:
-            break
-        cleaned = updated
-
-    return cleaned
-
-
-def _normalize_person_name(value: str, field_name: str) -> str:
-    cleaned = strip_titles(value).strip()
-    if not cleaned:
-        raise ValueError(f"{field_name} must not be empty")
-    return cleaned
-
-
-def normalize_date(value: str) -> str:
-    stripped = value.strip()
-    for date_format in _DATE_FORMATS:
-        try:
-            parsed_date = datetime.strptime(stripped, date_format)
-        except ValueError:
-            continue
-        return parsed_date.strftime("%d.%m.%Y")
-    return stripped
-
-
-def _validate_record_date(value: str, field_name: str) -> str:
-    stripped = value.strip()
-    has_uncertainty_marker = stripped.endswith("?")
-    date_value = stripped[:-1].strip() if has_uncertainty_marker else stripped
-
-    normalized = normalize_date(date_value)
-    if not _NORMALIZED_DATE_RE.fullmatch(normalized):
-        raise ValueError(f"{field_name} must be a valid dd.mm.yyyy date")
-    try:
-        datetime.strptime(normalized, "%d.%m.%Y")
-    except ValueError as exc:
-        raise ValueError(f"{field_name} must be a valid dd.mm.yyyy date") from exc
-    if has_uncertainty_marker:
-        return f"{normalized}?"
-    return normalized
-
-
-def normalize_topic(value: str) -> str:
-    stripped = value.strip()
-    if stripped in TOPIC_WHITELIST:
-        return stripped
-    return ""
-
 
 def resolve_model_name(model_name: str) -> str:
     try:
@@ -252,7 +133,7 @@ def extract_certificates(
             raise ValueError("Malformed extraction response: missing certificates")
         return ExtractionResult(
             certificates=[
-                CertificateRecord(**certificate)
+                normalize_certificate_fields(certificate)
                 for certificate in output.get("certificates", [])
             ]
         )
