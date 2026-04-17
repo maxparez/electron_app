@@ -47,6 +47,15 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertNotIn('onchange="updateCertificateField(', content)
         self.assertNotIn('onclick="removeCertificateRecord(', content)
 
+    def test_renderer_preserves_certificate_diagnostics_on_failed_import(self) -> None:
+        renderer = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
+        preload = (REPO_ROOT / "src" / "electron" / "preload.js").read_text(encoding="utf-8")
+
+        self.assertIn("error.data = result.data || null;", preload)
+        self.assertIn("error.errors = result.errors || [];", preload)
+        self.assertIn("if (error.data && error.data.batch)", renderer)
+        self.assertIn("applyCertificateBatchResult(error.data.batch, error.data.diagnostics || []);", renderer)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1021,9 +1021,18 @@ def import_dvpp_certificates_gemini():
             })
 
         error_messages = result.get("errors", [])
+        batch_errors = (((result.get("data") or {}).get("batch") or {}).get("errors") or [])
+        preferred_message = next(
+            (
+                message
+                for message in batch_errors + error_messages
+                if message and message != "Nepodařilo se vytěžit žádné certifikáty"
+            ),
+            None,
+        )
         return jsonify({
             "status": "error",
-            "message": error_messages[0] if error_messages else "Vytěžení DVPP certifikátů selhalo",
+            "message": preferred_message or (error_messages[0] if error_messages else "Vytěžení DVPP certifikátů selhalo"),
             "data": result.get("data"),
             "errors": error_messages,
             "warnings": result.get("warnings", []),

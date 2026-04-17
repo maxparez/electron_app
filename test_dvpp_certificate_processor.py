@@ -264,6 +264,64 @@ class DvppCertificateProcessorTests(unittest.TestCase):
             payload["message"],
         )
 
+    def test_server_endpoint_prefers_first_batch_error_when_processor_only_has_generic_error(self) -> None:
+        class FakeProcessor:
+            def __init__(self, logger, importer=None) -> None:
+                self.logger = logger
+
+            def process(self, files, options):
+                return {
+                    "success": False,
+                    "data": {
+                        "batch": {
+                            "input_mode": "gemini",
+                            "source_folder": options["folder_path"],
+                            "records": [],
+                            "warnings": [],
+                            "errors": ["a.pdf: Gemini structured output parse failed"],
+                            "export_metadata": {},
+                        },
+                        "diagnostics": [
+                            {
+                                "source_file": "a.pdf",
+                                "success": False,
+                                "record_count": 0,
+                                "warnings": [],
+                                "errors": ["Gemini structured output parse failed"],
+                            }
+                        ],
+                        "processedFiles": 1,
+                        "successfulFiles": 0,
+                        "failedFiles": 1,
+                        "modelName": options["model_name"],
+                    },
+                    "errors": ["Nepodařilo se vytěžit žádné certifikáty"],
+                    "warnings": [],
+                    "info": [],
+                }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir)
+
+            with patch.object(server, "DvppCertificateProcessor", FakeProcessor):
+                response = server.app.test_client().post(
+                    "/api/dvpp-certificates/import/gemini",
+                    json={
+                        "folderPath": str(project_dir),
+                        "selectedFiles": [],
+                        "modelName": "gemini-3-flash-preview",
+                        "apiKey": "test-key",
+                    },
+                )
+
+        self.assertEqual(400, response.status_code)
+        payload = response.get_json()
+        self.assertEqual("error", payload["status"])
+        self.assertEqual(
+            "a.pdf: Gemini structured output parse failed",
+            payload["message"],
+        )
+
     def test_import_raw_text_returns_shared_batch_payload(self) -> None:
         processor = DvppCertificateProcessor(importer=RecordingImporter())
 

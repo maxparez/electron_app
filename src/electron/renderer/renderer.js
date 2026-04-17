@@ -1176,6 +1176,9 @@ async function processCertificatesWithGemini() {
     } catch (error) {
         showLoading(false);
         console.error('Gemini certificate import error:', error);
+        if (error.data && error.data.batch) {
+            applyCertificateBatchResult(error.data.batch, error.data.diagnostics || []);
+        }
         showMessage(`Chyba při vytěžování certifikátů: ${error.message}`, 'error');
     }
 }

@@ -58,7 +58,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
             const result = await response.json();
             
             if (!response.ok) {
-                throw new Error(result.message || 'API request failed');
+                const error = new Error(result.message || 'API request failed');
+                error.data = result.data || null;
+                error.errors = result.errors || [];
+                error.warnings = result.warnings || [];
+                error.info = result.info || [];
+                error.status = result.status || 'error';
+                throw error;
             }
             
             return result;
