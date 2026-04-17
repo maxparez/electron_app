@@ -117,6 +117,7 @@ Výchozí chování:
 
 - TSV se tiskne na `stdout`
 - JSON a TSV soubor se zapisují jen pokud jsou explicitně předané přes flagy
+- `--input-dir` zpracuje složku sekvenčně jako `1 soubor = 1 request`
 
 API key:
 
@@ -130,13 +131,14 @@ Aktuální implementace už obsahuje:
 - validaci podporovaných formátů `pdf/jpg/jpeg/png`
 - ruční přepínání mezi `gemini-3-flash-preview` a `gemini-3.1-pro-preview`
 - serializaci do validovaného JSON a TSV
+- jednoduchý batch režim nad složkou bez multi-file requestu
 - unit testy pro CLI parsing, env lookup, mocked extraction orchestration a základní error handling
 
 Zatím stále chybí:
 
 - live Gemini smoke test nad reálným dokumentem
 - multipage PDF orchestrace
-- dávkové zpracování více souborů
+- robustnější batch reporting per source file
 - ukládání raw provider response
 
 ## Success Criteria

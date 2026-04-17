@@ -15,6 +15,7 @@ from dvpp_cert_extraction import (
     CertificateRecord,
     ExtractionResult,
     build_extraction_prompt,
+    collect_input_files,
     extract_certificates,
     format_tsv_row,
     load_api_key,
@@ -79,6 +80,33 @@ class DvppCertExtractionTests(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 validate_input_file(input_path)
+
+    def test_collect_input_files_returns_supported_files_from_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "b.pdf").write_text("sample", encoding="utf-8")
+            (root / "a.png").write_text("sample", encoding="utf-8")
+            (root / "ignore.txt").write_text("sample", encoding="utf-8")
+            nested = root / "nested"
+            nested.mkdir()
+            (nested / "c.jpg").write_text("sample", encoding="utf-8")
+
+            self.assertEqual(
+                [
+                    (root / "a.png").resolve(),
+                    (root / "b.pdf").resolve(),
+                    (nested / "c.jpg").resolve(),
+                ],
+                collect_input_files(root),
+            )
+
+    def test_collect_input_files_rejects_directory_without_supported_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "ignore.txt").write_text("sample", encoding="utf-8")
+
+            with self.assertRaises(ValueError):
+                collect_input_files(root)
 
     def test_strip_titles_removes_academic_prefixes_and_suffixes(self) -> None:
         self.assertEqual("Jana", strip_titles("Mgr. Jana, Ph.D."))
@@ -344,6 +372,21 @@ class DvppCertExtractionTests(unittest.TestCase):
         self.assertIsNone(parsed.output_json)
         self.assertIsNone(parsed.output_tsv)
 
+    def test_cli_parse_args_supports_input_directory(self) -> None:
+        cli_module = self._load_cli_module()
+
+        parsed = cli_module.parse_args(
+            [
+                "--input-dir",
+                "batch",
+                "--model",
+                "gemini-3-flash-preview",
+            ]
+        )
+
+        self.assertEqual(Path("batch"), parsed.input_dir)
+        self.assertIsNone(parsed.input)
+
     def test_cli_main_prints_tsv_and_writes_optional_outputs(self) -> None:
         cli_module = self._load_cli_module()
         extraction_result = ExtractionResult(
@@ -400,6 +443,72 @@ class DvppCertExtractionTests(unittest.TestCase):
             "Novakova\tJana\t05.09.1980\tKurz AI ve vyuce\t14.03.2024\t8\t\tumela inteligence",
             tsv_output,
         )
+
+    def test_cli_main_batches_directory_as_one_file_per_request(self) -> None:
+        cli_module = self._load_cli_module()
+
+        first_result = ExtractionResult(
+            certificates=[
+                CertificateRecord(
+                    surname="Novakova",
+                    name="Jana",
+                    birth_date="05.09.1980",
+                    course_name="Kurz AI",
+                    completion_date="14.03.2024",
+                    hours="8",
+                    topic="umela inteligence",
+                )
+            ]
+        )
+        second_result = ExtractionResult(
+            certificates=[
+                CertificateRecord(
+                    surname="Svobodova",
+                    name="Marie",
+                    birth_date="24.07.2000",
+                    course_name="Kurz Wellbeing",
+                    completion_date="24.03.2025",
+                    hours="8",
+                    topic="well-being a psychohygiena",
+                )
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            batch_dir = Path(temp_dir) / "batch"
+            batch_dir.mkdir()
+            first_file = batch_dir / "a.pdf"
+            second_file = batch_dir / "b.png"
+            first_file.write_bytes(b"%PDF-1.4")
+            second_file.write_bytes(b"png")
+
+            with (
+                patch.object(
+                    cli_module,
+                    "extract_certificates",
+                    side_effect=[first_result, second_result],
+                ) as mocked_extract,
+                patch.object(sys, "stdout", new_callable=io.StringIO) as stdout,
+            ):
+                exit_code = cli_module.main(
+                    [
+                        "--input-dir",
+                        str(batch_dir),
+                        "--model",
+                        "gemini-3-flash-preview",
+                    ]
+                )
+
+        self.assertEqual(0, exit_code)
+        self.assertEqual(
+            [
+                (first_file.resolve(), "gemini-3-flash-preview"),
+                (second_file.resolve(), "gemini-3-flash-preview"),
+            ],
+            [call.args for call in mocked_extract.call_args_list],
+        )
+        self.assertIn("Novakova\tJana\t05.09.1980", stdout.getvalue())
+        self.assertIn("Svobodova\tMarie\t24.07.2000", stdout.getvalue())
 
     def test_cli_main_exits_cleanly_on_unexpected_extraction_error(self) -> None:
         cli_module = self._load_cli_module()

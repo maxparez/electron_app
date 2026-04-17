@@ -13,6 +13,8 @@ if str(PYTHON_SRC) not in sys.path:
     sys.path.insert(0, str(PYTHON_SRC))
 
 from dvpp_cert_extraction import (
+    collect_input_files,
+    merge_extraction_results,
     SUPPORTED_MODELS,
     extract_certificates,
     serialize_result_json,
@@ -24,7 +26,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run the DVPP certificate extraction POC on a single file."
     )
-    parser.add_argument("--input", required=True, type=Path, help="Path to the input file.")
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument(
+        "--input",
+        type=Path,
+        help="Path to the input file.",
+    )
+    input_group.add_argument(
+        "--input-dir",
+        type=Path,
+        help="Path to a directory of input files. Each file is processed in a separate request.",
+    )
     parser.add_argument(
         "--model",
         required=True,
@@ -54,7 +66,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
-        result = extract_certificates(args.input, args.model)
+        if args.input is not None:
+            result = extract_certificates(args.input, args.model)
+        else:
+            batch_results = [
+                extract_certificates(input_path, args.model)
+                for input_path in collect_input_files(args.input_dir)
+            ]
+            result = merge_extraction_results(batch_results)
     except (FileNotFoundError, ModuleNotFoundError, TypeError, ValueError) as exc:
         parser.exit(2, f"{exc}\n")
     except Exception as exc:

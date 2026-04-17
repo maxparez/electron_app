@@ -236,6 +236,24 @@ def validate_input_file(path: str | Path) -> Path:
     return input_path.resolve()
 
 
+def collect_input_files(path: str | Path) -> list[Path]:
+    input_path = Path(path).expanduser()
+    if not input_path.exists() or not input_path.is_dir():
+        raise FileNotFoundError(f"Input directory not found: {input_path}")
+
+    files = sorted(
+        candidate.resolve()
+        for candidate in input_path.rglob("*")
+        if candidate.is_file() and candidate.suffix.lower() in SUPPORTED_EXTENSIONS
+    )
+    if not files:
+        supported = ", ".join(sorted(ext.lstrip(".") for ext in SUPPORTED_EXTENSIONS))
+        raise ValueError(
+            f"No supported input files found in directory: {input_path}. Supported: {supported}"
+        )
+    return files
+
+
 def create_agent(*, model_name: str, api_key: str):
     from pydantic_ai import Agent
     from pydantic_ai.models.google import GoogleModel
@@ -315,6 +333,13 @@ def serialize_result_json(result: ExtractionResult) -> str:
 
 def serialize_result_tsv(result: ExtractionResult) -> str:
     return "\n".join(format_tsv_row(asdict(record)) for record in result.certificates)
+
+
+def merge_extraction_results(results: list[ExtractionResult]) -> ExtractionResult:
+    certificates: list[CertificateRecord] = []
+    for result in results:
+        certificates.extend(result.certificates)
+    return ExtractionResult(certificates=certificates)
 
 
 def format_tsv_row(record: Mapping[str, str]) -> str:

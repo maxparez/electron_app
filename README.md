@@ -81,10 +81,21 @@ python scripts/dvpp_cert_extract.py \
   --output-tsv out/result.tsv
 ```
 
+Batch zpracování složky:
+
+```bash
+python scripts/dvpp_cert_extract.py \
+  --input-dir path/to/folder \
+  --model gemini-3-flash-preview \
+  --output-tsv out/batch.tsv
+```
+
+Batch režim posílá každý soubor samostatně, pak výsledky jen sloučí. Nepoužívá multi-file request do jednoho Gemini callu.
+
 Aktuální omezení POC:
-- zpracovává jen jeden soubor na běh
+- zpracovává jeden request na jeden soubor
 - nepodporuje multipage orchestraci
-- nepodporuje batch více souborů
+- batch režim jen sekvenčně skládá výsledky z jednotlivých requestů
 - nemá automatický fallback mezi modely
 - není zatím integrovaný do Electron aplikace
 
