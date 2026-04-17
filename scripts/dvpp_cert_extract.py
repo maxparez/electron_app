@@ -12,7 +12,12 @@ PYTHON_SRC = PROJECT_ROOT / "src" / "python"
 if str(PYTHON_SRC) not in sys.path:
     sys.path.insert(0, str(PYTHON_SRC))
 
-from dvpp_cert_extraction import SUPPORTED_MODELS, validate_input_file
+from dvpp_cert_extraction import (
+    SUPPORTED_MODELS,
+    extract_certificates,
+    serialize_result_json,
+    serialize_result_tsv,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -49,14 +54,24 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
-        validated_input = validate_input_file(args.input)
-    except (FileNotFoundError, ValueError) as exc:
+        result = extract_certificates(args.input, args.model)
+    except (FileNotFoundError, ModuleNotFoundError, TypeError, ValueError) as exc:
+        parser.exit(2, f"{exc}\n")
+    except Exception as exc:
         parser.exit(2, f"{exc}\n")
 
-    print(
-        f"Validated input {validated_input} for model {args.model}. "
-        "Extraction is not implemented in this step."
-    )
+    json_output = serialize_result_json(result)
+    tsv_output = serialize_result_tsv(result)
+
+    if args.output_json is not None:
+        args.output_json.parent.mkdir(parents=True, exist_ok=True)
+        args.output_json.write_text(f"{json_output}\n", encoding="utf-8")
+
+    if args.output_tsv is not None:
+        args.output_tsv.parent.mkdir(parents=True, exist_ok=True)
+        args.output_tsv.write_text(f"{tsv_output}\n", encoding="utf-8")
+
+    print(tsv_output)
     return 0
 
 

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+import json
+import os
 from datetime import datetime
 from pathlib import Path
-from typing import Mapping
+from typing import Callable, Mapping
 import re
 
 
@@ -14,6 +16,12 @@ SUPPORTED_MODELS = (
     "gemini-3-flash-preview",
     "gemini-3.1-pro-preview",
 )
+MODEL_NAME_MAPPING = {
+    "gemini-3-flash-preview": "gemini-3-flash-preview",
+    "gemini-3.1-pro-preview": "gemini-3.1-pro-preview",
+}
+PRIMARY_API_KEY_ENV = "GEMINI_API_KEY"
+FALLBACK_API_KEY_ENV = "GOOGLE_API_KEY"
 
 TOPIC_CATALOG = (
     "pedagogicka diagnostika",
@@ -194,6 +202,30 @@ def normalize_topic(value: str) -> str:
     return ""
 
 
+def resolve_model_name(model_name: str) -> str:
+    try:
+        return MODEL_NAME_MAPPING[model_name]
+    except KeyError as exc:
+        supported = ", ".join(SUPPORTED_MODELS)
+        raise ValueError(f"Unsupported model: {model_name}. Supported: {supported}") from exc
+
+
+def load_api_key(env: Mapping[str, str] | None = None) -> str:
+    source_env = os.environ if env is None else env
+    api_key = source_env.get(PRIMARY_API_KEY_ENV, "").strip()
+    if api_key:
+        return api_key
+
+    fallback_key = source_env.get(FALLBACK_API_KEY_ENV, "").strip()
+    if fallback_key:
+        return fallback_key
+
+    raise ValueError(
+        f"Missing API key. Set {PRIMARY_API_KEY_ENV}"
+        f" or {FALLBACK_API_KEY_ENV} in the environment."
+    )
+
+
 def validate_input_file(path: str | Path) -> Path:
     input_path = Path(path).expanduser()
     if not input_path.exists() or not input_path.is_file():
@@ -202,6 +234,53 @@ def validate_input_file(path: str | Path) -> Path:
         supported = ", ".join(sorted(ext.lstrip(".") for ext in SUPPORTED_EXTENSIONS))
         raise ValueError(f"Unsupported input file type: {input_path.suffix}. Supported: {supported}")
     return input_path.resolve()
+
+
+def create_agent(*, model_name: str, api_key: str):
+    from pydantic_ai import Agent
+    from pydantic_ai.models.google import GoogleModel
+    from pydantic_ai.providers.google import GoogleProvider
+
+    resolved_model_name = resolve_model_name(model_name)
+    provider = GoogleProvider(api_key=api_key)
+    model = GoogleModel(resolved_model_name, provider=provider)
+    return Agent(model=model, output_type=ExtractionResult)
+
+
+def _binary_content_from_path(path: Path):
+    from pydantic_ai import BinaryContent
+
+    return BinaryContent.from_path(path)
+
+
+def extract_certificates(
+    input_path: str | Path,
+    model_name: str,
+    *,
+    env: Mapping[str, str] | None = None,
+    agent_factory: Callable[..., object] | None = None,
+    binary_content_factory: Callable[[Path], object] | None = None,
+) -> ExtractionResult:
+    validated_input = validate_input_file(input_path)
+    api_key = load_api_key(env)
+    agent_builder = create_agent if agent_factory is None else agent_factory
+    binary_loader = _binary_content_from_path if binary_content_factory is None else binary_content_factory
+    agent = agent_builder(model_name=model_name, api_key=api_key)
+    prompt = f"{build_extraction_prompt()}\n\nNyni zpracuj prilozeny soubor."
+    response = agent.run_sync([prompt, binary_loader(validated_input)])
+    output = response.output
+    if isinstance(output, ExtractionResult):
+        return output
+    if isinstance(output, Mapping):
+        if "certificates" not in output:
+            raise ValueError("Malformed extraction response: missing certificates")
+        return ExtractionResult(
+            certificates=[
+                CertificateRecord(**certificate)
+                for certificate in output.get("certificates", [])
+            ]
+        )
+    raise TypeError("Unsupported extraction response type")
 
 
 def build_extraction_prompt() -> str:
@@ -227,6 +306,15 @@ Prijmeni<TAB>Jmeno<TAB>Datum narozeni<TAB>Nazev kurzu<TAB>Datum ukonceni vzdelav
 * Datum narozeni musi byt vzdy ve tvaru dd.mm.yyyy.
 * Datum ukonceni vzdelavani musi byt vzdy ve tvaru dd.mm.yyyy.
 """.strip()
+
+
+def serialize_result_json(result: ExtractionResult) -> str:
+    payload = {"certificates": [asdict(record) for record in result.certificates]}
+    return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def serialize_result_tsv(result: ExtractionResult) -> str:
+    return "\n".join(format_tsv_row(asdict(record)) for record in result.certificates)
 
 
 def format_tsv_row(record: Mapping[str, str]) -> str:
