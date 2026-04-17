@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 
 from dvpp_cert_extraction import collect_input_files, validate_input_file
 from dvpp_certificates.domain import ExtractionBatch, RecordOrigin, WorkingRecord
+from dvpp_certificates.exporters import export_records_to_excel, export_records_to_tsv
 from dvpp_certificates.importers import GeminiCertificateImporter
 from dvpp_certificates.normalization import normalize_certificate_fields
 
@@ -151,3 +152,44 @@ class DvppCertificateProcessor(BaseTool):
             "errors": batch.errors.copy(),
             "export_metadata": asdict(batch.export_metadata),
         }
+
+    def export_tsv(
+        self,
+        records_payload: list[dict[str, Any]],
+        *,
+        output_path: str | None = None,
+    ) -> Dict[str, Any]:
+        self.clear_messages()
+        try:
+            data = export_records_to_tsv(records_payload, output_path=output_path)
+            return self.get_result(True, data)
+        except Exception as exc:
+            self.add_error(str(exc))
+            return self.get_result(False)
+
+    def export_excel(
+        self,
+        records_payload: list[dict[str, Any]],
+        export_metadata_payload: dict[str, Any],
+        *,
+        template_path: str | None = None,
+        output_path: str | None = None,
+    ) -> Dict[str, Any]:
+        self.clear_messages()
+        try:
+            exported_path = export_records_to_excel(
+                records_payload,
+                export_metadata_payload,
+                template_path=template_path,
+                output_path=output_path,
+            )
+            return self.get_result(
+                True,
+                {
+                    "output_path": exported_path,
+                    "template_path": template_path,
+                },
+            )
+        except Exception as exc:
+            self.add_error(str(exc))
+            return self.get_result(False)

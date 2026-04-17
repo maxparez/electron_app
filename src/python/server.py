@@ -1036,6 +1036,94 @@ def import_dvpp_certificates_gemini():
             "message": str(e)
         }), 500
 
+
+@app.route('/api/dvpp-certificates/export/tsv', methods=['POST'])
+def export_dvpp_certificates_tsv():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.export_tsv(
+            data.get("records", []),
+            output_path=convert_path_if_needed(data.get("outputPath")),
+        )
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "TSV export byl úspěšně vytvořen",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        return jsonify({
+            "status": "error",
+            "message": "TSV export selhal",
+            "errors": result.get("errors", []),
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error exporting DVPP certificates TSV: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/dvpp-certificates/export/excel', methods=['POST'])
+def export_dvpp_certificates_excel():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.export_excel(
+            data.get("records", []),
+            data.get("exportMetadata", {}),
+            template_path=convert_path_if_needed(data.get("templatePath")),
+            output_path=convert_path_if_needed(data.get("outputPath")),
+        )
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "Excel export byl úspěšně vytvořen",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        return jsonify({
+            "status": "error",
+            "message": "Excel export selhal",
+            "errors": result.get("errors", []),
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error exporting DVPP certificates Excel: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
 @app.route('/api/config', methods=['GET'])
 def get_config():
     """Get application configuration"""
