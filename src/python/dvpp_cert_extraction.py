@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Callable, Mapping
 import re
 
+from dvpp_certificates.domain import CertificateRecord
+
 
 SUPPORTED_EXTENSIONS = frozenset({".pdf", ".jpg", ".jpeg", ".png"})
 SUPPORTED_MODELS = (
@@ -85,50 +87,6 @@ _TITLE_PATTERNS = (
 _LEADING_TITLES_RE = re.compile(rf"^(?:{'|'.join(_TITLE_PATTERNS)})\s*")
 _TRAILING_TITLES_RE = re.compile(rf"\s*,?\s*(?:{'|'.join(_TITLE_PATTERNS)})$")
 _NORMALIZED_DATE_RE = re.compile(r"^\d{2}\.\d{2}\.\d{4}$")
-
-
-@dataclass(slots=True)
-class CertificateRecord:
-    surname: str
-    name: str
-    birth_date: str
-    course_name: str
-    completion_date: str
-    hours: str
-    topic: str = ""
-    uncertainty_notes: str = ""
-
-    def __post_init__(self) -> None:
-        required_fields = (
-            "surname",
-            "name",
-            "birth_date",
-            "course_name",
-            "completion_date",
-            "hours",
-        )
-        for field_name in required_fields:
-            value = getattr(self, field_name)
-            if not isinstance(value, str):
-                raise TypeError(f"{field_name} must be a string")
-            cleaned_value = value.strip()
-            if not cleaned_value:
-                raise ValueError(f"{field_name} must not be empty")
-            setattr(self, field_name, cleaned_value)
-
-        if not isinstance(self.topic, str):
-            raise TypeError("topic must be a string")
-        if not isinstance(self.uncertainty_notes, str):
-            raise TypeError("uncertainty_notes must be a string")
-
-        self.surname = _normalize_person_name(self.surname, "surname")
-        self.name = _normalize_person_name(self.name, "name")
-        self.birth_date = _validate_record_date(self.birth_date, "birth_date")
-        self.completion_date = _validate_record_date(
-            self.completion_date, "completion_date"
-        )
-        self.topic = normalize_topic(self.topic)
-        self.uncertainty_notes = self.uncertainty_notes.strip()
 
 
 @dataclass(slots=True)
