@@ -24,6 +24,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Config
     getConfig: (key) => ipcRenderer.invoke('config:get', key),
     setConfig: (key, value) => ipcRenderer.invoke('config:set', key, value),
+    getGeminiApiKeyStatus: () => ipcRenderer.invoke('secure:gemini:getStatus'),
+    getGeminiApiKey: () => ipcRenderer.invoke('secure:gemini:get'),
+    saveGeminiApiKey: (apiKey) => ipcRenderer.invoke('secure:gemini:set', apiKey),
+    deleteGeminiApiKey: () => ipcRenderer.invoke('secure:gemini:delete'),
     
     // File system operations
     scanFolder: (folderPath) => ipcRenderer.invoke('fs:scanFolder', folderPath),
