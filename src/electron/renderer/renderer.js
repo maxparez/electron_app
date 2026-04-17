@@ -6,7 +6,8 @@ const state = {
     selectedFiles: {
         'inv-vzd': [],
         'zor-spec': [],
-        'dvpp': []
+        'dvpp': [],
+        'dvpp-certificates': []
     },
     selectedTemplate: {
         'inv-vzd': null
@@ -223,6 +224,7 @@ async function init() {
     elements.certModelSelect.addEventListener('change', (event) => {
         state.certificateExtraction.modelName = event.target.value;
     });
+    bindCertificateInteractionHandlers();
     bindCertificateMetadataInputs();
     
     // Setup plakat form
@@ -1122,8 +1124,8 @@ function renderCertificateFilesList() {
                 <input
                     type="checkbox"
                     class="dvpp-checkbox"
+                    data-cert-file-path="${escapeHtml(match.file_path)}"
                     ${isChecked ? 'checked' : ''}
-                    onchange="toggleCertificateFile('${match.file_path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', this.checked)"
                 >
                 <div class="checkbox-row-content">
                     <div class="file-path">
@@ -1219,14 +1221,14 @@ function renderCertificateRecordsTable() {
     elements.certRecordsTable.className = 'cert-records-table';
     const rowsHtml = state.certificateExtraction.records.map((record, index) => `
         <tr>
-            <td><input type="text" value="${escapeHtml(record.working_record.surname || '')}" onchange="updateCertificateField(${index}, 'surname', this.value)"></td>
-            <td><input type="text" value="${escapeHtml(record.working_record.name || '')}" onchange="updateCertificateField(${index}, 'name', this.value)"></td>
-            <td><input type="text" value="${escapeHtml(record.working_record.birth_date || '')}" onchange="updateCertificateField(${index}, 'birth_date', this.value)"></td>
-            <td><input type="text" value="${escapeHtml(record.working_record.course_name || '')}" onchange="updateCertificateField(${index}, 'course_name', this.value)"></td>
-            <td><input type="text" value="${escapeHtml(record.working_record.completion_date || '')}" onchange="updateCertificateField(${index}, 'completion_date', this.value)"></td>
-            <td><input type="text" value="${escapeHtml(record.working_record.hours || '')}" onchange="updateCertificateField(${index}, 'hours', this.value)"></td>
-            <td><input type="text" value="${escapeHtml(record.working_record.topic || '')}" onchange="updateCertificateField(${index}, 'topic', this.value)"></td>
-            <td class="cert-row-actions"><button class="btn-remove" onclick="removeCertificateRecord(${index})">✕</button></td>
+            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="surname" value="${escapeHtml(record.working_record.surname || '')}"></td>
+            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="name" value="${escapeHtml(record.working_record.name || '')}"></td>
+            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="birth_date" value="${escapeHtml(record.working_record.birth_date || '')}"></td>
+            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="course_name" value="${escapeHtml(record.working_record.course_name || '')}"></td>
+            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="completion_date" value="${escapeHtml(record.working_record.completion_date || '')}"></td>
+            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="hours" value="${escapeHtml(record.working_record.hours || '')}"></td>
+            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="topic" value="${escapeHtml(record.working_record.topic || '')}"></td>
+            <td class="cert-row-actions"><button class="btn-remove" type="button" data-cert-remove-index="${index}">✕</button></td>
         </tr>
     `).join('');
 
@@ -1247,6 +1249,44 @@ function renderCertificateRecordsTable() {
             <tbody>${rowsHtml}</tbody>
         </table>
     `;
+}
+
+function bindCertificateInteractionHandlers() {
+    elements.certFilesList.addEventListener('change', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement)) {
+            return;
+        }
+        const filePath = target.dataset.certFilePath;
+        if (!filePath) {
+            return;
+        }
+        toggleCertificateFile(filePath, target.checked);
+    });
+
+    elements.certRecordsTable.addEventListener('input', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement)) {
+            return;
+        }
+        const { certRecordIndex, certRecordField } = target.dataset;
+        if (certRecordIndex === undefined || !certRecordField) {
+            return;
+        }
+        updateCertificateField(Number(certRecordIndex), certRecordField, target.value);
+    });
+
+    elements.certRecordsTable.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+        const button = target.closest('[data-cert-remove-index]');
+        if (!button) {
+            return;
+        }
+        removeCertificateRecord(Number(button.getAttribute('data-cert-remove-index')));
+    });
 }
 
 function renderCertificateDiagnostics() {

@@ -28,6 +28,7 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
     def test_renderer_js_wires_certificate_import_and_export_actions(self) -> None:
         content = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
 
+        self.assertIn("'dvpp-certificates': []", content)
         self.assertIn("loadCertificateMatches", content)
         self.assertIn("processCertificatesWithGemini", content)
         self.assertIn("processCertificatesFromRawText", content)
@@ -38,6 +39,13 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("dvpp-certificates/import/raw-text", content)
         self.assertIn("dvpp-certificates/export/tsv", content)
         self.assertIn("dvpp-certificates/export/excel", content)
+
+    def test_renderer_js_avoids_inline_handlers_in_certificate_ui(self) -> None:
+        content = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
+
+        self.assertNotIn('onchange="toggleCertificateFile(', content)
+        self.assertNotIn('onchange="updateCertificateField(', content)
+        self.assertNotIn('onclick="removeCertificateRecord(', content)
 
 
 if __name__ == "__main__":
