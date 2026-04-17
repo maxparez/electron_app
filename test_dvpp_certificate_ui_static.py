@@ -24,6 +24,8 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn('id="cert-files-list"', html)
         self.assertIn('id="cert-records-table"', html)
         self.assertIn('id="cert-diagnostics"', html)
+        self.assertIn('Hlavička evidence DVPP', html)
+        self.assertIn('id="cert-fill-header"', html)
 
     def test_renderer_js_wires_certificate_import_and_export_actions(self) -> None:
         content = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
@@ -34,6 +36,7 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("processCertificatesFromRawText", content)
         self.assertIn("copyCertificateTsv", content)
         self.assertIn("saveCertificateExcel", content)
+        self.assertIn("autoLoadStoredGeminiApiKey", content)
         self.assertIn("dvpp-certificates/scan", content)
         self.assertIn("dvpp-certificates/import/gemini", content)
         self.assertIn("dvpp-certificates/import/raw-text", content)

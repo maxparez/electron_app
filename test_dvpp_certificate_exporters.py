@@ -70,8 +70,7 @@ def build_export_metadata(**overrides) -> ExportMetadata:
         "project_number": "CZ.00/00/00/00000",
         "recipient_name": "Zakladni skola Test",
         "zor_number": "1",
-        "sablona": "DVPP/1",
-        "forma": "prezencni",
+        "fill_header": True,
     }
     payload.update(overrides)
     return ExportMetadata(**payload)
@@ -115,9 +114,9 @@ class DvppCertificateExportersTests(unittest.TestCase):
             self.assertEqual(1, len(writer_calls))
             self.assertEqual(output_path, writer_calls[0][0])
 
-    def test_export_records_to_excel_requires_metadata_before_write(self) -> None:
+    def test_export_records_to_excel_requires_metadata_before_write_when_header_enabled(self) -> None:
         record = build_working_record_payload()
-        metadata = build_export_metadata(sablona="")
+        metadata = build_export_metadata(project_number="")
         writer_called = False
 
         def fake_writer(output_path, records, export_metadata):
@@ -136,8 +135,35 @@ class DvppCertificateExportersTests(unittest.TestCase):
                     workbook_writer=fake_writer,
                 )
 
-        self.assertIn("sablona", str(exc_info.exception))
+        self.assertIn("project_number", str(exc_info.exception))
         self.assertFalse(writer_called)
+
+    def test_export_records_to_excel_allows_blank_header_fields_when_header_disabled(self) -> None:
+        record = build_working_record_payload()
+        metadata = build_export_metadata(
+            project_number="",
+            recipient_name="",
+            zor_number="",
+            fill_header=False,
+        )
+        writer_calls = []
+
+        def fake_writer(output_path, records, export_metadata):
+            writer_calls.append((output_path, records, export_metadata))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "template.xlsx"
+            template_path.write_bytes(b"template-bytes")
+
+            output_path = export_records_to_excel(
+                [record],
+                metadata,
+                template_path=str(template_path),
+                workbook_writer=fake_writer,
+            )
+
+        self.assertEqual(1, len(writer_calls))
+        self.assertEqual(output_path, writer_calls[0][0])
 
     def test_resolve_excel_template_path_uses_default_template(self) -> None:
         self.assertEqual(DEFAULT_EXCEL_TEMPLATE_PATH, resolve_excel_template_path(None))

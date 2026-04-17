@@ -157,8 +157,7 @@ class DvppCertificatesDomainTests(unittest.TestCase):
                 project_number="CZ.02.02.XX/00/00_000/0000000",
                 recipient_name="Zakladni skola",
                 zor_number="1ZoR",
-                sablona="DVPP",
-                forma="prezencni",
+                fill_header=True,
             ),
         )
 
@@ -175,8 +174,7 @@ class DvppCertificatesDomainTests(unittest.TestCase):
             "CZ.02.02.XX/00/00_000/0000000",
             batch.export_metadata.project_number,
         )
-        self.assertEqual("DVPP", batch.export_metadata.sablona)
-        self.assertEqual("prezencni", batch.export_metadata.forma)
+        self.assertTrue(batch.export_metadata.fill_header)
 
 
 if __name__ == "__main__":

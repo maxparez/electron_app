@@ -307,15 +307,16 @@
 
                     <div class="cert-review-side">
                         <div class="form-group">
-                            <label>Exportní metadata:</label>
+                            <label>Hlavička evidence DVPP:</label>
                             <div class="cert-metadata-grid">
                                 <input type="text" id="cert-project-number" placeholder="Registrační číslo projektu">
-                                <input type="text" id="cert-recipient-name" placeholder="Název příjemce">
+                                <input type="text" id="cert-recipient-name" placeholder="Příjemce podpory">
                                 <input type="text" id="cert-zor-number" placeholder="Číslo ZoR">
-                                <input type="text" id="cert-sablona" placeholder="Šablona">
-                                <input type="text" id="cert-forma" placeholder="Forma">
-                                <input type="text" id="cert-qualification-split" placeholder="Kvalifikační rozdělení">
                             </div>
+                            <label class="checkbox-inline">
+                                <input type="checkbox" id="cert-fill-header">
+                                Vyplnit hlavičku
+                            </label>
                         </div>
 
                         <div class="form-group">

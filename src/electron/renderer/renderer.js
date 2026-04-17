@@ -32,9 +32,7 @@ const state = {
             project_number: '',
             recipient_name: '',
             zor_number: '',
-            sablona: '',
-            forma: '',
-            qualification_split: '',
+            fill_header: false,
             template_path: 'D:\\JAK2024\\Dokumenty\\Evidence_podpor_poskytnutych_ucastnikum_vzdelavani_MS_ZS_upravene_DVPP.xlsx'
         }
     }
@@ -101,9 +99,7 @@ const elements = {
     certProjectNumber: document.getElementById('cert-project-number'),
     certRecipientName: document.getElementById('cert-recipient-name'),
     certZorNumber: document.getElementById('cert-zor-number'),
-    certSablona: document.getElementById('cert-sablona'),
-    certForma: document.getElementById('cert-forma'),
-    certQualificationSplit: document.getElementById('cert-qualification-split'),
+    certFillHeader: document.getElementById('cert-fill-header'),
     certTemplatePath: document.getElementById('cert-template-path'),
     certSelectTemplateBtn: document.getElementById('select-cert-template'),
     certCopyTsvBtn: document.getElementById('copy-cert-tsv'),
@@ -252,6 +248,7 @@ async function init() {
     elements.certUserPrompt.value = CERT_USER_PROMPT;
     elements.certTemplatePath.value = state.certificateExtraction.exportMetadata.template_path;
     await refreshGeminiApiKeyStatus();
+    await autoLoadStoredGeminiApiKey();
     renderCertificateFilesList();
     updateCertificateActions();
     
@@ -970,9 +967,6 @@ function bindCertificateMetadataInputs() {
         ['project_number', elements.certProjectNumber],
         ['recipient_name', elements.certRecipientName],
         ['zor_number', elements.certZorNumber],
-        ['sablona', elements.certSablona],
-        ['forma', elements.certForma],
-        ['qualification_split', elements.certQualificationSplit],
         ['template_path', elements.certTemplatePath]
     ];
 
@@ -981,12 +975,17 @@ function bindCertificateMetadataInputs() {
             state.certificateExtraction.exportMetadata[key] = event.target.value;
         });
     });
+
+    elements.certFillHeader.addEventListener('change', (event) => {
+        state.certificateExtraction.exportMetadata.fill_header = !!event.target.checked;
+    });
 }
 
 async function refreshGeminiApiKeyStatus() {
     try {
         const result = await window.electronAPI.getGeminiApiKeyStatus();
         state.certificateExtraction.hasStoredApiKey = !!(result && result.stored);
+        elements.certRememberKey.checked = state.certificateExtraction.hasStoredApiKey;
         elements.certApiKeyStatus.textContent = state.certificateExtraction.hasStoredApiKey
             ? 'Uložený Gemini API key je k dispozici v zabezpečeném úložišti.'
             : 'Zatím není uložen žádný Gemini API key.';
@@ -1004,10 +1003,28 @@ async function loadStoredGeminiApiKey() {
             return;
         }
         elements.certApiKeyInput.value = apiKey;
+        elements.certRememberKey.checked = true;
         showMessage('Uložený Gemini API key byl načten.', 'success');
     } catch (error) {
         console.error('Load stored Gemini key error:', error);
         showMessage('Nepodařilo se načíst uložený Gemini API key.', 'error');
+    }
+}
+
+async function autoLoadStoredGeminiApiKey() {
+    if (!state.certificateExtraction.hasStoredApiKey) {
+        return;
+    }
+
+    try {
+        const apiKey = await window.electronAPI.getGeminiApiKey();
+        if (!apiKey) {
+            return;
+        }
+        elements.certApiKeyInput.value = apiKey;
+        elements.certRememberKey.checked = true;
+    } catch (error) {
+        console.error('Auto-load stored Gemini key error:', error);
     }
 }
 

@@ -15,8 +15,6 @@ REQUIRED_EXPORT_METADATA_FIELDS = (
     "project_number",
     "recipient_name",
     "zor_number",
-    "sablona",
-    "forma",
 )
 
 
@@ -83,6 +81,9 @@ def _coerce_export_metadata(
 
 
 def _validate_export_metadata(export_metadata: ExportMetadata) -> None:
+    if not export_metadata.fill_header:
+        return
+
     for field_name in REQUIRED_EXPORT_METADATA_FIELDS:
         value = getattr(export_metadata, field_name, "")
         if not isinstance(value, str) or not value.strip():
@@ -128,40 +129,29 @@ def _write_records_with_xlwings(
     book = None
     try:
         book = app.books.open(output_path)
-        sheet_name = "DVPP_CERT_IMPORT"
-        try:
-            sheet = book.sheets[sheet_name]
-            sheet.clear()
-        except Exception:
-            sheet = book.sheets.add(sheet_name, after=book.sheets[-1])
+        sheet = book.sheets["podpory"]
 
-        sheet.range("A1").value = [
-            ["Project number", export_metadata.project_number],
-            ["Recipient", export_metadata.recipient_name],
-            ["ZoR number", export_metadata.zor_number],
-            ["Sablona", export_metadata.sablona],
-            ["Forma", export_metadata.forma],
-            ["Qualification split", export_metadata.qualification_split],
-        ]
-        sheet.range("A8").value = [
-            "Prijmeni",
-            "Jmeno",
-            "Datum narozeni",
-            "Nazev kurzu",
-            "Datum ukonceni vzdelavani",
-            "Pocet hodin",
-            "Tema",
-        ]
+        if export_metadata.fill_header:
+            sheet.range("C6").value = export_metadata.project_number
+            sheet.range("I6").value = export_metadata.zor_number
+            sheet.range("C7").value = export_metadata.recipient_name
+
+        data_start_row = 11
+        data_end_row = max(data_start_row + len(records) - 1, 500)
+        sheet.range(f"B{data_start_row}:J{data_end_row}").clear_contents()
+
         if records:
-            sheet.range("A9").value = [
+            sheet.range(f"B{data_start_row}").value = [
                 [
                     record.surname,
                     record.name,
-                    record.birth_date,
+                    "",
                     record.course_name,
                     record.completion_date,
                     record.hours,
+                    "",
                     record.topic,
+                    "",
                 ]
                 for record in records
             ]

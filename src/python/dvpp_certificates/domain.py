@@ -97,9 +97,7 @@ class ExportMetadata:
     project_number: str = ""
     recipient_name: str = ""
     zor_number: str = ""
-    sablona: str = ""
-    forma: str = ""
-    qualification_split: str = ""
+    fill_header: bool = False
 
 
 @dataclass(slots=True)
