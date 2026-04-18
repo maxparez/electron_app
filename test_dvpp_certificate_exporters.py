@@ -81,7 +81,7 @@ def build_export_metadata(**overrides) -> ExportMetadata:
 
 
 class DvppCertificateExportersTests(unittest.TestCase):
-    def test_write_records_to_sheet_temporarily_unprotects_locked_sheet(self) -> None:
+    def test_write_records_to_sheet_writes_header_and_rows_without_sheet_protection_handling(self) -> None:
         class FakeSheetApi:
             def __init__(self) -> None:
                 self.ProtectContents = True
@@ -130,8 +130,8 @@ class DvppCertificateExportersTests(unittest.TestCase):
 
         _write_records_to_sheet(sheet, records, build_export_metadata())
 
-        self.assertEqual(1, sheet.api.unprotect_calls)
-        self.assertEqual(1, sheet.api.protect_calls)
+        self.assertEqual(0, sheet.api.unprotect_calls)
+        self.assertEqual(0, sheet.api.protect_calls)
         self.assertEqual("CZ.00/00/00/00000", sheet.ranges["D6"].value)
         self.assertEqual("1", sheet.ranges["I6"].value)
         self.assertEqual("Zakladni skola Test", sheet.ranges["D7"].value)

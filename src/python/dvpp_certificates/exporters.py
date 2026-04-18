@@ -128,36 +128,27 @@ def _write_records_to_sheet(
     records: list[CertificateRecord],
     export_metadata: ExportMetadata,
 ) -> None:
-    was_protected = bool(getattr(getattr(sheet, "api", None), "ProtectContents", False))
+    if export_metadata.fill_header:
+        sheet.range("D6").value = export_metadata.project_number
+        sheet.range("I6").value = export_metadata.zor_number
+        sheet.range("D7").value = export_metadata.recipient_name
 
-    try:
-        if was_protected:
-            sheet.api.Unprotect()
+    data_start_row = 11
+    data_end_row = max(data_start_row + len(records) - 1, 500)
+    sheet.range(f"B{data_start_row}:J{data_end_row}").clear_contents()
 
-        if export_metadata.fill_header:
-            sheet.range("D6").value = export_metadata.project_number
-            sheet.range("I6").value = export_metadata.zor_number
-            sheet.range("D7").value = export_metadata.recipient_name
-
-        data_start_row = 11
-        data_end_row = max(data_start_row + len(records) - 1, 500)
-        sheet.range(f"B{data_start_row}:J{data_end_row}").clear_contents()
-
-        if records:
-            sheet.range(f"B{data_start_row}").value = [
-                [
-                    record.surname,
-                    record.name,
-                    record.sablona,
-                    record.course_name,
-                    record.completion_date,
-                    record.hours,
-                    "",
-                    record.topic,
-                    "",
-                ]
-                for record in records
+    if records:
+        sheet.range(f"B{data_start_row}").value = [
+            [
+                record.surname,
+                record.name,
+                record.sablona,
+                record.course_name,
+                record.completion_date,
+                record.hours,
+                "",
+                record.topic,
+                "",
             ]
-    finally:
-        if was_protected:
-            sheet.api.Protect()
+            for record in records
+        ]
