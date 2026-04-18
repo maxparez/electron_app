@@ -66,6 +66,15 @@ body {
     overflow-y: auto;
 }
 
+.content.certificates-scroll-mode {
+    scrollbar-width: none;
+}
+
+.content.certificates-scroll-mode::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
 .tool-content {
     display: none;
     animation: fadeIn 0.3s ease-in;
