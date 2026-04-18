@@ -614,32 +614,99 @@ h3.error {
     font-style: italic;
 }
 
-.cert-records-grid {
+.cert-records-table {
     width: 100%;
-    border-collapse: collapse;
+    min-height: 360px;
+    border: 1px solid #dbe4f0;
+    border-radius: 14px;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.98)),
+        linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(16, 185, 129, 0.04));
 }
 
-.cert-records-grid th,
-.cert-records-grid td {
-    padding: 8px;
-    border-bottom: 1px solid #e9ecef;
-    vertical-align: top;
+.cert-records-table.ag-theme-alpine {
+    --ag-font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    --ag-font-size: 13px;
+    --ag-foreground-color: #10233f;
+    --ag-background-color: transparent;
+    --ag-border-color: #dbe4f0;
+    --ag-header-background-color: rgba(226, 232, 240, 0.85);
+    --ag-header-foreground-color: #314158;
+    --ag-header-height: 44px;
+    --ag-row-height: 44px;
+    --ag-row-hover-color: rgba(59, 130, 246, 0.06);
+    --ag-selected-row-background-color: rgba(37, 99, 235, 0.08);
+    --ag-input-focus-border-color: #2563eb;
+    --ag-range-selection-border-color: #2563eb;
 }
 
-.cert-records-grid th {
-    text-align: left;
-    font-size: 12px;
+.cert-records-table .ag-root-wrapper {
+    border: none;
+    background: transparent;
+}
+
+.cert-records-table .ag-header-cell-label {
+    font-size: 11px;
     text-transform: uppercase;
-    color: #6c757d;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.08em;
+    font-weight: 700;
 }
 
-.cert-records-grid input {
+.cert-records-table .ag-cell {
+    display: flex;
+    align-items: center;
+}
+
+.cert-records-table .ag-cell-value,
+.cert-records-table .ag-cell-wrapper {
     width: 100%;
-    padding: 8px;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
-    font-size: 13px;
+}
+
+.cert-records-table .ag-cell-inline-editing {
+    border-radius: 10px;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
+}
+
+.cert-records-table .ag-row:last-child .ag-cell {
+    border-bottom: none;
+}
+
+.cert-records-table .ag-overlay-no-rows-center {
+    padding: 28px 16px;
+    color: #64748b;
+    font-style: italic;
+}
+
+.cert-grid-empty {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 96px;
+}
+
+.cert-grid-template-cell {
+    font-weight: 600;
+    color: #1d4ed8;
+}
+
+.cert-grid-remove-btn {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    color: #b91c1c;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.cert-grid-remove-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(185, 28, 28, 0.18);
+    background: linear-gradient(135deg, #fecaca, #fca5a5);
 }
 
 .cert-metadata-grid {
@@ -681,11 +748,6 @@ h3.error {
 
 .cert-mode-btn.active {
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
-}
-
-.cert-row-actions {
-    display: flex;
-    justify-content: center;
 }
 
 .cert-prompt-actions {

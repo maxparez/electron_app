@@ -19,6 +19,9 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
 
         self.assertIn('data-tool="dvpp-certificates"', html)
         self.assertIn('id="dvpp-certificates-tool"', html)
+        self.assertIn('ag-grid.css', html)
+        self.assertIn('ag-theme-alpine.css', html)
+        self.assertIn('ag-grid-community.min.js', html)
         self.assertIn('id="cert-gemini-panel"', html)
         self.assertIn('id="cert-raw-panel"', html)
         self.assertIn('id="cert-files-list"', html)
@@ -32,6 +35,9 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
 
         self.assertIn("'dvpp-certificates': []", content)
         self.assertIn("TEMPLATE_OPTIONS", content)
+        self.assertIn("createCertificateGrid", content)
+        self.assertIn("ensureCertificateGridApi", content)
+        self.assertIn("setGridOption('rowData'", content)
         self.assertIn("loadCertificateMatches", content)
         self.assertIn("processCertificatesWithGemini", content)
         self.assertIn("processCertificatesFromRawText", content)
@@ -63,7 +69,8 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
     def test_renderer_supports_template_select_and_copy_feedback(self) -> None:
         renderer = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
 
-        self.assertIn("data-cert-record-field=\"sablona\"", renderer)
+        self.assertIn("agSelectCellEditor", renderer)
+        self.assertIn("cellEditorParams: { values: TEMPLATE_OPTIONS }", renderer)
         self.assertIn("TSV obsah byl zkopírován do schránky.", renderer)
         self.assertIn("setStatusMessage(successMessage, 4000);", renderer)
 

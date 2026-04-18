@@ -28,6 +28,7 @@ const state = {
         diagnostics: [],
         rawText: '',
         hasStoredApiKey: false,
+        gridApi: null,
         exportMetadata: {
             project_number: '',
             recipient_name: '',
@@ -230,6 +231,7 @@ async function init() {
     });
     bindCertificateInteractionHandlers();
     bindCertificateMetadataInputs();
+    createCertificateGrid();
     
     // Setup plakat form
     elements.plakatForm.addEventListener('submit', generatePlakat);
@@ -1238,64 +1240,124 @@ async function processCertificatesFromRawText() {
 function applyCertificateBatchResult(batch, diagnostics) {
     state.certificateExtraction.records = Array.isArray(batch.records) ? batch.records : [];
     state.certificateExtraction.diagnostics = diagnostics;
-    renderCertificateRecordsTable();
+    refreshCertificateGridRows();
     renderCertificateDiagnostics();
     updateCertificateActions();
 }
 
-function renderCertificateRecordsTable() {
-    if (state.certificateExtraction.records.length === 0) {
+function buildCertificateGridRowData() {
+    return state.certificateExtraction.records.map((record, index) => ({
+        __recordIndex: index,
+        surname: record.working_record.surname || '',
+        name: record.working_record.name || '',
+        birth_date: record.working_record.birth_date || '',
+        sablona: record.working_record.sablona || '',
+        course_name: record.working_record.course_name || '',
+        completion_date: record.working_record.completion_date || '',
+        hours: record.working_record.hours || '',
+        topic: record.working_record.topic || ''
+    }));
+}
+
+function ensureCertificateGridApi() {
+    if (state.certificateExtraction.gridApi) {
+        return state.certificateExtraction.gridApi;
+    }
+
+    return createCertificateGrid();
+}
+
+function createCertificateGrid() {
+    if (state.certificateExtraction.gridApi) {
+        return state.certificateExtraction.gridApi;
+    }
+
+    if (!window.agGrid || typeof window.agGrid.createGrid !== 'function') {
+        console.error('AG Grid is not available in the renderer process.');
         elements.certRecordsTable.className = 'cert-records-table empty-state';
-        elements.certRecordsTable.textContent = 'Zatím nejsou načtené žádné certifikáty.';
+        elements.certRecordsTable.textContent = 'Editor certifikátů se nepodařilo načíst.';
+        return null;
+    }
+
+    elements.certRecordsTable.className = 'cert-records-table ag-theme-alpine';
+    elements.certRecordsTable.innerHTML = '';
+
+    const gridOptions = {
+        rowData: buildCertificateGridRowData(),
+        defaultColDef: {
+            editable: true,
+            resizable: true,
+            sortable: false,
+            suppressMovable: true,
+            wrapHeaderText: true,
+            autoHeaderHeight: true,
+            flex: 1,
+            minWidth: 130
+        },
+        domLayout: 'autoHeight',
+        animateRows: true,
+        stopEditingWhenCellsLoseFocus: true,
+        suppressRowClickSelection: true,
+        overlayNoRowsTemplate: '<span class="cert-grid-empty">Zatím nejsou načtené žádné certifikáty.</span>',
+        columnDefs: [
+            { field: 'surname', headerName: 'Příjmení', minWidth: 150 },
+            { field: 'name', headerName: 'Jméno', minWidth: 140 },
+            { field: 'birth_date', headerName: 'Datum narození', minWidth: 150 },
+            {
+                field: 'sablona',
+                headerName: 'Šablona',
+                minWidth: 220,
+                cellEditor: 'agSelectCellEditor',
+                cellEditorParams: { values: TEMPLATE_OPTIONS },
+                cellClass: 'cert-grid-template-cell'
+            },
+            { field: 'course_name', headerName: 'Název kurzu', minWidth: 260, flex: 1.6 },
+            { field: 'completion_date', headerName: 'Datum ukončení', minWidth: 150 },
+            { field: 'hours', headerName: 'Hodiny', minWidth: 110 },
+            { field: 'topic', headerName: 'Téma', minWidth: 220, flex: 1.4 },
+            {
+                colId: 'actions',
+                headerName: '',
+                editable: false,
+                minWidth: 84,
+                maxWidth: 84,
+                pinned: 'right',
+                lockPinned: true,
+                cellRenderer: () => '<button type="button" class="cert-grid-remove-btn" data-cert-grid-remove="1" aria-label="Odstranit záznam">✕</button>'
+            }
+        ],
+        onCellValueChanged: (event) => {
+            if (!event.colDef.field) {
+                return;
+            }
+            updateCertificateField(event.data.__recordIndex, event.colDef.field, event.newValue ?? '');
+        },
+        onCellClicked: (event) => {
+            if (event.column.getColId() !== 'actions') {
+                return;
+            }
+            removeCertificateRecord(event.data.__recordIndex);
+        }
+    };
+
+    state.certificateExtraction.gridApi = window.agGrid.createGrid(elements.certRecordsTable, gridOptions);
+    refreshCertificateGridRows();
+    return state.certificateExtraction.gridApi;
+}
+
+function refreshCertificateGridRows() {
+    const gridApi = ensureCertificateGridApi();
+    if (!gridApi) {
         return;
     }
 
-    elements.certRecordsTable.className = 'cert-records-table';
-    const templateOptionsHtml = TEMPLATE_OPTIONS.map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('');
-    const rowsHtml = state.certificateExtraction.records.map((record, index) => `
-        <tr>
-            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="surname" value="${escapeHtml(record.working_record.surname || '')}"></td>
-            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="name" value="${escapeHtml(record.working_record.name || '')}"></td>
-            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="birth_date" value="${escapeHtml(record.working_record.birth_date || '')}"></td>
-            <td>
-                <select data-cert-record-index="${index}" data-cert-record-field="sablona">
-                    <option value="">Vyberte šablonu</option>
-                    ${templateOptionsHtml}
-                </select>
-            </td>
-            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="course_name" value="${escapeHtml(record.working_record.course_name || '')}"></td>
-            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="completion_date" value="${escapeHtml(record.working_record.completion_date || '')}"></td>
-            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="hours" value="${escapeHtml(record.working_record.hours || '')}"></td>
-            <td><input type="text" data-cert-record-index="${index}" data-cert-record-field="topic" value="${escapeHtml(record.working_record.topic || '')}"></td>
-            <td class="cert-row-actions"><button class="btn-remove" type="button" data-cert-remove-index="${index}">✕</button></td>
-        </tr>
-    `).join('');
-
-    elements.certRecordsTable.innerHTML = `
-        <table class="cert-records-grid">
-            <thead>
-                <tr>
-                    <th>Příjmení</th>
-                    <th>Jméno</th>
-                    <th>Datum narození</th>
-                    <th>Šablona</th>
-                    <th>Název kurzu</th>
-                    <th>Datum ukončení</th>
-                    <th>Hodiny</th>
-                    <th>Téma</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>${rowsHtml}</tbody>
-        </table>
-    `;
-
-    state.certificateExtraction.records.forEach((record, index) => {
-        const select = elements.certRecordsTable.querySelector(`select[data-cert-record-index="${index}"][data-cert-record-field="sablona"]`);
-        if (select) {
-            select.value = record.working_record.sablona || '';
-        }
-    });
+    const rowData = buildCertificateGridRowData();
+    gridApi.setGridOption('rowData', rowData);
+    if (rowData.length === 0) {
+        gridApi.showNoRowsOverlay();
+    } else {
+        gridApi.hideOverlay();
+    }
 }
 
 function bindCertificateInteractionHandlers() {
@@ -1310,42 +1372,6 @@ function bindCertificateInteractionHandlers() {
         }
         toggleCertificateFile(filePath, target.checked);
     });
-
-    elements.certRecordsTable.addEventListener('input', (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLInputElement)) {
-            return;
-        }
-        handleCertificateRecordFieldChange(target);
-    });
-
-    elements.certRecordsTable.addEventListener('change', (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) {
-            return;
-        }
-        handleCertificateRecordFieldChange(target);
-    });
-
-    elements.certRecordsTable.addEventListener('click', (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) {
-            return;
-        }
-        const button = target.closest('[data-cert-remove-index]');
-        if (!button) {
-            return;
-        }
-        removeCertificateRecord(Number(button.getAttribute('data-cert-remove-index')));
-    });
-}
-
-function handleCertificateRecordFieldChange(target) {
-    const { certRecordIndex, certRecordField } = target.dataset;
-    if (certRecordIndex === undefined || !certRecordField) {
-        return;
-    }
-    updateCertificateField(Number(certRecordIndex), certRecordField, target.value);
 }
 
 function renderCertificateDiagnostics() {
@@ -1378,7 +1404,7 @@ function updateCertificateField(index, field, value) {
 
 function removeCertificateRecord(index) {
     state.certificateExtraction.records.splice(index, 1);
-    renderCertificateRecordsTable();
+    refreshCertificateGridRows();
     updateCertificateActions();
 }
 
