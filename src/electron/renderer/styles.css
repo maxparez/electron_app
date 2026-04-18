@@ -75,6 +75,13 @@ body {
     display: block;
 }
 
+#dvpp-certificates-tool.active {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 120px);
+    overflow: hidden;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -598,6 +605,8 @@ h3.error {
     grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
     gap: 20px;
     align-items: start;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .cert-review-main,
@@ -606,6 +615,11 @@ h3.error {
     border: 1px solid #dbe4f0;
     border-radius: 10px;
     padding: 20px;
+    min-height: 0;
+}
+
+.cert-review-side {
+    overflow: auto;
 }
 
 .cert-records-table.empty-state,
