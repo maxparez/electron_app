@@ -43,7 +43,6 @@ const state = {
 const elements = {
     navItems: document.querySelectorAll('.nav-item'),
     toolContents: document.querySelectorAll('.tool-content'),
-    mainContent: document.querySelector('.content'),
     loadingOverlay: document.getElementById('loading-overlay'),
     
     // Inv Vzd elements
@@ -311,7 +310,6 @@ function switchTool(toolId) {
     if (targetContent) {
         targetContent.classList.add('active');
         state.currentTool = toolId;
-        elements.mainContent.classList.toggle('certificates-scroll-mode', toolId === 'dvpp-certificates');
     }
 }
 
@@ -1290,6 +1288,7 @@ function createCertificateGrid() {
     const gridOptions = {
         rowData: buildCertificateGridRowData(),
         theme: 'legacy',
+        domLayout: 'autoHeight',
         defaultColDef: {
             editable: true,
             resizable: true,

@@ -38,7 +38,6 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         content = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
 
         self.assertIn("'dvpp-certificates': []", content)
-        self.assertIn("mainContent: document.querySelector('.content')", content)
         self.assertIn("TEMPLATE_OPTIONS", content)
         self.assertIn("createCertificateGrid", content)
         self.assertIn("ensureCertificateGridApi", content)
@@ -55,7 +54,6 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("dvpp-certificates/import/raw-text", content)
         self.assertIn("dvpp-certificates/export/tsv", content)
         self.assertIn("dvpp-certificates/export/excel", content)
-        self.assertIn("elements.mainContent.classList.toggle('certificates-scroll-mode', toolId === 'dvpp-certificates');", content)
 
     def test_renderer_js_avoids_inline_handlers_in_certificate_ui(self) -> None:
         content = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
@@ -79,8 +77,8 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("agSelectCellEditor", renderer)
         self.assertIn("cellEditorParams: { values: TEMPLATE_OPTIONS }", renderer)
         self.assertIn("theme: 'legacy'", renderer)
+        self.assertIn("domLayout: 'autoHeight'", renderer)
         self.assertIn("singleClickEdit: true", renderer)
-        self.assertNotIn("domLayout: 'autoHeight'", renderer)
         self.assertNotIn("suppressRowClickSelection", renderer)
         self.assertIn("TSV obsah byl zkopírován do schránky.", renderer)
         self.assertIn("setStatusMessage(successMessage, 4000);", renderer)
@@ -90,15 +88,11 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
     def test_certificate_grid_styles_include_vertical_lines(self) -> None:
         styles = (REPO_ROOT / "src" / "electron" / "renderer" / "styles.css").read_text(encoding="utf-8")
 
-        self.assertIn(".content.certificates-scroll-mode", styles)
-        self.assertIn("scrollbar-width: none;", styles)
-        self.assertIn(".content.certificates-scroll-mode::-webkit-scrollbar", styles)
-        self.assertIn("width: 0;", styles)
         self.assertIn("--ag-borders: solid 1px;", styles)
         self.assertIn("--ag-cell-horizontal-border: solid #dbe4f0;", styles)
         self.assertIn(".cert-records-table .ag-cell:not(:last-child)", styles)
         self.assertIn("border-right: 1px solid #dbe4f0;", styles)
-        self.assertIn("height: 520px;", styles)
+        self.assertIn("min-height: 220px;", styles)
         self.assertIn("overflow: hidden;", styles)
 
     def test_renderer_does_not_block_excel_export_on_missing_header_fields(self) -> None:
