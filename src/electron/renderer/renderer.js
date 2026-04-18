@@ -1287,6 +1287,7 @@ function createCertificateGrid() {
 
     const gridOptions = {
         rowData: buildCertificateGridRowData(),
+        theme: 'legacy',
         defaultColDef: {
             editable: true,
             resizable: true,
@@ -1300,7 +1301,6 @@ function createCertificateGrid() {
         animateRows: true,
         singleClickEdit: true,
         stopEditingWhenCellsLoseFocus: true,
-        suppressRowClickSelection: true,
         overlayNoRowsTemplate: '<span class="cert-grid-empty">Zatím nejsou načtené žádné certifikáty.</span>',
         columnDefs: [
             { field: 'surname', headerName: 'Příjmení', minWidth: 150 },
