@@ -90,9 +90,10 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("border-right: 1px solid #dbe4f0;", styles)
         self.assertIn("height: 520px;", styles)
         self.assertIn("overflow: hidden;", styles)
+        self.assertIn(".content {\n    flex: 1;\n    padding: 30px;\n    overflow-y: auto;\n    display: flex;\n    flex-direction: column;\n    min-height: 0;", styles)
         self.assertIn("#dvpp-certificates-tool.active", styles)
         self.assertIn("flex-direction: column;", styles)
-        self.assertIn("height: calc(100vh - 120px);", styles)
+        self.assertIn("flex: 1 1 auto;", styles)
         self.assertIn("min-height: 0;", styles)
 
     def test_renderer_does_not_block_excel_export_on_missing_header_fields(self) -> None:
