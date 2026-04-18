@@ -115,11 +115,29 @@ def _write_records_with_xlwings(
     try:
         book = app.books.open(output_path)
         sheet = book.sheets["podpory"]
+        _write_records_to_sheet(sheet, records, export_metadata)
+        book.save()
+    finally:
+        if book is not None:
+            book.close()
+        app.quit()
+
+
+def _write_records_to_sheet(
+    sheet,
+    records: list[CertificateRecord],
+    export_metadata: ExportMetadata,
+) -> None:
+    was_protected = bool(getattr(getattr(sheet, "api", None), "ProtectContents", False))
+
+    try:
+        if was_protected:
+            sheet.api.Unprotect()
 
         if export_metadata.fill_header:
-            sheet.range("C6").value = export_metadata.project_number
+            sheet.range("D6").value = export_metadata.project_number
             sheet.range("I6").value = export_metadata.zor_number
-            sheet.range("C7").value = export_metadata.recipient_name
+            sheet.range("D7").value = export_metadata.recipient_name
 
         data_start_row = 11
         data_end_row = max(data_start_row + len(records) - 1, 500)
@@ -140,8 +158,6 @@ def _write_records_with_xlwings(
                 ]
                 for record in records
             ]
-        book.save()
     finally:
-        if book is not None:
-            book.close()
-        app.quit()
+        if was_protected:
+            sheet.api.Protect()

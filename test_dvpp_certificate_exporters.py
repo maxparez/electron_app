@@ -14,6 +14,7 @@ import server
 from dvpp_certificates.domain import CertificateRecord, ExportMetadata
 from dvpp_certificates.exporters import (
     DEFAULT_EXCEL_TEMPLATE_PATH,
+    _write_records_to_sheet,
     export_records_to_excel,
     export_records_to_tsv,
     resolve_excel_template_path,
@@ -80,6 +81,111 @@ def build_export_metadata(**overrides) -> ExportMetadata:
 
 
 class DvppCertificateExportersTests(unittest.TestCase):
+    def test_write_records_to_sheet_temporarily_unprotects_locked_sheet(self) -> None:
+        class FakeSheetApi:
+            def __init__(self) -> None:
+                self.ProtectContents = True
+                self.unprotect_calls = 0
+                self.protect_calls = 0
+
+            def Unprotect(self) -> None:
+                self.unprotect_calls += 1
+                self.ProtectContents = False
+
+            def Protect(self) -> None:
+                self.protect_calls += 1
+                self.ProtectContents = True
+
+        class FakeRange:
+            def __init__(self) -> None:
+                self.value = None
+                self.cleared = False
+
+            def clear_contents(self) -> None:
+                self.cleared = True
+
+        class FakeSheet:
+            def __init__(self) -> None:
+                self.api = FakeSheetApi()
+                self.ranges = {}
+
+            def range(self, address: str) -> FakeRange:
+                if address not in self.ranges:
+                    self.ranges[address] = FakeRange()
+                return self.ranges[address]
+
+        sheet = FakeSheet()
+        records = [
+            CertificateRecord(
+                surname="Novakova",
+                name="Jana",
+                birth_date="05.09.1980",
+                course_name="Kurz AI ve vyuce",
+                completion_date="14.03.2024",
+                hours="8",
+                sablona="vzdělávání ZŠ_2_II_4",
+                topic="umělá inteligence",
+            )
+        ]
+
+        _write_records_to_sheet(sheet, records, build_export_metadata())
+
+        self.assertEqual(1, sheet.api.unprotect_calls)
+        self.assertEqual(1, sheet.api.protect_calls)
+        self.assertEqual("CZ.00/00/00/00000", sheet.ranges["D6"].value)
+        self.assertEqual("1", sheet.ranges["I6"].value)
+        self.assertEqual("Zakladni skola Test", sheet.ranges["D7"].value)
+        self.assertTrue(sheet.ranges["B11:J500"].cleared)
+        self.assertEqual(
+            [[
+                "Novakova",
+                "Jana",
+                "vzdělávání ZŠ_2_II_4",
+                "Kurz AI ve vyuce",
+                "14.03.2024",
+                "8",
+                "",
+                "umělá inteligence",
+                "",
+            ]],
+            sheet.ranges["B11"].value,
+        )
+
+    def test_write_records_to_sheet_leaves_unprotected_sheet_unprotected(self) -> None:
+        class FakeSheetApi:
+            def __init__(self) -> None:
+                self.ProtectContents = False
+                self.unprotect_calls = 0
+                self.protect_calls = 0
+
+            def Unprotect(self) -> None:
+                self.unprotect_calls += 1
+
+            def Protect(self) -> None:
+                self.protect_calls += 1
+
+        class FakeRange:
+            def __init__(self) -> None:
+                self.value = None
+
+            def clear_contents(self) -> None:
+                pass
+
+        class FakeSheet:
+            def __init__(self) -> None:
+                self.api = FakeSheetApi()
+                self.ranges = {}
+
+            def range(self, address: str) -> FakeRange:
+                if address not in self.ranges:
+                    self.ranges[address] = FakeRange()
+                return self.ranges[address]
+
+        sheet = FakeSheet()
+        _write_records_to_sheet(sheet, [], build_export_metadata(fill_header=False))
+        self.assertEqual(0, sheet.api.unprotect_calls)
+        self.assertEqual(0, sheet.api.protect_calls)
+
     def test_export_records_to_tsv_uses_working_record_values(self) -> None:
         record = build_working_record_payload()
 
