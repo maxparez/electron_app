@@ -67,12 +67,12 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("TSV obsah byl zkopírován do schránky.", renderer)
         self.assertIn("setStatusMessage(successMessage, 4000);", renderer)
 
-    def test_renderer_validates_header_fields_before_excel_export(self) -> None:
+    def test_renderer_does_not_block_excel_export_on_missing_header_fields(self) -> None:
         renderer = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
 
-        self.assertIn("validateCertificateExportMetadata()", renderer)
-        self.assertIn("Vyplnění hlavičky evidence DVPP vyžaduje doplnit pole", renderer)
-        self.assertIn("const metadataValidationError = validateCertificateExportMetadata();", renderer)
+        self.assertNotIn("validateCertificateExportMetadata()", renderer)
+        self.assertNotIn("Vyplnění hlavičky evidence DVPP vyžaduje doplnit pole", renderer)
+        self.assertIn("exportMetadata: state.certificateExtraction.exportMetadata", renderer)
 
 
 if __name__ == "__main__":

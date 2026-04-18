@@ -11,11 +11,6 @@ from dvpp_certificates.domain import CertificateRecord, ExportMetadata, RecordOr
 DEFAULT_EXCEL_TEMPLATE_PATH = (
     r"D:\JAK2024\Dokumenty\Evidence_podpor_poskytnutych_ucastnikum_vzdelavani_MS_ZS_upravene_DVPP.xlsx"
 )
-REQUIRED_EXPORT_METADATA_FIELDS = (
-    "project_number",
-    "recipient_name",
-    "zor_number",
-)
 
 
 def resolve_excel_template_path(template_path: str | None) -> str:
@@ -48,7 +43,6 @@ def export_records_to_excel(
     workbook_writer=None,
 ) -> str:
     metadata = _coerce_export_metadata(export_metadata)
-    _validate_export_metadata(metadata)
 
     resolved_template = Path(resolve_excel_template_path(template_path)).expanduser()
     if not resolved_template.exists() or not resolved_template.is_file():
@@ -78,16 +72,6 @@ def _coerce_export_metadata(
     if not isinstance(export_metadata, Mapping):
         raise TypeError("export_metadata must be an ExportMetadata or mapping")
     return ExportMetadata(**dict(export_metadata))
-
-
-def _validate_export_metadata(export_metadata: ExportMetadata) -> None:
-    if not export_metadata.fill_header:
-        return
-
-    for field_name in REQUIRED_EXPORT_METADATA_FIELDS:
-        value = getattr(export_metadata, field_name, "")
-        if not isinstance(value, str) or not value.strip():
-            raise ValueError(f"Missing required export metadata: {field_name}")
 
 
 def _coerce_working_record(record: WorkingRecord | Mapping[str, Any]) -> CertificateRecord:

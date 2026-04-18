@@ -119,29 +119,28 @@ class DvppCertificateExportersTests(unittest.TestCase):
             self.assertEqual(output_path, writer_calls[0][0])
             self.assertEqual("vzdělávání ZŠ_2_II_4", writer_calls[0][1][0].sablona)
 
-    def test_export_records_to_excel_requires_metadata_before_write_when_header_enabled(self) -> None:
+    def test_export_records_to_excel_allows_partial_metadata_when_header_enabled(self) -> None:
         record = build_working_record_payload()
         metadata = build_export_metadata(project_number="")
-        writer_called = False
+        writer_calls = []
 
         def fake_writer(output_path, records, export_metadata):
-            nonlocal writer_called
-            writer_called = True
+            writer_calls.append((output_path, records, export_metadata))
 
         with tempfile.TemporaryDirectory() as temp_dir:
             template_path = Path(temp_dir) / "template.xlsx"
             template_path.write_bytes(b"template-bytes")
 
-            with self.assertRaises(ValueError) as exc_info:
-                export_records_to_excel(
-                    [record],
-                    metadata,
-                    template_path=str(template_path),
-                    workbook_writer=fake_writer,
-                )
+            output_path = export_records_to_excel(
+                [record],
+                metadata,
+                template_path=str(template_path),
+                workbook_writer=fake_writer,
+            )
 
-        self.assertIn("project_number", str(exc_info.exception))
-        self.assertFalse(writer_called)
+        self.assertEqual(1, len(writer_calls))
+        self.assertEqual(output_path, writer_calls[0][0])
+        self.assertEqual("", writer_calls[0][2].project_number)
 
     def test_export_records_to_excel_allows_blank_header_fields_when_header_disabled(self) -> None:
         record = build_working_record_payload()

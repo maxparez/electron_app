@@ -1423,13 +1423,6 @@ async function saveCertificateTsv() {
 
 async function saveCertificateExcel() {
     try {
-        const metadataValidationError = validateCertificateExportMetadata();
-        if (metadataValidationError) {
-            showMessage(metadataValidationError, 'error');
-            setStatusMessage(metadataValidationError, 5000);
-            return;
-        }
-
         const outputPath = await window.electronAPI.saveFile('dvpp_certificates.xlsx');
         if (!outputPath) {
             return;
@@ -1446,28 +1439,6 @@ async function saveCertificateExcel() {
         console.error('Save Excel error:', error);
         showMessage(`Chyba při vytváření Excelu: ${error.message}`, 'error');
     }
-}
-
-function validateCertificateExportMetadata() {
-    const exportMetadata = state.certificateExtraction.exportMetadata;
-    if (!exportMetadata.fill_header) {
-        return '';
-    }
-
-    const requiredFields = [
-        ['project_number', 'Registrační číslo projektu'],
-        ['recipient_name', 'Příjemce podpory'],
-        ['zor_number', 'Číslo ZoR']
-    ];
-    const missingFields = requiredFields
-        .filter(([fieldName]) => !String(exportMetadata[fieldName] || '').trim())
-        .map(([, label]) => label);
-
-    if (!missingFields.length) {
-        return '';
-    }
-
-    return `Vyplnění hlavičky evidence DVPP vyžaduje doplnit pole: ${missingFields.join(', ')}`;
 }
 
 async function selectCertificateTemplate() {
