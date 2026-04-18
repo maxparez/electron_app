@@ -1297,7 +1297,6 @@ function createCertificateGrid() {
             flex: 1,
             minWidth: 130
         },
-        domLayout: 'autoHeight',
         animateRows: true,
         singleClickEdit: true,
         stopEditingWhenCellsLoseFocus: true,

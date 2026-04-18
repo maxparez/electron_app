@@ -75,6 +75,7 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("agSelectCellEditor", renderer)
         self.assertIn("cellEditorParams: { values: TEMPLATE_OPTIONS }", renderer)
         self.assertIn("singleClickEdit: true", renderer)
+        self.assertNotIn("domLayout: 'autoHeight'", renderer)
         self.assertIn("TSV obsah byl zkopírován do schránky.", renderer)
         self.assertIn("setStatusMessage(successMessage, 4000);", renderer)
         self.assertIn("await openFile(result.data.output_path);", renderer)
@@ -87,6 +88,8 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("--ag-cell-horizontal-border: solid #dbe4f0;", styles)
         self.assertIn(".cert-records-table .ag-cell:not(:last-child)", styles)
         self.assertIn("border-right: 1px solid #dbe4f0;", styles)
+        self.assertIn("height: 520px;", styles)
+        self.assertIn("overflow: hidden;", styles)
 
     def test_renderer_does_not_block_excel_export_on_missing_header_fields(self) -> None:
         renderer = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")

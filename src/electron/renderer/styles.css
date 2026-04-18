@@ -616,7 +616,7 @@ h3.error {
 
 .cert-records-table {
     width: 100%;
-    min-height: 360px;
+    height: 520px;
     border: 1px solid #dbe4f0;
     border-radius: 14px;
     overflow: hidden;
