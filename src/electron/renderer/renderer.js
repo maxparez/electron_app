@@ -1296,6 +1296,7 @@ function createCertificateGrid() {
         },
         domLayout: 'autoHeight',
         animateRows: true,
+        singleClickEdit: true,
         stopEditingWhenCellsLoseFocus: true,
         suppressRowClickSelection: true,
         overlayNoRowsTemplate: '<span class="cert-grid-empty">Zatím nejsou načtené žádné certifikáty.</span>',
@@ -1461,6 +1462,7 @@ async function saveCertificateExcel() {
             outputPath
         });
         showMessage(`Excel export byl vytvořen: ${wslToWindowsPath(result.data.output_path)}`, 'success');
+        await openFile(result.data.output_path);
     } catch (error) {
         console.error('Save Excel error:', error);
         showMessage(`Chyba při vytváření Excelu: ${error.message}`, 'error');

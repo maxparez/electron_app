@@ -630,7 +630,9 @@ h3.error {
     --ag-font-size: 13px;
     --ag-foreground-color: #10233f;
     --ag-background-color: transparent;
+    --ag-borders: solid 1px;
     --ag-border-color: #dbe4f0;
+    --ag-cell-horizontal-border: solid #dbe4f0;
     --ag-header-background-color: rgba(226, 232, 240, 0.85);
     --ag-header-foreground-color: #314158;
     --ag-header-height: 44px;

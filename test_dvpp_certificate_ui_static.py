@@ -71,8 +71,16 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
 
         self.assertIn("agSelectCellEditor", renderer)
         self.assertIn("cellEditorParams: { values: TEMPLATE_OPTIONS }", renderer)
+        self.assertIn("singleClickEdit: true", renderer)
         self.assertIn("TSV obsah byl zkopírován do schránky.", renderer)
         self.assertIn("setStatusMessage(successMessage, 4000);", renderer)
+        self.assertIn("await openFile(result.data.output_path);", renderer)
+
+    def test_certificate_grid_styles_include_vertical_lines(self) -> None:
+        styles = (REPO_ROOT / "src" / "electron" / "renderer" / "styles.css").read_text(encoding="utf-8")
+
+        self.assertIn("--ag-borders: solid 1px;", styles)
+        self.assertIn("--ag-cell-horizontal-border: solid #dbe4f0;", styles)
 
     def test_renderer_does_not_block_excel_export_on_missing_header_fields(self) -> None:
         renderer = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
