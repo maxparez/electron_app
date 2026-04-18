@@ -622,6 +622,19 @@ h3.error {
     min-height: 0;
 }
 
+.cert-review-main {
+    display: flex;
+    flex-direction: column;
+}
+
+.cert-review-main .form-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-bottom: 0;
+}
+
 .cert-review-side {
     overflow: auto;
 }
@@ -634,7 +647,9 @@ h3.error {
 
 .cert-records-table {
     width: 100%;
-    height: 520px;
+    flex: 1 1 auto;
+    min-height: 320px;
+    height: 100%;
     border: 1px solid #dbe4f0;
     border-radius: 14px;
     overflow: hidden;
