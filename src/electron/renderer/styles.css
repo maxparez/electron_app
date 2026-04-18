@@ -625,6 +625,22 @@ h3.error {
         linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(16, 185, 129, 0.04));
 }
 
+.cert-bulk-template-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.cert-bulk-template-bar select {
+    flex: 1;
+    min-width: 260px;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
 .cert-records-table.ag-theme-alpine {
     --ag-font-family: "Segoe UI", "Helvetica Neue", sans-serif;
     --ag-font-size: 13px;
@@ -658,6 +674,10 @@ h3.error {
 .cert-records-table .ag-cell {
     display: flex;
     align-items: center;
+}
+
+.cert-records-table .ag-cell:not(:last-child) {
+    border-right: 1px solid #dbe4f0;
 }
 
 .cert-records-table .ag-cell-value,
@@ -762,7 +782,8 @@ h3.error {
     }
 
     .cert-api-key-row,
-    .cert-template-row {
+    .cert-template-row,
+    .cert-bulk-template-bar {
         flex-direction: column;
     }
 }

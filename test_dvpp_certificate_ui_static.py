@@ -26,6 +26,8 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn('id="cert-raw-panel"', html)
         self.assertIn('id="cert-files-list"', html)
         self.assertIn('id="cert-records-table"', html)
+        self.assertIn('id="cert-bulk-template-select"', html)
+        self.assertIn('id="cert-apply-template-all"', html)
         self.assertIn('id="cert-diagnostics"', html)
         self.assertIn('Hlavička evidence DVPP', html)
         self.assertIn('id="cert-fill-header"', html)
@@ -43,6 +45,7 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("processCertificatesFromRawText", content)
         self.assertIn("copyCertificateTsv", content)
         self.assertIn("saveCertificateExcel", content)
+        self.assertIn("applyCertificateTemplateToAllRecords", content)
         self.assertIn("autoLoadStoredGeminiApiKey", content)
         self.assertIn("dvpp-certificates/scan", content)
         self.assertIn("dvpp-certificates/import/gemini", content)
@@ -75,12 +78,15 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("TSV obsah byl zkopírován do schránky.", renderer)
         self.assertIn("setStatusMessage(successMessage, 4000);", renderer)
         self.assertIn("await openFile(result.data.output_path);", renderer)
+        self.assertIn("certApplyTemplateAllBtn.addEventListener('click', applyCertificateTemplateToAllRecords);", renderer)
 
     def test_certificate_grid_styles_include_vertical_lines(self) -> None:
         styles = (REPO_ROOT / "src" / "electron" / "renderer" / "styles.css").read_text(encoding="utf-8")
 
         self.assertIn("--ag-borders: solid 1px;", styles)
         self.assertIn("--ag-cell-horizontal-border: solid #dbe4f0;", styles)
+        self.assertIn(".cert-records-table .ag-cell:not(:last-child)", styles)
+        self.assertIn("border-right: 1px solid #dbe4f0;", styles)
 
     def test_renderer_does_not_block_excel_export_on_missing_header_fields(self) -> None:
         renderer = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")

@@ -95,6 +95,8 @@ const elements = {
     certCopyUserPromptBtn: document.getElementById('copy-cert-user-prompt'),
     certRawText: document.getElementById('cert-raw-text'),
     certProcessRawBtn: document.getElementById('process-cert-raw'),
+    certBulkTemplateSelect: document.getElementById('cert-bulk-template-select'),
+    certApplyTemplateAllBtn: document.getElementById('cert-apply-template-all'),
     certRecordsTable: document.getElementById('cert-records-table'),
     certDiagnostics: document.getElementById('cert-diagnostics'),
     certProjectNumber: document.getElementById('cert-project-number'),
@@ -225,6 +227,7 @@ async function init() {
     elements.certCopyTsvBtn.addEventListener('click', copyCertificateTsv);
     elements.certSaveTsvBtn.addEventListener('click', saveCertificateTsv);
     elements.certSaveExcelBtn.addEventListener('click', saveCertificateExcel);
+    elements.certApplyTemplateAllBtn.addEventListener('click', applyCertificateTemplateToAllRecords);
     elements.certSelectTemplateBtn.addEventListener('click', selectCertificateTemplate);
     elements.certModelSelect.addEventListener('change', (event) => {
         state.certificateExtraction.modelName = event.target.value;
@@ -1409,6 +1412,26 @@ function removeCertificateRecord(index) {
     updateCertificateActions();
 }
 
+function applyCertificateTemplateToAllRecords() {
+    const selectedTemplate = elements.certBulkTemplateSelect.value;
+    if (!selectedTemplate) {
+        showMessage('Nejprve vyberte šablonu pro hromadné vyplnění.', 'warning');
+        return;
+    }
+
+    if (!state.certificateExtraction.records.length) {
+        showMessage('Zatím nejsou načtené žádné certifikáty.', 'warning');
+        return;
+    }
+
+    state.certificateExtraction.records.forEach((record) => {
+        record.working_record.sablona = selectedTemplate;
+    });
+
+    refreshCertificateGridRows();
+    showMessage(`Šablona ${selectedTemplate} byla nastavena do všech řádků.`, 'success');
+}
+
 function updateCertificateActions() {
     const hasSelectedFiles = state.selectedFiles['dvpp-certificates'].length > 0;
     elements.certProcessGeminiBtn.disabled = !state.certificateExtraction.folderPath || !hasSelectedFiles;
@@ -1416,6 +1439,7 @@ function updateCertificateActions() {
     elements.certCopyTsvBtn.disabled = !hasRecords;
     elements.certSaveTsvBtn.disabled = !hasRecords;
     elements.certSaveExcelBtn.disabled = !hasRecords;
+    elements.certApplyTemplateAllBtn.disabled = !hasRecords;
 }
 
 async function copyCertificateTsv() {

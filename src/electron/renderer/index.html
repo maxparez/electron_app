@@ -301,6 +301,17 @@
                     <div class="cert-review-main">
                         <div class="form-group">
                             <label>Kontrola a editace záznamů:</label>
+                            <div class="cert-bulk-template-bar">
+                                <select id="cert-bulk-template-select">
+                                    <option value="">Vyberte šablonu pro hromadné vyplnění</option>
+                                    <option value="vzdělávání MŠ_2_I_5">vzdělávání MŠ_2_I_5</option>
+                                    <option value="vzdělávání ZŠ_2_II_4">vzdělávání ZŠ_2_II_4</option>
+                                    <option value="vzdělávání ŠD_SK_2_V_1">vzdělávání ŠD_SK_2_V_1</option>
+                                    <option value="vzdělávání SVČ_2_V_1">vzdělávání SVČ_2_V_1</option>
+                                    <option value="vzdělávání ZUŠ_2_VII_1">vzdělávání ZUŠ_2_VII_1</option>
+                                </select>
+                                <button class="btn btn-secondary" id="cert-apply-template-all" type="button">Vyplnit do všech řádků</button>
+                            </div>
                             <div id="cert-records-table" class="cert-records-table empty-state">
                                 Zatím nejsou načtené žádné certifikáty.
                             </div>
