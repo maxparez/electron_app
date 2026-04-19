@@ -334,7 +334,7 @@ class DvppCertificateProcessorTests(unittest.TestCase):
         self.assertEqual(1, len(result["data"]["batch"]["records"]))
         self.assertEqual(1, result["data"]["processedRows"])
         self.assertEqual(
-            "umělá inteligence",
+            "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
             result["data"]["batch"]["records"][0]["working_record"]["topic"],
         )
 

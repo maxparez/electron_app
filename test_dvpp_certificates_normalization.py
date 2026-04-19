@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "src" / "python"))
 
 from dvpp_certificates.domain import CertificateRecord, RecordOrigin
 from dvpp_certificates.normalization import (
+    TOPIC_CATALOG,
     normalize_certificate_fields,
     normalize_date,
     normalize_topic,
@@ -16,6 +17,36 @@ from dvpp_certificates.normalization import (
 
 
 class DvppCertificatesNormalizationTests(unittest.TestCase):
+    def test_topic_catalog_matches_expected_values(self) -> None:
+        self.assertEqual(
+            (
+                "pedagogická diagnostika",
+                "individualizace vzdělávání",
+                "formativní hodnocení",
+                "podpora nadání/talentu",
+                "řečová výchova",
+                "grafomotorika",
+                "rozvoj gramotností",
+                "rozvoj digitálních kompetencí",
+                "podpora polytechniky",
+                "vzdělávání pro udržitelný rozvoj – např. EVVO, klimatické vzdělávání, principy místně zakotveného učení",
+                "well-being a psychohygiena",
+                "genderová tematika v obsahu vzdělávání",
+                "výuka moderních dějin",
+                "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
+                "pohybové aktivity",
+                "práce s dětmi/žáky se speciálními vzdělávacími potřebami; vzdělávání heterogenních kolektivů",
+                "vzdělávání dětí/žáků cizinců a dětí/žáků s potřebou jazykové podpory",
+                "rozvoj pedagogických kompetencí v oblasti metod a forem vzdělávání",
+                "komunikace se zákonnými zástupci",
+                "management škol, řízení organizace, leadership a řízení pedagogického procesu",
+                "vzdělávání dětí a žáků z marginalizovaných skupin, jako jsou Romové",
+                "podpora uvádějících/provázejících učitelů",
+                "profesní rozvoj ostatních pracovníků ve vzdělávání",
+            ),
+            TOPIC_CATALOG,
+        )
+
     def test_strip_titles_removes_academic_prefixes_and_suffixes(self) -> None:
         self.assertEqual("Jana", strip_titles("Mgr. Jana, Ph.D."))
         self.assertEqual("Novakova", strip_titles("Bc. Novakova, DiS."))
@@ -25,9 +56,24 @@ class DvppCertificatesNormalizationTests(unittest.TestCase):
         self.assertEqual("07.03.2024?", normalize_date("07/03/2024?"))
 
     def test_normalize_topic_enforces_whitelist(self) -> None:
-        self.assertEqual("umělá inteligence", normalize_topic("umela inteligence"))
+        self.assertEqual(
+            "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
+            normalize_topic("umela inteligence"),
+        )
         self.assertEqual("formativní hodnocení", normalize_topic("formativní hodnocení"))
         self.assertEqual("formativní hodnocení", normalize_topic("formativni hodnoceni"))
+        self.assertEqual(
+            "management škol, řízení organizace, leadership a řízení pedagogického procesu",
+            normalize_topic("management skol, rizeni organizace, leadership a rizeni pedagogickeho procesu"),
+        )
+        self.assertEqual(
+            "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
+            normalize_topic("medialni gramotnost, prevence kybersikany, chovani na socialnich sitich, umela inteligence"),
+        )
+        self.assertEqual(
+            "profesní rozvoj ostatních pracovníků ve vzdělávání",
+            normalize_topic("profesni rozvoj ostatnich pracovniku ve vzdelavani"),
+        )
         self.assertEqual("", normalize_topic("finance a ucetnictvi"))
 
     def test_normalize_certificate_fields_returns_canonical_record(self) -> None:
@@ -59,7 +105,10 @@ class DvppCertificatesNormalizationTests(unittest.TestCase):
         self.assertEqual("14.03.2024", record.completion_date)
         self.assertEqual("8", record.hours)
         self.assertEqual("vzdělávání ZŠ_2_II_4", record.sablona)
-        self.assertEqual("umělá inteligence", record.topic)
+        self.assertEqual(
+            "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
+            record.topic,
+        )
         self.assertEqual("low-confidence surname", record.uncertainty_notes)
         self.assertIs(record.origin, origin)
 

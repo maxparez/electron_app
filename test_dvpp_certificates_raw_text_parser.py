@@ -24,7 +24,10 @@ class DvppCertificatesRawTextParserTests(unittest.TestCase):
         self.assertEqual("Jana", batch.records[0].working_record.name)
         self.assertEqual("vzdělávání ZŠ_2_II_4", batch.records[0].working_record.sablona)
         self.assertEqual("neakreditovaný kurz", batch.records[0].working_record.forma)
-        self.assertEqual("umělá inteligence", batch.records[0].working_record.topic)
+        self.assertEqual(
+            "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
+            batch.records[0].working_record.topic,
+        )
         self.assertEqual(
             "raw_text", batch.records[0].extracted_record.origin.source_mode
         )

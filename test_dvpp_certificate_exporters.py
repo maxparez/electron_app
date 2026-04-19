@@ -150,7 +150,7 @@ class DvppCertificateExportersTests(unittest.TestCase):
                 "14.03.2024",
                 "8",
                 "akreditovaný kurz při DVPP",
-                "umělá inteligence",
+                "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
                 "",
             ]],
             sheet.ranges["B11"].value,

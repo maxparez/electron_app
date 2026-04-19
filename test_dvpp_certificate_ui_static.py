@@ -65,6 +65,15 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("dvpp-certificates/import/raw-text", content)
         self.assertIn("dvpp-certificates/export/tsv", content)
         self.assertIn("dvpp-certificates/export/excel", content)
+        self.assertIn(
+            "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
+            content,
+        )
+        self.assertIn(
+            "management škol, řízení organizace, leadership a řízení pedagogického procesu",
+            content,
+        )
+        self.assertIn("profesní rozvoj ostatních pracovníků ve vzdělávání", content)
 
     def test_renderer_js_avoids_inline_handlers_in_certificate_ui(self) -> None:
         content = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")

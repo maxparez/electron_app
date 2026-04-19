@@ -19,18 +19,11 @@ TOPIC_CATALOG = (
     "rozvoj gramotností",
     "rozvoj digitálních kompetencí",
     "podpora polytechniky",
-    (
-        "vzdělávání pro udržitelný rozvoj – např. EVVO "
-        "(environmentální vzdělávání, výchova a osvěta), klimatické vzdělávání, "
-        "principy místně zakotveného učení"
-    ),
+    "vzdělávání pro udržitelný rozvoj – např. EVVO, klimatické vzdělávání, principy místně zakotveného učení",
     "well-being a psychohygiena",
     "genderová tematika v obsahu vzdělávání",
     "výuka moderních dějin",
-    "mediální gramotnost",
-    "prevence kyberšikany",
-    "chování na sociálních sítích",
-    "umělá inteligence",
+    "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
     "pohybové aktivity",
     (
         "práce s dětmi/žáky se speciálními vzdělávacími potřebami; "
@@ -39,14 +32,27 @@ TOPIC_CATALOG = (
     "vzdělávání dětí/žáků cizinců a dětí/žáků s potřebou jazykové podpory",
     "rozvoj pedagogických kompetencí v oblasti metod a forem vzdělávání",
     "komunikace se zákonnými zástupci",
-    "management škol",
-    "řízení organizace",
-    "leadership a řízení pedagogického procesu",
+    "management škol, řízení organizace, leadership a řízení pedagogického procesu",
     "vzdělávání dětí a žáků z marginalizovaných skupin, jako jsou Romové",
     "podpora uvádějících/provázejících učitelů",
+    "profesní rozvoj ostatních pracovníků ve vzdělávání",
 )
 TOPIC_WHITELIST = frozenset(TOPIC_CATALOG)
 TOPIC_LOOKUP = {}
+TOPIC_ALIASES = {
+    "vzdělávání pro udržitelný rozvoj – např. EVVO (environmentální vzdělávání, výchova a osvěta), klimatické vzdělávání, principy místně zakotveného učení": (
+        "vzdělávání pro udržitelný rozvoj – např. EVVO, klimatické vzdělávání, principy místně zakotveného učení"
+    ),
+    "mediální gramotnost": "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
+    "prevence kyberšikany": "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
+    "chování na sociálních sítích": "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
+    "umělá inteligence": "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
+    "management škol": "management škol, řízení organizace, leadership a řízení pedagogického procesu",
+    "řízení organizace": "management škol, řízení organizace, leadership a řízení pedagogického procesu",
+    "leadership a řízení pedagogického procesu": (
+        "management škol, řízení organizace, leadership a řízení pedagogického procesu"
+    ),
+}
 DATE_FORMATS = ("%Y-%m-%d", "%d.%m.%Y", "%d/%m/%Y")
 TITLE_PATTERNS = (
     r"Bc\.",
@@ -76,6 +82,9 @@ def _normalize_topic_key(value: str) -> str:
 
 for topic_name in TOPIC_CATALOG:
     TOPIC_LOOKUP[_normalize_topic_key(topic_name)] = topic_name
+
+for topic_alias, topic_name in TOPIC_ALIASES.items():
+    TOPIC_LOOKUP[_normalize_topic_key(topic_alias)] = topic_name
 
 
 def strip_titles(value: str) -> str:

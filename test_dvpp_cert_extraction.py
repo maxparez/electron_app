@@ -49,16 +49,19 @@ class DvppCertExtractionTests(unittest.TestCase):
             "completion_date": "14.03.2024",
             "hours": "8",
             "forma": "neakreditovaný kurz",
-            "topic": "umělá inteligence",
+            "topic": "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
         }
 
         self.assertEqual(
-            "Novakova\tJana\t05.09.1980\tvzdělávání ZŠ_2_II_4\tKurz AI ve vyuce\t14.03.2024\t8\tneakreditovaný kurz\tumělá inteligence",
+            "Novakova\tJana\t05.09.1980\tvzdělávání ZŠ_2_II_4\tKurz AI ve vyuce\t14.03.2024\t8\tneakreditovaný kurz\tmediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
             format_tsv_row(record),
         )
 
     def test_normalize_topic_enforces_whitelist(self) -> None:
-        self.assertEqual("umělá inteligence", normalize_topic("umela inteligence"))
+        self.assertEqual(
+            "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
+            normalize_topic("umela inteligence"),
+        )
         self.assertEqual("", normalize_topic("finance a ucetnictvi"))
 
     def test_normalize_date_returns_dd_mm_yyyy(self) -> None:
@@ -131,7 +134,10 @@ class DvppCertExtractionTests(unittest.TestCase):
         self.assertEqual("Kurz AI ve vyuce", record.course_name)
         self.assertEqual("14.03.2024", record.completion_date)
         self.assertEqual("8", record.hours)
-        self.assertEqual("umělá inteligence", record.topic)
+        self.assertEqual(
+            "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
+            record.topic,
+        )
 
         with self.assertRaises(ValueError):
             CertificateRecord(
@@ -234,6 +240,15 @@ class DvppCertExtractionTests(unittest.TestCase):
         self.assertIn("pedagogická diagnostika", prompt)
         self.assertIn("well-being a psychohygiena", prompt)
         self.assertIn("podpora uvádějících/provázejících učitelů", prompt)
+        self.assertIn(
+            "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
+            prompt,
+        )
+        self.assertIn(
+            "management škol, řízení organizace, leadership a řízení pedagogického procesu",
+            prompt,
+        )
+        self.assertIn("profesní rozvoj ostatních pracovníků ve vzdělávání", prompt)
 
     def test_resolve_model_name_accepts_supported_gemini_models(self) -> None:
         self.assertEqual(
@@ -314,7 +329,7 @@ class DvppCertExtractionTests(unittest.TestCase):
         self.assertIn("Nyni zpracuj prilozeny soubor.", created_agents[0].calls[0][0])
         self.assertIn('"surname": "Novakova"', serialize_result_json(result))
         self.assertEqual(
-            "Novakova\tJana\t05.09.1980\t\tKurz AI ve vyuce\t14.03.2024\t8\t\tumělá inteligence",
+            "Novakova\tJana\t05.09.1980\t\tKurz AI ve vyuce\t14.03.2024\t8\t\tmediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
             serialize_result_tsv(result),
         )
 
@@ -442,7 +457,7 @@ class DvppCertExtractionTests(unittest.TestCase):
         self.assertIn("Novakova\tJana\t05.09.1980", stdout_output)
         self.assertIn('"surname": "Novakova"', json_output)
         self.assertIn(
-            "Novakova\tJana\t05.09.1980\t\tKurz AI ve vyuce\t14.03.2024\t8\t\tumělá inteligence",
+            "Novakova\tJana\t05.09.1980\t\tKurz AI ve vyuce\t14.03.2024\t8\t\tmediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
             tsv_output,
         )
 
