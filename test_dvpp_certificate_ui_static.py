@@ -141,6 +141,7 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("border-right: 1px solid #dbe4f0;", styles)
         self.assertIn("min-height: 220px;", styles)
         self.assertIn("overflow: hidden;", styles)
+        self.assertNotIn(".cert-import-toggle-btn {\n    margin-left: auto;\n}", styles)
 
     def test_renderer_does_not_block_excel_export_on_missing_header_fields(self) -> None:
         renderer = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")

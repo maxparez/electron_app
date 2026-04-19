@@ -566,7 +566,7 @@ h3.error {
 }
 
 .cert-import-toggle-btn {
-    margin-left: auto;
+    margin-left: 0;
 }
 
 .cert-import-section.collapsed {
