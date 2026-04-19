@@ -37,6 +37,8 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn('id="cert-diagnostics"', html)
         self.assertIn('Hlavička evidence DVPP', html)
         self.assertIn('id="cert-fill-header"', html)
+        self.assertLess(html.index('<span>Vytěžování certifikátů</span>'), html.index('<span>Generátor plakátů</span>'))
+        self.assertLess(html.index('<h3>🧾 Vytěžování certifikátů</h3>'), html.index('<h3>🖼️ Generátor plakátů</h3>'))
         self.assertLess(html.index('id="save-cert-excel"'), html.index('id="save-cert-esf"'))
         self.assertLess(html.index('id="save-cert-esf"'), html.index('id="copy-cert-tsv"'))
 
