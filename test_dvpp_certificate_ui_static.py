@@ -43,10 +43,13 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn('id="cert-diagnostics"', html)
         self.assertIn('Hlavička evidence DVPP', html)
         self.assertIn('id="cert-fill-header"', html)
+        self.assertLess(html.index('<span>DVPP report</span>'), html.index('<span>Vytěžování certifikátů</span>'))
+        self.assertLess(html.index('<h3>📚 DVPP report</h3>'), html.index('<h3>🧾 Vytěžování certifikátů</h3>'))
         self.assertLess(html.index('<span>Vytěžování certifikátů</span>'), html.index('<span>Generátor plakátů</span>'))
         self.assertLess(html.index('<h3>🧾 Vytěžování certifikátů</h3>'), html.index('<h3>🖼️ Generátor plakátů</h3>'))
         self.assertLess(html.index('id="save-cert-excel"'), html.index('id="save-cert-esf"'))
         self.assertLess(html.index('id="save-cert-esf"'), html.index('id="copy-cert-tsv"'))
+        self.assertIn('class="btn btn-primary" id="save-cert-esf"', html)
 
     def test_renderer_js_wires_certificate_import_and_export_actions(self) -> None:
         content = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
