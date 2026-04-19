@@ -991,7 +991,7 @@ async function processDvppReport() {
 function switchCertificateMode(mode) {
     state.certificateExtraction.mode = mode;
     elements.certModeGeminiBtn.classList.toggle('active', mode === 'gemini');
-    elements.certModeGeminiBtn.classList.toggle('btn-primary', mode === 'gemini');
+    elements.certModeGeminiBtn.classList.toggle('btn-success', mode === 'gemini');
     elements.certModeGeminiBtn.classList.toggle('btn-secondary', mode !== 'gemini');
     elements.certModeRawBtn.classList.toggle('active', mode === 'raw');
     elements.certModeRawBtn.classList.toggle('btn-primary', mode === 'raw');
@@ -1004,7 +1004,8 @@ function syncCertificateImportPanels() {
     elements.certImportSection.classList.toggle('collapsed', !importVisible);
     elements.certGeminiPanel.classList.toggle('active', importVisible && state.certificateExtraction.mode === 'gemini');
     elements.certRawPanel.classList.toggle('active', importVisible && state.certificateExtraction.mode === 'raw');
-    elements.certToggleImportPanelBtn.textContent = importVisible ? 'Skrýt import' : 'Zobrazit import';
+    elements.certToggleImportPanelBtn.textContent = 'Zobrazit import';
+    elements.certToggleImportPanelBtn.disabled = importVisible;
 }
 
 function setCertificateImportCollapsed(collapsed) {
@@ -1013,7 +1014,17 @@ function setCertificateImportCollapsed(collapsed) {
 }
 
 function toggleCertificateImportPanel() {
-    setCertificateImportCollapsed(!state.certificateExtraction.importCollapsed);
+    if (state.certificateExtraction.importCollapsed) {
+        setCertificateImportCollapsed(false);
+    }
+}
+
+function resetCertificateExtractionOutput() {
+    state.certificateExtraction.records = [];
+    state.certificateExtraction.diagnostics = [];
+    refreshCertificateGridRows();
+    renderCertificateDiagnostics();
+    updateCertificateActions();
 }
 
 function bindCertificateMetadataInputs() {
@@ -1231,6 +1242,7 @@ function toggleCertificateFile(filePath, checked) {
 async function processCertificatesWithGemini() {
     try {
         const apiKey = await resolveGeminiApiKey();
+        resetCertificateExtractionOutput();
         showLoading(true, { text: 'Vytěžuji certifikáty přes Gemini...' });
         setStatusMessage('Probíhá vytěžování certifikátů přes Gemini...');
 
@@ -1262,6 +1274,7 @@ async function processCertificatesFromRawText() {
             return;
         }
 
+        resetCertificateExtractionOutput();
         showLoading(true, { text: 'Načítám raw text certifikátů...' });
         const result = await window.electronAPI.apiCall('dvpp-certificates/import/raw-text', 'POST', {
             rawText
