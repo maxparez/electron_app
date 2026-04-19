@@ -161,13 +161,13 @@ const TEMPLATE_OPTIONS = [
 ];
 
 const FORMA_OPTIONS = [
-    'akreditovaný kurz při DVPP',
+    'akreditovaný kurz průběžné DVPP',
     'neakreditovaný kurz',
-    'kvalifikační studium_DVPP',
+    'kvalifikační_studium_DVPP',
     'akreditovaný kurz jiný',
     'stáž',
     'mentoring',
-    'supervize',
+    'supevize',
     'koučink'
 ];
 

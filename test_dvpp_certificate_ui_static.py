@@ -32,6 +32,12 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn('id="cert-apply-template-all"', html)
         self.assertIn('id="cert-bulk-forma-select"', html)
         self.assertIn('id="cert-apply-forma-all"', html)
+        self.assertIn('akreditovaný kurz průběžné DVPP', html)
+        self.assertIn('kvalifikační_studium_DVPP', html)
+        self.assertIn('supevize', html)
+        self.assertNotIn('akreditovaný kurz při DVPP', html)
+        self.assertNotIn('kvalifikační studium_DVPP', html)
+        self.assertNotIn('supervize', html)
         self.assertIn('id="cert-toggle-import-panel"', html)
         self.assertIn('id="save-cert-esf"', html)
         self.assertIn('id="cert-diagnostics"', html)
@@ -74,6 +80,12 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
             content,
         )
         self.assertIn("profesní rozvoj ostatních pracovníků ve vzdělávání", content)
+        self.assertIn("akreditovaný kurz průběžné DVPP", content)
+        self.assertIn("kvalifikační_studium_DVPP", content)
+        self.assertIn("supevize", content)
+        self.assertNotIn("akreditovaný kurz při DVPP", content)
+        self.assertNotIn("kvalifikační studium_DVPP", content)
+        self.assertNotIn("supervize", content)
 
     def test_renderer_js_avoids_inline_handlers_in_certificate_ui(self) -> None:
         content = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")

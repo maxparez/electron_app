@@ -6,9 +6,11 @@ from dvpp_certificates.domain import (
     WorkingRecord,
 )
 from dvpp_certificates.normalization import (
+    FORMA_CATALOG,
     TOPIC_CATALOG,
     normalize_certificate_fields,
     normalize_date,
+    normalize_forma,
     normalize_topic,
     strip_titles,
 )
@@ -24,6 +26,7 @@ __all__ = [
     "CertificateRecord",
     "DEFAULT_EXCEL_TEMPLATE_PATH",
     "ExportMetadata",
+    "FORMA_CATALOG",
     "ExtractionBatch",
     "RecordOrigin",
     "TOPIC_CATALOG",
@@ -32,6 +35,7 @@ __all__ = [
     "WorkingRecord",
     "normalize_certificate_fields",
     "normalize_date",
+    "normalize_forma",
     "normalize_topic",
     "parse_raw_text_batch",
     "resolve_excel_template_path",

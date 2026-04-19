@@ -50,6 +50,31 @@ class DvppCertificatesDomainTests(unittest.TestCase):
         self.assertEqual("birth date read from low-quality scan", record.uncertainty_notes)
         self.assertIs(record.origin, origin)
 
+    def test_certificate_record_keeps_only_exact_forma_choices(self) -> None:
+        record = CertificateRecord(
+            surname="Novakova",
+            name="Jana",
+            birth_date="05.09.1980",
+            course_name="Kurz AI ve vyuce",
+            completion_date="14.03.2024",
+            hours="8",
+            forma="supevize",
+        )
+
+        self.assertEqual("supevize", record.forma)
+
+        invalid = CertificateRecord(
+            surname="Novakova",
+            name="Jana",
+            birth_date="05.09.1980",
+            course_name="Kurz AI ve vyuce",
+            completion_date="14.03.2024",
+            hours="8",
+            forma="supervize",
+        )
+
+        self.assertEqual("", invalid.forma)
+
     def test_record_origin_keeps_provenance_fields(self) -> None:
         origin = RecordOrigin(
             source_mode="raw_text",

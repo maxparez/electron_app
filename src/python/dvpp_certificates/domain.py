@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field, replace
 from dvpp_certificates.normalization import (
+    normalize_forma,
     normalize_person_name,
     normalize_topic,
     validate_record_date,
@@ -67,7 +68,7 @@ class CertificateRecord:
         self.completion_date = validate_record_date(
             self.completion_date, "completion_date"
         )
-        self.forma = self.forma.strip()
+        self.forma = normalize_forma(self.forma)
         self.sablona = self.sablona.strip()
         self.topic = normalize_topic(self.topic)
         self.uncertainty_notes = self.uncertainty_notes.strip()

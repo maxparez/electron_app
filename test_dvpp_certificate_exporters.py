@@ -127,7 +127,7 @@ class DvppCertificateExportersTests(unittest.TestCase):
                 course_name="Kurz AI ve vyuce",
                 completion_date="14.03.2024",
                 hours="8",
-                forma="akreditovaný kurz při DVPP",
+                forma="akreditovaný kurz průběžné DVPP",
                 sablona="vzdělávání ZŠ_2_II_4",
                 topic="umělá inteligence",
             )
@@ -149,7 +149,7 @@ class DvppCertificateExportersTests(unittest.TestCase):
                 "Kurz AI ve vyuce",
                 "14.03.2024",
                 "8",
-                "akreditovaný kurz při DVPP",
+                "akreditovaný kurz průběžné DVPP",
                 "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
                 "",
             ]],

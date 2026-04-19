@@ -8,15 +8,32 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "src" / "python"))
 
 from dvpp_certificates.domain import CertificateRecord, RecordOrigin
 from dvpp_certificates.normalization import (
+    FORMA_CATALOG,
     TOPIC_CATALOG,
     normalize_certificate_fields,
     normalize_date,
+    normalize_forma,
     normalize_topic,
     strip_titles,
 )
 
 
 class DvppCertificatesNormalizationTests(unittest.TestCase):
+    def test_forma_catalog_matches_expected_values(self) -> None:
+        self.assertEqual(
+            (
+                "akreditovaný kurz průběžné DVPP",
+                "neakreditovaný kurz",
+                "kvalifikační_studium_DVPP",
+                "akreditovaný kurz jiný",
+                "stáž",
+                "mentoring",
+                "supevize",
+                "koučink",
+            ),
+            FORMA_CATALOG,
+        )
+
     def test_topic_catalog_matches_expected_values(self) -> None:
         self.assertEqual(
             (
@@ -76,6 +93,12 @@ class DvppCertificatesNormalizationTests(unittest.TestCase):
         )
         self.assertEqual("", normalize_topic("finance a ucetnictvi"))
 
+    def test_normalize_forma_enforces_whitelist(self) -> None:
+        self.assertEqual("stáž", normalize_forma("stáž"))
+        self.assertEqual("supevize", normalize_forma("supevize"))
+        self.assertEqual("", normalize_forma("supervize"))
+        self.assertEqual("", normalize_forma("webinář"))
+
     def test_normalize_certificate_fields_returns_canonical_record(self) -> None:
         origin = RecordOrigin(
             source_mode="gemini",
@@ -92,6 +115,7 @@ class DvppCertificatesNormalizationTests(unittest.TestCase):
                 "completion_date": "14/03/2024",
                 "hours": " 8 ",
                 "sablona": "vzdělávání ZŠ_2_II_4",
+                "forma": "supevize",
                 "topic": "umela inteligence",
                 "uncertainty_notes": "  low-confidence surname  ",
             },
@@ -105,6 +129,7 @@ class DvppCertificatesNormalizationTests(unittest.TestCase):
         self.assertEqual("14.03.2024", record.completion_date)
         self.assertEqual("8", record.hours)
         self.assertEqual("vzdělávání ZŠ_2_II_4", record.sablona)
+        self.assertEqual("supevize", record.forma)
         self.assertEqual(
             "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
             record.topic,

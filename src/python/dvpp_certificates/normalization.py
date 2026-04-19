@@ -39,6 +39,17 @@ TOPIC_CATALOG = (
 )
 TOPIC_WHITELIST = frozenset(TOPIC_CATALOG)
 TOPIC_LOOKUP = {}
+FORMA_CATALOG = (
+    "akreditovaný kurz průběžné DVPP",
+    "neakreditovaný kurz",
+    "kvalifikační_studium_DVPP",
+    "akreditovaný kurz jiný",
+    "stáž",
+    "mentoring",
+    "supevize",
+    "koučink",
+)
+FORMA_WHITELIST = frozenset(FORMA_CATALOG)
 TOPIC_ALIASES = {
     "vzdělávání pro udržitelný rozvoj – např. EVVO (environmentální vzdělávání, výchova a osvěta), klimatické vzdělávání, principy místně zakotveného učení": (
         "vzdělávání pro udržitelný rozvoj – např. EVVO, klimatické vzdělávání, principy místně zakotveného učení"
@@ -147,6 +158,13 @@ def normalize_topic(value: str) -> str:
     if not stripped:
         return ""
     return TOPIC_LOOKUP.get(_normalize_topic_key(stripped), "")
+
+
+def normalize_forma(value: str) -> str:
+    stripped = value.strip()
+    if not stripped:
+        return ""
+    return stripped if stripped in FORMA_WHITELIST else ""
 
 
 def _require_string_field(raw_record: Mapping[str, object], field_name: str) -> str:
