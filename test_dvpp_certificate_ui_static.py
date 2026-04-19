@@ -30,9 +30,15 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn('id="cert-records-table"', html)
         self.assertIn('id="cert-bulk-template-select"', html)
         self.assertIn('id="cert-apply-template-all"', html)
+        self.assertIn('id="cert-bulk-forma-select"', html)
+        self.assertIn('id="cert-apply-forma-all"', html)
+        self.assertIn('id="cert-toggle-import-panel"', html)
+        self.assertIn('id="save-cert-esf"', html)
         self.assertIn('id="cert-diagnostics"', html)
         self.assertIn('Hlavička evidence DVPP', html)
         self.assertIn('id="cert-fill-header"', html)
+        self.assertLess(html.index('id="save-cert-excel"'), html.index('id="save-cert-esf"'))
+        self.assertLess(html.index('id="save-cert-esf"'), html.index('id="copy-cert-tsv"'))
 
     def test_renderer_js_wires_certificate_import_and_export_actions(self) -> None:
         content = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
@@ -47,7 +53,10 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("processCertificatesFromRawText", content)
         self.assertIn("copyCertificateTsv", content)
         self.assertIn("saveCertificateExcel", content)
+        self.assertIn("saveCertificateEsfImport", content)
         self.assertIn("applyCertificateTemplateToAllRecords", content)
+        self.assertIn("applyCertificateFormaToAllRecords", content)
+        self.assertIn("setCertificateImportCollapsed", content)
         self.assertIn("autoLoadStoredGeminiApiKey", content)
         self.assertIn("dvpp-certificates/scan", content)
         self.assertIn("dvpp-certificates/import/gemini", content)
@@ -76,6 +85,7 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
 
         self.assertIn("agSelectCellEditor", renderer)
         self.assertIn("cellEditorParams: { values: TEMPLATE_OPTIONS }", renderer)
+        self.assertIn("cellEditorParams: { values: FORMA_OPTIONS }", renderer)
         self.assertIn("theme: 'legacy'", renderer)
         self.assertIn("domLayout: 'autoHeight'", renderer)
         self.assertIn("singleClickEdit: true", renderer)
@@ -84,6 +94,9 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("setStatusMessage(successMessage, 4000);", renderer)
         self.assertIn("await openFile(result.data.output_path);", renderer)
         self.assertIn("certApplyTemplateAllBtn.addEventListener('click', applyCertificateTemplateToAllRecords);", renderer)
+        self.assertIn("certApplyFormaAllBtn.addEventListener('click', applyCertificateFormaToAllRecords);", renderer)
+        self.assertIn("certToggleImportPanelBtn.addEventListener('click', toggleCertificateImportPanel);", renderer)
+        self.assertIn("setCertificateImportCollapsed(true);", renderer)
 
     def test_certificate_grid_styles_include_vertical_lines(self) -> None:
         styles = (REPO_ROOT / "src" / "electron" / "renderer" / "styles.css").read_text(encoding="utf-8")

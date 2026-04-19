@@ -27,20 +27,15 @@ def parse_raw_text_batch(text: str) -> ExtractionBatch:
             course_name = columns[4]
             completion_date = columns[5]
             hours = columns[6]
-            spacer = columns[7]
+            forma = columns[7]
             topic = columns[8]
         else:
             sablona = ""
             course_name = columns[3]
             completion_date = columns[4]
             hours = columns[5]
-            spacer = columns[6]
+            forma = columns[6]
             topic = columns[7]
-
-        if spacer != "":
-            raise ValueError(
-                f"Malformed raw text row at line {line_number}: spacer column must be empty"
-            )
 
         origin = RecordOrigin(
             source_mode="raw_text",
@@ -56,6 +51,7 @@ def parse_raw_text_batch(text: str) -> ExtractionBatch:
                 "course_name": course_name,
                 "completion_date": completion_date,
                 "hours": hours,
+                "forma": forma,
                 "topic": topic,
             },
             origin=origin,

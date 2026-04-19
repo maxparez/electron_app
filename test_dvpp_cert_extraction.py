@@ -48,11 +48,12 @@ class DvppCertExtractionTests(unittest.TestCase):
             "course_name": "Kurz AI ve vyuce",
             "completion_date": "14.03.2024",
             "hours": "8",
+            "forma": "neakreditovaný kurz",
             "topic": "umělá inteligence",
         }
 
         self.assertEqual(
-            "Novakova\tJana\t05.09.1980\tvzdělávání ZŠ_2_II_4\tKurz AI ve vyuce\t14.03.2024\t8\t\tumělá inteligence",
+            "Novakova\tJana\t05.09.1980\tvzdělávání ZŠ_2_II_4\tKurz AI ve vyuce\t14.03.2024\t8\tneakreditovaný kurz\tumělá inteligence",
             format_tsv_row(record),
         )
 

@@ -561,6 +561,16 @@ h3.error {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.cert-import-toggle-btn {
+    margin-left: auto;
+}
+
+.cert-import-section.collapsed {
+    display: none;
 }
 
 .cert-mode-panel {
@@ -630,14 +640,19 @@ h3.error {
         linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(16, 185, 129, 0.04));
 }
 
-.cert-bulk-template-bar {
-    display: flex;
+.cert-bulk-controls {
+    display: grid;
     gap: 10px;
-    align-items: center;
     margin-bottom: 14px;
 }
 
-.cert-bulk-template-bar select {
+.cert-bulk-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.cert-bulk-row select {
     flex: 1;
     min-width: 260px;
     padding: 10px 12px;
@@ -717,6 +732,10 @@ h3.error {
     color: #1d4ed8;
 }
 
+.cert-grid-forma-cell {
+    color: #0f766e;
+}
+
 .cert-grid-remove-btn {
     width: 30px;
     height: 30px;
@@ -788,8 +807,12 @@ h3.error {
 
     .cert-api-key-row,
     .cert-template-row,
-    .cert-bulk-template-bar {
+    .cert-bulk-row {
         flex-direction: column;
+    }
+
+    .cert-import-toggle-btn {
+        margin-left: 0;
     }
 }
 

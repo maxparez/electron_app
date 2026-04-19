@@ -41,6 +41,7 @@ class DvppCertificatesDomainTests(unittest.TestCase):
         self.assertEqual("Kurz AI ve vyuce", record.course_name)
         self.assertEqual("14.03.2024", record.completion_date)
         self.assertEqual("8", record.hours)
+        self.assertEqual("", record.forma)
         self.assertEqual("umělá inteligence", record.topic)
         self.assertEqual("", record.sablona)
         self.assertEqual("birth date read from low-quality scan", record.uncertainty_notes)

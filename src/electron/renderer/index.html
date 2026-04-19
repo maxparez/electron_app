@@ -229,71 +229,74 @@
                 <div class="cert-mode-switch">
                     <button class="btn btn-primary cert-mode-btn active" id="cert-mode-gemini" type="button">Gemini API</button>
                     <button class="btn btn-secondary cert-mode-btn" id="cert-mode-raw" type="button">Raw text z GAI Studia</button>
+                    <button class="btn btn-secondary cert-import-toggle-btn" id="cert-toggle-import-panel" type="button">Skrýt import</button>
                 </div>
 
-                <div id="cert-gemini-panel" class="cert-mode-panel active">
-                    <div class="form-group">
-                        <label for="cert-gemini-api-key">Gemini API key:</label>
-                        <div class="cert-api-key-row">
-                            <input type="password" id="cert-gemini-api-key" placeholder="AIza..." autocomplete="off">
-                            <button class="btn btn-secondary" id="cert-load-stored-key" type="button">Načíst uložený</button>
-                            <button class="btn btn-secondary" id="cert-delete-stored-key" type="button">Zapomenout</button>
+                <div id="cert-import-section" class="cert-import-section">
+                    <div id="cert-gemini-panel" class="cert-mode-panel active">
+                        <div class="form-group">
+                            <label for="cert-gemini-api-key">Gemini API key:</label>
+                            <div class="cert-api-key-row">
+                                <input type="password" id="cert-gemini-api-key" placeholder="AIza..." autocomplete="off">
+                                <button class="btn btn-secondary" id="cert-load-stored-key" type="button">Načíst uložený</button>
+                                <button class="btn btn-secondary" id="cert-delete-stored-key" type="button">Zapomenout</button>
+                            </div>
+                            <label class="checkbox-inline">
+                                <input type="checkbox" id="cert-remember-key">
+                                Uložit pro příště
+                            </label>
+                            <div id="cert-api-key-status" class="form-hint">Kontroluji stav uloženého klíče...</div>
                         </div>
-                        <label class="checkbox-inline">
-                            <input type="checkbox" id="cert-remember-key">
-                            Uložit pro příště
-                        </label>
-                        <div id="cert-api-key-status" class="form-hint">Kontroluji stav uloženého klíče...</div>
-                    </div>
 
-                    <div class="form-group">
-                        <label for="cert-model-select">Model:</label>
-                        <select id="cert-model-select">
-                            <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
-                            <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Složka s certifikáty:</label>
-                        <div class="button-group">
-                            <button class="btn btn-primary" id="select-cert-folder" type="button">Vybrat složku</button>
-                            <button class="btn btn-secondary" id="refresh-cert-folder" type="button" style="display: none;">🔄 Obnovit</button>
-                            <span class="form-hint">💡 Zpracují se všechny podporované soubory PDF/JPG/JPEG/PNG včetně podsložek</span>
+                        <div class="form-group">
+                            <label for="cert-model-select">Model:</label>
+                            <select id="cert-model-select">
+                                <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
+                                <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview</option>
+                            </select>
                         </div>
-                        <div id="cert-folder-name" class="file-item"></div>
-                        <div id="cert-files-list" class="files-list"></div>
-                    </div>
 
-                    <div class="form-group">
-                        <button class="btn btn-success" id="process-cert-gemini" type="button" disabled>Vytěžit přes Gemini</button>
-                    </div>
-                </div>
-
-                <div id="cert-raw-panel" class="cert-mode-panel">
-                    <div class="form-group">
-                        <label>Prompt pro systémovou roli:</label>
-                        <div class="button-group">
-                            <button class="btn btn-secondary" id="copy-cert-system-prompt" type="button">Kopírovat prompt</button>
+                        <div class="form-group">
+                            <label>Složka s certifikáty:</label>
+                            <div class="button-group">
+                                <button class="btn btn-primary" id="select-cert-folder" type="button">Vybrat složku</button>
+                                <button class="btn btn-secondary" id="refresh-cert-folder" type="button" style="display: none;">🔄 Obnovit</button>
+                                <span class="form-hint">💡 Zpracují se všechny podporované soubory PDF/JPG/JPEG/PNG včetně podsložek</span>
+                            </div>
+                            <div id="cert-folder-name" class="file-item"></div>
+                            <div id="cert-files-list" class="files-list"></div>
                         </div>
-                        <textarea id="cert-system-prompt" rows="10" readonly></textarea>
-                    </div>
 
-                    <div class="form-group">
-                        <label>Prompt pro uživatelský vstup:</label>
-                        <div class="button-group">
-                            <button class="btn btn-secondary" id="copy-cert-user-prompt" type="button">Kopírovat prompt</button>
+                        <div class="form-group">
+                            <button class="btn btn-success" id="process-cert-gemini" type="button" disabled>Vytěžit přes Gemini</button>
                         </div>
-                        <textarea id="cert-user-prompt" rows="10" readonly></textarea>
                     </div>
 
-                    <div class="form-group">
-                        <label for="cert-raw-text">Raw text z Google AI Studia:</label>
-                        <textarea id="cert-raw-text" rows="12" placeholder="Vložte čistý TSV výstup z AI Studia..."></textarea>
-                    </div>
+                    <div id="cert-raw-panel" class="cert-mode-panel">
+                        <div class="form-group">
+                            <label>Prompt pro systémovou roli:</label>
+                            <div class="button-group">
+                                <button class="btn btn-secondary" id="copy-cert-system-prompt" type="button">Kopírovat prompt</button>
+                            </div>
+                            <textarea id="cert-system-prompt" rows="10" readonly></textarea>
+                        </div>
 
-                    <div class="form-group">
-                        <button class="btn btn-success" id="process-cert-raw" type="button">Načíst raw text</button>
+                        <div class="form-group">
+                            <label>Prompt pro uživatelský vstup:</label>
+                            <div class="button-group">
+                                <button class="btn btn-secondary" id="copy-cert-user-prompt" type="button">Kopírovat prompt</button>
+                            </div>
+                            <textarea id="cert-user-prompt" rows="10" readonly></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cert-raw-text">Raw text z Google AI Studia:</label>
+                            <textarea id="cert-raw-text" rows="12" placeholder="Vložte čistý TSV výstup z AI Studia..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <button class="btn btn-success" id="process-cert-raw" type="button">Načíst raw text</button>
+                        </div>
                     </div>
                 </div>
 
@@ -301,16 +304,32 @@
                     <div class="cert-review-main">
                         <div class="form-group">
                             <label>Kontrola a editace záznamů:</label>
-                            <div class="cert-bulk-template-bar">
-                                <select id="cert-bulk-template-select">
-                                    <option value="">Vyberte šablonu pro hromadné vyplnění</option>
-                                    <option value="vzdělávání MŠ_2_I_5">vzdělávání MŠ_2_I_5</option>
-                                    <option value="vzdělávání ZŠ_2_II_4">vzdělávání ZŠ_2_II_4</option>
-                                    <option value="vzdělávání ŠD_SK_2_V_1">vzdělávání ŠD_SK_2_V_1</option>
-                                    <option value="vzdělávání SVČ_2_V_1">vzdělávání SVČ_2_V_1</option>
-                                    <option value="vzdělávání ZUŠ_2_VII_1">vzdělávání ZUŠ_2_VII_1</option>
-                                </select>
-                                <button class="btn btn-secondary" id="cert-apply-template-all" type="button">Vyplnit do všech řádků</button>
+                            <div class="cert-bulk-controls">
+                                <div class="cert-bulk-row">
+                                    <select id="cert-bulk-template-select">
+                                        <option value="">Vyberte šablonu pro hromadné vyplnění</option>
+                                        <option value="vzdělávání MŠ_2_I_5">vzdělávání MŠ_2_I_5</option>
+                                        <option value="vzdělávání ZŠ_2_II_4">vzdělávání ZŠ_2_II_4</option>
+                                        <option value="vzdělávání ŠD_SK_2_V_1">vzdělávání ŠD_SK_2_V_1</option>
+                                        <option value="vzdělávání SVČ_2_V_1">vzdělávání SVČ_2_V_1</option>
+                                        <option value="vzdělávání ZUŠ_2_VII_1">vzdělávání ZUŠ_2_VII_1</option>
+                                    </select>
+                                    <button class="btn btn-secondary" id="cert-apply-template-all" type="button">Vyplnit šablonu do všech řádků</button>
+                                </div>
+                                <div class="cert-bulk-row">
+                                    <select id="cert-bulk-forma-select">
+                                        <option value="">Vyberte formu DVPP pro hromadné vyplnění</option>
+                                        <option value="akreditovaný kurz při DVPP">akreditovaný kurz při DVPP</option>
+                                        <option value="neakreditovaný kurz">neakreditovaný kurz</option>
+                                        <option value="kvalifikační studium_DVPP">kvalifikační studium_DVPP</option>
+                                        <option value="akreditovaný kurz jiný">akreditovaný kurz jiný</option>
+                                        <option value="stáž">stáž</option>
+                                        <option value="mentoring">mentoring</option>
+                                        <option value="supervize">supervize</option>
+                                        <option value="koučink">koučink</option>
+                                    </select>
+                                    <button class="btn btn-secondary" id="cert-apply-forma-all" type="button">Vyplnit formu do všech řádků</button>
+                                </div>
                             </div>
                             <div id="cert-records-table" class="cert-records-table empty-state">
                                 Zatím nejsou načtené žádné certifikáty.
@@ -343,9 +362,10 @@
                         <div class="form-group">
                             <label>Export:</label>
                             <div class="cert-export-actions">
-                                <button class="btn btn-secondary" id="copy-cert-tsv" type="button" disabled>Kopírovat TSV</button>
-                                <button class="btn btn-secondary" id="save-cert-tsv" type="button" disabled>Uložit TSV</button>
                                 <button class="btn btn-success" id="save-cert-excel" type="button" disabled>Vytvořit Excel</button>
+                                <button class="btn btn-secondary" id="save-cert-esf" type="button" disabled>Vygenerovat ESF import</button>
+                                <button class="btn btn-secondary" id="save-cert-tsv" type="button" disabled>Uložit TSV</button>
+                                <button class="btn btn-secondary" id="copy-cert-tsv" type="button" disabled>Kopírovat TSV</button>
                             </div>
                         </div>
 

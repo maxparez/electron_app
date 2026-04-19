@@ -29,6 +29,7 @@ def build_working_record_payload() -> dict:
         course_name="Kurz AI ve vyuce",
         completion_date="14.03.2024",
         hours="8",
+        forma="neakreditovaný kurz",
         topic="umela inteligence",
     )
     working = CertificateRecord(
@@ -38,6 +39,7 @@ def build_working_record_payload() -> dict:
         course_name="Kurz AI ve vyuce - upraveno",
         completion_date="15.03.2024",
         hours="16",
+        forma="stáž",
         topic="well-being a psychohygiena",
         sablona="vzdělávání ZŠ_2_II_4",
     )
@@ -49,6 +51,7 @@ def build_working_record_payload() -> dict:
             "course_name": extracted.course_name,
             "completion_date": extracted.completion_date,
             "hours": extracted.hours,
+            "forma": extracted.forma,
             "sablona": extracted.sablona,
             "topic": extracted.topic,
             "uncertainty_notes": extracted.uncertainty_notes,
@@ -61,6 +64,7 @@ def build_working_record_payload() -> dict:
             "course_name": working.course_name,
             "completion_date": working.completion_date,
             "hours": working.hours,
+            "forma": working.forma,
             "sablona": working.sablona,
             "topic": working.topic,
             "uncertainty_notes": working.uncertainty_notes,
@@ -123,6 +127,7 @@ class DvppCertificateExportersTests(unittest.TestCase):
                 course_name="Kurz AI ve vyuce",
                 completion_date="14.03.2024",
                 hours="8",
+                forma="akreditovaný kurz při DVPP",
                 sablona="vzdělávání ZŠ_2_II_4",
                 topic="umělá inteligence",
             )
@@ -144,7 +149,7 @@ class DvppCertificateExportersTests(unittest.TestCase):
                 "Kurz AI ve vyuce",
                 "14.03.2024",
                 "8",
-                "",
+                "akreditovaný kurz při DVPP",
                 "umělá inteligence",
                 "",
             ]],
@@ -198,6 +203,7 @@ class DvppCertificateExportersTests(unittest.TestCase):
             self.assertIn("Kurz AI ve vyuce - upraveno", output_path.read_text(encoding="utf-8"))
             self.assertIn("15.03.2024", result["content"])
             self.assertIn("vzdělávání ZŠ_2_II_4", result["content"])
+            self.assertIn("stáž", result["content"])
 
     def test_export_records_to_excel_copies_template_without_overwriting_source(self) -> None:
         record = build_working_record_payload()

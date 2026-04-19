@@ -97,7 +97,7 @@ def _format_tsv_row(record: CertificateRecord) -> str:
         payload.get("course_name", ""),
         payload.get("completion_date", ""),
         payload.get("hours", ""),
-        "",
+        payload.get("forma", ""),
         payload.get("topic", ""),
     ]
     return "\t".join(str(field) for field in fields)
@@ -146,7 +146,7 @@ def _write_records_to_sheet(
                 record.course_name,
                 record.completion_date,
                 record.hours,
-                "",
+                record.forma,
                 record.topic,
                 "",
             ]

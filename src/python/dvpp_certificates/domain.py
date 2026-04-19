@@ -26,6 +26,7 @@ class CertificateRecord:
     course_name: str
     completion_date: str
     hours: str
+    forma: str = ""
     sablona: str = ""
     topic: str = ""
     uncertainty_notes: str = ""
@@ -49,6 +50,8 @@ class CertificateRecord:
                 raise ValueError(f"{field_name} must not be empty")
             setattr(self, field_name, cleaned_value)
 
+        if not isinstance(self.forma, str):
+            raise TypeError("forma must be a string")
         if not isinstance(self.sablona, str):
             raise TypeError("sablona must be a string")
         if not isinstance(self.topic, str):
@@ -64,6 +67,7 @@ class CertificateRecord:
         self.completion_date = validate_record_date(
             self.completion_date, "completion_date"
         )
+        self.forma = self.forma.strip()
         self.sablona = self.sablona.strip()
         self.topic = normalize_topic(self.topic)
         self.uncertainty_notes = self.uncertainty_notes.strip()

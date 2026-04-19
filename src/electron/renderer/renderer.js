@@ -21,6 +21,7 @@ const state = {
     detectedTemplateVersion: null,
     certificateExtraction: {
         mode: 'gemini',
+        importCollapsed: false,
         folderPath: null,
         modelName: 'gemini-3-flash-preview',
         matches: [],
@@ -76,6 +77,8 @@ const elements = {
     // DVPP certificate extraction elements
     certModeGeminiBtn: document.getElementById('cert-mode-gemini'),
     certModeRawBtn: document.getElementById('cert-mode-raw'),
+    certToggleImportPanelBtn: document.getElementById('cert-toggle-import-panel'),
+    certImportSection: document.getElementById('cert-import-section'),
     certGeminiPanel: document.getElementById('cert-gemini-panel'),
     certRawPanel: document.getElementById('cert-raw-panel'),
     certApiKeyInput: document.getElementById('cert-gemini-api-key'),
@@ -97,6 +100,8 @@ const elements = {
     certProcessRawBtn: document.getElementById('process-cert-raw'),
     certBulkTemplateSelect: document.getElementById('cert-bulk-template-select'),
     certApplyTemplateAllBtn: document.getElementById('cert-apply-template-all'),
+    certBulkFormaSelect: document.getElementById('cert-bulk-forma-select'),
+    certApplyFormaAllBtn: document.getElementById('cert-apply-forma-all'),
     certRecordsTable: document.getElementById('cert-records-table'),
     certDiagnostics: document.getElementById('cert-diagnostics'),
     certProjectNumber: document.getElementById('cert-project-number'),
@@ -108,6 +113,7 @@ const elements = {
     certCopyTsvBtn: document.getElementById('copy-cert-tsv'),
     certSaveTsvBtn: document.getElementById('save-cert-tsv'),
     certSaveExcelBtn: document.getElementById('save-cert-excel'),
+    certSaveEsfBtn: document.getElementById('save-cert-esf'),
     certResults: document.getElementById('cert-results'),
 
     // Plakat elements
@@ -152,6 +158,17 @@ const TEMPLATE_OPTIONS = [
     'vzdělávání ŠD_SK_2_V_1',
     'vzdělávání SVČ_2_V_1',
     'vzdělávání ZUŠ_2_VII_1'
+];
+
+const FORMA_OPTIONS = [
+    'akreditovaný kurz při DVPP',
+    'neakreditovaný kurz',
+    'kvalifikační studium_DVPP',
+    'akreditovaný kurz jiný',
+    'stáž',
+    'mentoring',
+    'supervize',
+    'koučink'
 ];
 
 // Status bar functions
@@ -216,6 +233,7 @@ async function init() {
 
     elements.certModeGeminiBtn.addEventListener('click', () => switchCertificateMode('gemini'));
     elements.certModeRawBtn.addEventListener('click', () => switchCertificateMode('raw'));
+    elements.certToggleImportPanelBtn.addEventListener('click', toggleCertificateImportPanel);
     elements.certLoadStoredKeyBtn.addEventListener('click', loadStoredGeminiApiKey);
     elements.certDeleteStoredKeyBtn.addEventListener('click', deleteStoredGeminiApiKey);
     elements.certFolderBtn.addEventListener('click', selectCertificateFolder);
@@ -227,7 +245,9 @@ async function init() {
     elements.certCopyTsvBtn.addEventListener('click', copyCertificateTsv);
     elements.certSaveTsvBtn.addEventListener('click', saveCertificateTsv);
     elements.certSaveExcelBtn.addEventListener('click', saveCertificateExcel);
+    elements.certSaveEsfBtn.addEventListener('click', saveCertificateEsfImport);
     elements.certApplyTemplateAllBtn.addEventListener('click', applyCertificateTemplateToAllRecords);
+    elements.certApplyFormaAllBtn.addEventListener('click', applyCertificateFormaToAllRecords);
     elements.certSelectTemplateBtn.addEventListener('click', selectCertificateTemplate);
     elements.certModelSelect.addEventListener('change', (event) => {
         state.certificateExtraction.modelName = event.target.value;
@@ -264,6 +284,7 @@ async function init() {
     elements.certZorNumber.value = state.certificateExtraction.exportMetadata.zor_number;
     elements.certFillHeader.checked = !!state.certificateExtraction.exportMetadata.fill_header;
     elements.certTemplatePath.value = state.certificateExtraction.exportMetadata.template_path;
+    setCertificateImportCollapsed(false);
     await refreshGeminiApiKeyStatus();
     await autoLoadStoredGeminiApiKey();
     renderCertificateFilesList();
@@ -975,8 +996,24 @@ function switchCertificateMode(mode) {
     elements.certModeRawBtn.classList.toggle('active', mode === 'raw');
     elements.certModeRawBtn.classList.toggle('btn-primary', mode === 'raw');
     elements.certModeRawBtn.classList.toggle('btn-secondary', mode !== 'raw');
-    elements.certGeminiPanel.classList.toggle('active', mode === 'gemini');
-    elements.certRawPanel.classList.toggle('active', mode === 'raw');
+    syncCertificateImportPanels();
+}
+
+function syncCertificateImportPanels() {
+    const importVisible = !state.certificateExtraction.importCollapsed;
+    elements.certImportSection.classList.toggle('collapsed', !importVisible);
+    elements.certGeminiPanel.classList.toggle('active', importVisible && state.certificateExtraction.mode === 'gemini');
+    elements.certRawPanel.classList.toggle('active', importVisible && state.certificateExtraction.mode === 'raw');
+    elements.certToggleImportPanelBtn.textContent = importVisible ? 'Skrýt import' : 'Zobrazit import';
+}
+
+function setCertificateImportCollapsed(collapsed) {
+    state.certificateExtraction.importCollapsed = !!collapsed;
+    syncCertificateImportPanels();
+}
+
+function toggleCertificateImportPanel() {
+    setCertificateImportCollapsed(!state.certificateExtraction.importCollapsed);
 }
 
 function bindCertificateMetadataInputs() {
@@ -1243,6 +1280,9 @@ async function processCertificatesFromRawText() {
 function applyCertificateBatchResult(batch, diagnostics) {
     state.certificateExtraction.records = Array.isArray(batch.records) ? batch.records : [];
     state.certificateExtraction.diagnostics = diagnostics;
+    if (state.certificateExtraction.records.length > 0) {
+        setCertificateImportCollapsed(true);
+    }
     refreshCertificateGridRows();
     renderCertificateDiagnostics();
     updateCertificateActions();
@@ -1258,6 +1298,7 @@ function buildCertificateGridRowData() {
         course_name: record.working_record.course_name || '',
         completion_date: record.working_record.completion_date || '',
         hours: record.working_record.hours || '',
+        forma: record.working_record.forma || '',
         topic: record.working_record.topic || ''
     }));
 }
@@ -1318,6 +1359,14 @@ function createCertificateGrid() {
             { field: 'course_name', headerName: 'Název kurzu', minWidth: 260, flex: 1.6 },
             { field: 'completion_date', headerName: 'Datum ukončení', minWidth: 150 },
             { field: 'hours', headerName: 'Hodiny', minWidth: 110 },
+            {
+                field: 'forma',
+                headerName: 'Forma',
+                minWidth: 220,
+                cellEditor: 'agSelectCellEditor',
+                cellEditorParams: { values: FORMA_OPTIONS },
+                cellClass: 'cert-grid-forma-cell'
+            },
             { field: 'topic', headerName: 'Téma', minWidth: 220, flex: 1.4 },
             {
                 colId: 'actions',
@@ -1432,6 +1481,26 @@ function applyCertificateTemplateToAllRecords() {
     showMessage(`Šablona ${selectedTemplate} byla nastavena do všech řádků.`, 'success');
 }
 
+function applyCertificateFormaToAllRecords() {
+    const selectedForma = elements.certBulkFormaSelect.value;
+    if (!selectedForma) {
+        showMessage('Nejprve vyberte formu DVPP pro hromadné vyplnění.', 'warning');
+        return;
+    }
+
+    if (!state.certificateExtraction.records.length) {
+        showMessage('Zatím nejsou načtené žádné certifikáty.', 'warning');
+        return;
+    }
+
+    state.certificateExtraction.records.forEach((record) => {
+        record.working_record.forma = selectedForma;
+    });
+
+    refreshCertificateGridRows();
+    showMessage(`Forma ${selectedForma} byla nastavena do všech řádků.`, 'success');
+}
+
 function updateCertificateActions() {
     const hasSelectedFiles = state.selectedFiles['dvpp-certificates'].length > 0;
     elements.certProcessGeminiBtn.disabled = !state.certificateExtraction.folderPath || !hasSelectedFiles;
@@ -1439,7 +1508,9 @@ function updateCertificateActions() {
     elements.certCopyTsvBtn.disabled = !hasRecords;
     elements.certSaveTsvBtn.disabled = !hasRecords;
     elements.certSaveExcelBtn.disabled = !hasRecords;
+    elements.certSaveEsfBtn.disabled = !hasRecords;
     elements.certApplyTemplateAllBtn.disabled = !hasRecords;
+    elements.certApplyFormaAllBtn.disabled = !hasRecords;
 }
 
 async function copyCertificateTsv() {
@@ -1491,6 +1562,10 @@ async function saveCertificateExcel() {
         console.error('Save Excel error:', error);
         showMessage(`Chyba při vytváření Excelu: ${error.message}`, 'error');
     }
+}
+
+async function saveCertificateEsfImport() {
+    showMessage('Generování ESF importu zatím není implementováno.', 'info');
 }
 
 async function selectCertificateTemplate() {

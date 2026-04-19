@@ -191,7 +191,7 @@ def format_tsv_row(record: Mapping[str, str]) -> str:
         record.get("course_name", ""),
         record.get("completion_date", ""),
         record.get("hours", ""),
-        "",
+        record.get("forma", ""),
         record.get("topic", ""),
     ]
     return "\t".join(str(field) for field in fields)

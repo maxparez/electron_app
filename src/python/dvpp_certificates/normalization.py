@@ -169,6 +169,7 @@ def normalize_certificate_fields(
         "course_name": _require_string_field(raw_record, "course_name"),
         "completion_date": _require_string_field(raw_record, "completion_date"),
         "hours": _require_string_field(raw_record, "hours"),
+        "forma": _optional_string_field(raw_record, "forma"),
         "sablona": _optional_string_field(raw_record, "sablona"),
         "topic": _optional_string_field(raw_record, "topic"),
         "uncertainty_notes": _optional_string_field(raw_record, "uncertainty_notes"),
