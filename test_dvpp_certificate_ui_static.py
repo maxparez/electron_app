@@ -56,6 +56,7 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
 
     def test_renderer_js_wires_certificate_import_and_export_actions(self) -> None:
         content = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
+        switch_mode_body = content.split("function switchCertificateMode(mode) {", 1)[1].split("function syncCertificateImportPanels()", 1)[0]
 
         self.assertIn("'dvpp-certificates': []", content)
         self.assertIn("TEMPLATE_OPTIONS", content)
@@ -72,6 +73,8 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("applyCertificateTemplateToAllRecords", content)
         self.assertIn("applyCertificateFormaToAllRecords", content)
         self.assertIn("setCertificateImportCollapsed", content)
+        self.assertIn("if (state.certificateExtraction.importCollapsed) {", switch_mode_body)
+        self.assertIn("setCertificateImportCollapsed(false);", switch_mode_body)
         self.assertIn("autoLoadStoredGeminiApiKey", content)
         self.assertIn("dvpp-certificates/scan", content)
         self.assertIn("dvpp-certificates/import/gemini", content)

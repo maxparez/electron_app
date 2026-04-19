@@ -996,6 +996,10 @@ function switchCertificateMode(mode) {
     elements.certModeRawBtn.classList.toggle('active', mode === 'raw');
     elements.certModeRawBtn.classList.toggle('btn-primary', mode === 'raw');
     elements.certModeRawBtn.classList.toggle('btn-secondary', mode !== 'raw');
+    if (state.certificateExtraction.importCollapsed) {
+        setCertificateImportCollapsed(false);
+        return;
+    }
     syncCertificateImportPanels();
 }
 
