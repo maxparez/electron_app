@@ -63,6 +63,11 @@ class RuntimeConsistencyTests(unittest.TestCase):
         self.assertIn("test_students_16plus.py", content)
         self.assertNotIn("tests/test_students_16plus.py", content)
 
+    def test_main_window_defaults_to_wide_desktop_layout(self) -> None:
+        main_js = (REPO_ROOT / "src" / "electron" / "main.js").read_text(encoding="utf-8")
+
+        self.assertIn("width: 1600,", main_js)
+
     def test_plakat_endpoint_cleans_up_temporary_directory(self) -> None:
         temp_root = Path(tempfile.mkdtemp(prefix="plakat-endpoint-root-"))
         self.addCleanup(lambda: shutil.rmtree(temp_root, ignore_errors=True))

@@ -307,6 +307,7 @@
                         <label>Kontrola a editace záznamů:</label>
                         <div class="cert-bulk-controls">
                             <div class="cert-bulk-row">
+                                <label class="cert-bulk-label" for="cert-bulk-template-select">Šablona:</label>
                                 <select id="cert-bulk-template-select">
                                     <option value="">Vyberte šablonu pro hromadné vyplnění</option>
                                     <option value="vzdělávání MŠ_2_I_5">vzdělávání MŠ_2_I_5</option>
@@ -315,9 +316,10 @@
                                     <option value="vzdělávání SVČ_2_V_1">vzdělávání SVČ_2_V_1</option>
                                     <option value="vzdělávání ZUŠ_2_VII_1">vzdělávání ZUŠ_2_VII_1</option>
                                 </select>
-                                <button class="btn btn-secondary" id="cert-apply-template-all" type="button">Vyplnit šablonu do všech řádků</button>
+                                <button class="btn btn-secondary cert-action-btn" id="cert-apply-template-all" type="button">Vyplnit do všech řádků</button>
                             </div>
                             <div class="cert-bulk-row">
+                                <label class="cert-bulk-label" for="cert-bulk-forma-select">Forma:</label>
                                 <select id="cert-bulk-forma-select">
                                     <option value="">Vyberte formu DVPP pro hromadné vyplnění</option>
                                     <option value="akreditovaný kurz průběžné DVPP">akreditovaný kurz průběžné DVPP</option>
@@ -329,15 +331,16 @@
                                     <option value="supevize">supevize</option>
                                     <option value="koučink">koučink</option>
                                 </select>
-                                <button class="btn btn-secondary" id="cert-apply-forma-all" type="button">Vyplnit formu do všech řádků</button>
+                                <button class="btn btn-secondary cert-action-btn" id="cert-apply-forma-all" type="button">Vyplnit do všech řádků</button>
                             </div>
                             <div class="cert-bulk-row">
+                                <label class="cert-bulk-label" for="cert-bulk-pohlavi-select">Pohlaví:</label>
                                 <select id="cert-bulk-pohlavi-select">
                                     <option value="">Vyberte pohlaví pro hromadné vyplnění</option>
                                     <option value="POHZENY">POHZENY</option>
                                     <option value="POHMUZI">POHMUZI</option>
                                 </select>
-                                <button class="btn btn-secondary" id="cert-apply-pohlavi-all" type="button">Vyplnit pohlaví do všech řádků</button>
+                                <button class="btn btn-secondary cert-action-btn" id="cert-apply-pohlavi-all" type="button">Vyplnit do všech řádků</button>
                             </div>
                         </div>
                         <div id="cert-records-table" class="cert-records-table empty-state">
@@ -351,6 +354,14 @@
                         <div class="cert-export-card cert-excel-export-card">
                             <div class="form-group">
                                 <label>Excel export:</label>
+                                <label for="cert-template-path">Excel šablona:</label>
+                                <div class="cert-template-row">
+                                    <input type="text" id="cert-template-path">
+                                    <button class="btn btn-secondary cert-action-btn" id="select-cert-template" type="button">Vybrat</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
                                 <div class="form-hint">Hlavička evidence DVPP</div>
                                 <div class="cert-metadata-grid">
                                     <input type="text" id="cert-project-number" placeholder="Registrační číslo projektu">
@@ -364,18 +375,10 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="cert-template-path">Excel šablona:</label>
-                                <div class="cert-template-row">
-                                    <input type="text" id="cert-template-path">
-                                    <button class="btn btn-secondary" id="select-cert-template" type="button">Vybrat</button>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
                                 <div class="cert-export-actions">
-                                    <button class="btn btn-success" id="save-cert-excel" type="button" disabled>Vytvořit Excel</button>
-                                    <button class="btn btn-secondary" id="save-cert-tsv" type="button" disabled>Uložit TSV</button>
-                                    <button class="btn btn-secondary" id="copy-cert-tsv" type="button" disabled>Kopírovat TSV</button>
+                                    <button class="btn btn-success cert-action-btn" id="save-cert-excel" type="button" disabled>Vytvořit Excel</button>
+                                    <button class="btn btn-secondary cert-action-btn" id="save-cert-tsv" type="button" disabled>Uložit TSV</button>
+                                    <button class="btn btn-secondary cert-action-btn" id="copy-cert-tsv" type="button" disabled>Kopírovat TSV</button>
                                 </div>
                             </div>
                         </div>
@@ -391,7 +394,7 @@
 
                             <div class="form-group">
                                 <div class="cert-export-actions">
-                                    <button class="btn btn-primary" id="save-cert-esf" type="button" disabled>Vygenerovat ESF import</button>
+                                    <button class="btn btn-primary cert-action-btn" id="save-cert-esf" type="button" disabled>Vygenerovat ESF import</button>
                                 </div>
                             </div>
                         </div>

@@ -658,20 +658,32 @@ h3.error {
 }
 
 .cert-bulk-controls {
-    display: grid;
-    gap: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
     margin-bottom: 14px;
+    align-items: flex-start;
 }
 
 .cert-bulk-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(260px, 340px) auto;
     gap: 10px;
     align-items: center;
+    padding: 10px 12px;
+    border: 1px solid #dbe4f0;
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96));
+    max-width: 100%;
+}
+
+.cert-bulk-label {
+    margin-bottom: 0;
+    white-space: nowrap;
 }
 
 .cert-bulk-row select {
-    flex: 1;
-    min-width: 260px;
+    width: 100%;
     padding: 10px 12px;
     border: 1px solid #cbd5e1;
     border-radius: 10px;
@@ -793,14 +805,21 @@ h3.error {
     min-height: 100%;
 }
 
+.cert-action-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+    margin-bottom: 0;
+}
+
 .cert-export-card .form-group:last-child {
     margin-bottom: 0;
 }
 
 .cert-export-actions {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 10px;
+    align-items: center;
 }
 
 .cert-diagnostics-list {
@@ -838,9 +857,16 @@ h3.error {
 
 @media (max-width: 980px) {
     .cert-api-key-row,
-    .cert-template-row,
-    .cert-bulk-row {
+    .cert-template-row {
         flex-direction: column;
+    }
+
+    .cert-bulk-controls {
+        display: grid;
+    }
+
+    .cert-bulk-row {
+        grid-template-columns: 1fr;
     }
 
     .cert-export-grid {
