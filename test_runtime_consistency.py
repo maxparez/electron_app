@@ -68,6 +68,16 @@ class RuntimeConsistencyTests(unittest.TestCase):
 
         self.assertIn("width: 1600,", main_js)
 
+    def test_environment_configs_match_release_version_family(self) -> None:
+        package_version = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))["version"]
+        production_config = json.loads((REPO_ROOT / "config" / "production.json").read_text(encoding="utf-8"))
+        development_config = json.loads((REPO_ROOT / "config" / "development.json").read_text(encoding="utf-8"))
+        electron_config = (REPO_ROOT / "src" / "electron" / "config.js").read_text(encoding="utf-8")
+
+        self.assertEqual(package_version, production_config["app"]["version"])
+        self.assertEqual(f"{package_version}-dev", development_config["app"]["version"])
+        self.assertIn(f'version: "{package_version}"', electron_config)
+
     def test_plakat_endpoint_cleans_up_temporary_directory(self) -> None:
         temp_root = Path(tempfile.mkdtemp(prefix="plakat-endpoint-root-"))
         self.addCleanup(lambda: shutil.rmtree(temp_root, ignore_errors=True))
