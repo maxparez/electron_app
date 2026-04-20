@@ -83,6 +83,9 @@ const elements = {
     certImportSection: document.getElementById('cert-import-section'),
     certGeminiPanel: document.getElementById('cert-gemini-panel'),
     certRawPanel: document.getElementById('cert-raw-panel'),
+    certPromptsModal: document.getElementById('cert-prompts-modal'),
+    certOpenPromptsModalBtn: document.getElementById('open-cert-prompts-modal'),
+    certClosePromptsModalBtn: document.getElementById('close-cert-prompts-modal'),
     certApiKeyInput: document.getElementById('cert-gemini-api-key'),
     certRememberKey: document.getElementById('cert-remember-key'),
     certApiKeyStatus: document.getElementById('cert-api-key-status'),
@@ -245,6 +248,8 @@ async function init() {
     elements.certModeGeminiBtn.addEventListener('click', () => switchCertificateMode('gemini'));
     elements.certModeRawBtn.addEventListener('click', () => switchCertificateMode('raw'));
     elements.certToggleImportPanelBtn.addEventListener('click', toggleCertificateImportPanel);
+    elements.certOpenPromptsModalBtn.addEventListener('click', openCertificatePromptsModal);
+    elements.certClosePromptsModalBtn.addEventListener('click', closeCertificatePromptsModal);
     elements.certLoadStoredKeyBtn.addEventListener('click', loadStoredGeminiApiKey);
     elements.certDeleteStoredKeyBtn.addEventListener('click', deleteStoredGeminiApiKey);
     elements.certFolderBtn.addEventListener('click', selectCertificateFolder);
@@ -263,6 +268,16 @@ async function init() {
     elements.certSelectTemplateBtn.addEventListener('click', selectCertificateTemplate);
     elements.certModelSelect.addEventListener('change', (event) => {
         state.certificateExtraction.modelName = event.target.value;
+    });
+    elements.certPromptsModal.addEventListener('click', (event) => {
+        if (event.target === elements.certPromptsModal) {
+            closeCertificatePromptsModal();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !elements.certPromptsModal.hidden) {
+            closeCertificatePromptsModal();
+        }
     });
     bindCertificateInteractionHandlers();
     bindCertificateMetadataInputs();
@@ -1015,6 +1030,14 @@ function switchCertificateMode(mode) {
         return;
     }
     syncCertificateImportPanels();
+}
+
+function openCertificatePromptsModal() {
+    elements.certPromptsModal.hidden = false;
+}
+
+function closeCertificatePromptsModal() {
+    elements.certPromptsModal.hidden = true;
 }
 
 function syncCertificateImportPanels() {

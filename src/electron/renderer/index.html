@@ -275,24 +275,18 @@
 
                         <div id="cert-raw-panel" class="cert-mode-panel">
                         <div class="form-group">
-                            <label>Prompt pro systémovou roli:</label>
-                            <div class="button-group">
-                                <button class="btn btn-secondary" id="copy-cert-system-prompt" type="button">Kopírovat prompt</button>
+                            <div class="cert-prompt-entry">
+                                <div>
+                                    <label class="cert-inline-label">Potřebujete prompt do GAI?</label>
+                                    <div class="form-hint">Otevře se pomocné okno se systémovým a uživatelským promptem pro ruční vytěžení.</div>
+                                </div>
+                                <button class="btn btn-secondary cert-action-btn" id="open-cert-prompts-modal" type="button">Prompty pro GAI</button>
                             </div>
-                            <textarea id="cert-system-prompt" rows="10" readonly></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Prompt pro uživatelský vstup:</label>
-                            <div class="button-group">
-                                <button class="btn btn-secondary" id="copy-cert-user-prompt" type="button">Kopírovat prompt</button>
-                            </div>
-                            <textarea id="cert-user-prompt" rows="10" readonly></textarea>
                         </div>
 
                         <div class="form-group">
                             <label for="cert-raw-text">Raw text z Google AI Studia:</label>
-                            <textarea id="cert-raw-text" rows="12" placeholder="Vložte čistý TSV výstup z AI Studia..."></textarea>
+                            <textarea id="cert-raw-text" rows="14" placeholder="Zde vložte raw text z Google AI Studia..."></textarea>
                         </div>
 
                         <div class="form-group">
@@ -410,6 +404,44 @@
                     </div>
 
                     <div id="cert-results" class="results-container"></div>
+                </div>
+            </div>
+
+            <div id="cert-prompts-modal" class="cert-modal-overlay" hidden>
+                <div class="cert-modal" role="dialog" aria-modal="true" aria-labelledby="cert-prompts-modal-title">
+                    <div class="cert-modal-header">
+                        <div>
+                            <h3 id="cert-prompts-modal-title">Prompty pro Google AI Studio</h3>
+                            <p>Nejdřív vložte systémový prompt, potom uživatelský prompt a nakonec dokumenty nebo text.</p>
+                        </div>
+                        <button class="btn btn-secondary cert-action-btn" id="close-cert-prompts-modal" type="button">Zavřít</button>
+                    </div>
+
+                    <div class="cert-modal-body">
+                        <div class="form-group">
+                            <label>Prompt pro systémovou roli:</label>
+                            <div class="button-group">
+                                <button class="btn btn-secondary" id="copy-cert-system-prompt" type="button">Kopírovat prompt</button>
+                            </div>
+                            <textarea id="cert-system-prompt" rows="10" readonly></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Prompt pro uživatelský vstup:</label>
+                            <div class="button-group">
+                                <button class="btn btn-secondary" id="copy-cert-user-prompt" type="button">Kopírovat prompt</button>
+                            </div>
+                            <textarea id="cert-user-prompt" rows="10" readonly></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Prompt pro uživatelský vstup:</label>
+                            <div class="button-group">
+                                <button class="btn btn-secondary" id="copy-cert-user-prompt" type="button">Kopírovat prompt</button>
+                            </div>
+                            <textarea id="cert-user-prompt" rows="10" readonly></textarea>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
