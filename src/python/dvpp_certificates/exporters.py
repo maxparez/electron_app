@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 import shutil
 from dataclasses import asdict
 from pathlib import Path
@@ -11,6 +13,74 @@ from dvpp_certificates.domain import CertificateRecord, ExportMetadata, RecordOr
 DEFAULT_EXCEL_TEMPLATE_PATH = (
     r"D:\JAK2024\Dokumenty\Evidence_podpor_poskytnutych_ucastnikum_vzdelavani_MS_ZS_upravene_DVPP.xlsx"
 )
+ESF_HEADER = [
+    "Jmeno_Osoby",
+    "Prijmeni_Osoby",
+    "DatumNarozeni_Osoby",
+    "Obec_TrvaleBydlisteOsoby",
+    "CastObce_TrvaleBydlisteOsoby",
+    "Ulice_TrvaleBydlisteOsoby",
+    "CisloPopisne_TrvaleBydlisteOsoby",
+    "CisloOrientacni_TrvaleBydlisteOsoby",
+    "ZnakCislaOrientacniho_TrvaleBydlisteOsoby",
+    "PSC_TrvaleBydlisteOsoby",
+    "TitulPredJmenem_Osoby",
+    "TitulZaJmenem_Osoby",
+    "DatumVystupuZProjektu_Osoby",
+    "DatumUmrti_Osoby",
+    "Email_KontaktOsoby",
+    "Telefon_KontaktOsoby",
+    "VstupuDoProjektu_Osoby",
+    "PodlePohlavi",
+    "PodlePostaveniNaTrhuPrace_MonitorovaciList",
+    "PodlePostaveniOsobyVProjektu_MonitorovaciList",
+    "PodleNejvyssihoDosazenehoVzdelani_MonitorovaciList",
+    "PodlePristupuKBydleni_MonitorovaciList",
+    "PodleAktivityVSektoruEkonomiky_MonitorovaciList",
+    "PodleSpecifikacePusobeniVeVerejnemSektoru_MonitorovaciList",
+    "PodleTypuZnevyhodneni_MonitorovaciList",
+    "PodleOsobSdilejicichStejnouDomacnost_MonitorovaciList",
+    "PodleDruhuObdrzenePodpory_MonitorovaciList",
+    "PodlePostaveniDaneOsoby_MonitorovaciList",
+    "PodleVysledkuUcasti_MonitorovaciList",
+    "PodleSituacePoUkonceniUcastiVProjektu_MonitorovaciList",
+    "ProhlaseniPodporeneOsobyOUzemniZpusobilosti_MonitorovaciList",
+    "Partner",
+]
+ESF_DEFAULT_ROW = [
+    "",
+    "",
+    "",
+    "Aš",
+    "Aš",
+    "Saská",
+    "24",
+    "1",
+    "",
+    "35201",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "01.09.2025",
+    "POHMUZI",
+    "TPZAMCI",
+    "",
+    "VZISCED5-8",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+]
 
 
 def resolve_excel_template_path(template_path: str | None) -> str:
@@ -27,6 +97,29 @@ def export_records_to_tsv(
 
     if output_path:
         Path(output_path).expanduser().write_text(content, encoding="utf-8")
+
+    return {
+        "content": content,
+        "output_path": output_path,
+    }
+
+
+def export_records_to_esf_csv(
+    records: list[WorkingRecord | Mapping[str, Any]],
+    *,
+    output_path: str | None = None,
+) -> dict[str, str | None]:
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, delimiter=";", lineterminator="\n")
+    writer.writerow(ESF_HEADER)
+
+    for record in records:
+        writer.writerow(_format_esf_row(_coerce_working_record(record)))
+
+    content = buffer.getvalue()
+
+    if output_path:
+        Path(output_path).expanduser().write_text(content, encoding="utf-8-sig", newline="")
 
     return {
         "content": content,
@@ -101,6 +194,14 @@ def _format_tsv_row(record: CertificateRecord) -> str:
         payload.get("topic", ""),
     ]
     return "\t".join(str(field) for field in fields)
+
+
+def _format_esf_row(record: CertificateRecord) -> list[str]:
+    row = ESF_DEFAULT_ROW.copy()
+    row[0] = record.name
+    row[1] = record.surname
+    row[2] = record.birth_date
+    return row
 
 
 def _write_records_with_xlwings(

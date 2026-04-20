@@ -6,7 +6,11 @@ from typing import Any, Dict, List
 
 from dvpp_cert_extraction import collect_input_files, validate_input_file
 from dvpp_certificates.domain import ExtractionBatch, RecordOrigin, WorkingRecord
-from dvpp_certificates.exporters import export_records_to_excel, export_records_to_tsv
+from dvpp_certificates.exporters import (
+    export_records_to_esf_csv,
+    export_records_to_excel,
+    export_records_to_tsv,
+)
 from dvpp_certificates.importers import GeminiCertificateImporter
 from dvpp_certificates.normalization import normalize_certificate_fields
 from dvpp_certificates.raw_text_parser import parse_raw_text_batch
@@ -211,6 +215,20 @@ class DvppCertificateProcessor(BaseTool):
                     "template_path": template_path,
                 },
             )
+        except Exception as exc:
+            self.add_error(str(exc))
+            return self.get_result(False)
+
+    def export_esf(
+        self,
+        records_payload: list[dict[str, Any]],
+        *,
+        output_path: str | None = None,
+    ) -> Dict[str, Any]:
+        self.clear_messages()
+        try:
+            data = export_records_to_esf_csv(records_payload, output_path=output_path)
+            return self.get_result(True, data)
         except Exception as exc:
             self.add_error(str(exc))
             return self.get_result(False)

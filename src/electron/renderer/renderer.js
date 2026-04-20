@@ -1582,7 +1582,22 @@ async function saveCertificateExcel() {
 }
 
 async function saveCertificateEsfImport() {
-    showMessage('Generování ESF importu zatím není implementováno.', 'info');
+    try {
+        const outputPath = await window.electronAPI.saveFile('osoby.csv');
+        if (!outputPath) {
+            return;
+        }
+
+        const result = await window.electronAPI.apiCall('dvpp-certificates/export/esf', 'POST', {
+            records: state.certificateExtraction.records,
+            outputPath
+        });
+        showMessage(`ESF import byl vytvořen: ${wslToWindowsPath(result.data.output_path)}`, 'success');
+        await openFile(result.data.output_path);
+    } catch (error) {
+        console.error('Save ESF import error:', error);
+        showMessage(`Chyba při vytváření ESF importu: ${error.message}`, 'error');
+    }
 }
 
 async function selectCertificateTemplate() {

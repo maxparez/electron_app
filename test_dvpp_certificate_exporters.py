@@ -16,6 +16,7 @@ from dvpp_certificates.exporters import (
     DEFAULT_EXCEL_TEMPLATE_PATH,
     _write_records_to_sheet,
     export_records_to_excel,
+    export_records_to_esf_csv,
     export_records_to_tsv,
     resolve_excel_template_path,
 )
@@ -281,6 +282,44 @@ class DvppCertificateExportersTests(unittest.TestCase):
         self.assertEqual(1, len(writer_calls))
         self.assertEqual(output_path, writer_calls[0][0])
 
+    def test_export_records_to_esf_csv_writes_header_and_keeps_all_columns(self) -> None:
+        record = build_working_record_payload()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "osoby.csv"
+            result = export_records_to_esf_csv([record], output_path=str(output_path))
+
+            self.assertEqual(str(output_path), result["output_path"])
+            self.assertTrue(output_path.exists())
+
+            content = output_path.read_text(encoding="utf-8-sig")
+            lines = content.splitlines()
+            self.assertEqual(2, len(lines))
+
+            header = lines[0].split(";")
+            row = lines[1].split(";")
+            self.assertEqual(32, len(header))
+            self.assertEqual(32, len(row))
+            self.assertEqual("Jmeno_Osoby", header[0])
+            self.assertEqual("Prijmeni_Osoby", header[1])
+            self.assertEqual("DatumNarozeni_Osoby", header[2])
+            self.assertEqual("Jana", row[0])
+            self.assertEqual("Novakova", row[1])
+            self.assertEqual("05.09.1980", row[2])
+            self.assertEqual("Aš", row[3])
+            self.assertEqual("Aš", row[4])
+            self.assertEqual("Saská", row[5])
+            self.assertEqual("24", row[6])
+            self.assertEqual("1", row[7])
+            self.assertEqual("", row[8])
+            self.assertEqual("35201", row[9])
+            self.assertEqual("01.09.2025", row[16])
+            self.assertEqual("POHMUZI", row[17])
+            self.assertEqual("TPZAMCI", row[18])
+            self.assertEqual("", row[19])
+            self.assertEqual("VZISCED5-8", row[20])
+            self.assertTrue(lines[1].endswith(";;;;;;;;;;;"))
+
     def test_resolve_excel_template_path_uses_default_template(self) -> None:
         self.assertEqual(DEFAULT_EXCEL_TEMPLATE_PATH, resolve_excel_template_path(None))
 
@@ -380,6 +419,37 @@ class DvppCertificateExportersTests(unittest.TestCase):
             "Missing required export metadata: project_number",
             payload["message"],
         )
+
+    def test_server_esf_export_endpoint_returns_processor_payload(self) -> None:
+        class FakeProcessor:
+            def __init__(self, logger, importer=None) -> None:
+                self.logger = logger
+
+            def export_esf(self, records_payload, output_path=None):
+                return {
+                    "success": True,
+                    "data": {
+                        "content": "Jmeno_Osoby;Prijmeni_Osoby\nJana;Novakova",
+                        "output_path": output_path,
+                    },
+                    "errors": [],
+                    "warnings": [],
+                    "info": [],
+                }
+
+        with patch.object(server, "DvppCertificateProcessor", FakeProcessor):
+            response = server.app.test_client().post(
+                "/api/dvpp-certificates/export/esf",
+                json={
+                    "records": [build_working_record_payload()],
+                    "outputPath": "/tmp/osoby.csv",
+                },
+            )
+
+        self.assertEqual(200, response.status_code)
+        payload = response.get_json()
+        self.assertEqual("success", payload["status"])
+        self.assertEqual("/tmp/osoby.csv", payload["data"]["output_path"])
 
 
 if __name__ == "__main__":

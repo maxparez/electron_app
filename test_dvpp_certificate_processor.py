@@ -151,6 +151,39 @@ class DvppCertificateProcessorTests(unittest.TestCase):
             self.assertEqual(0, len(result["data"]["batch"]["records"]))
             self.assertIn("Nepodařilo se vytěžit žádné certifikáty", result["errors"])
 
+    def test_export_esf_writes_csv_file(self) -> None:
+        processor = DvppCertificateProcessor(importer=RecordingImporter())
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "osoby.csv"
+            result = processor.export_esf(
+                [
+                    {
+                        "working_record": {
+                            "surname": "Novakova",
+                            "name": "Jana",
+                            "birth_date": "05.09.1980",
+                            "course_name": "Kurz AI ve vyuce",
+                            "completion_date": "14.03.2024",
+                            "hours": "8",
+                            "forma": "",
+                            "sablona": "",
+                            "topic": "",
+                            "uncertainty_notes": "",
+                            "origin": None,
+                        }
+                    }
+                ],
+                output_path=str(output_path),
+            )
+
+            self.assertTrue(result["success"])
+            self.assertEqual(str(output_path), result["data"]["output_path"])
+            self.assertTrue(output_path.exists())
+            content = output_path.read_text(encoding="utf-8-sig")
+            self.assertIn("Jmeno_Osoby;Prijmeni_Osoby;DatumNarozeni_Osoby", content)
+            self.assertIn("Jana;Novakova;05.09.1980;Aš;Aš;Saská;24;1;;35201", content)
+
     def test_server_endpoint_returns_processor_payload(self) -> None:
         class FakeProcessor:
             def __init__(self, logger, importer=None) -> None:
