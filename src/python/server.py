@@ -682,6 +682,11 @@ def process_zor_spec_paths():
             
             # Process files using paths directly
             result = processor.process_paths(file_paths, output_dir, options)
+            server_logger.info(
+                f"ZOR-SPEC-PATHS result: success={result.get('success')}, "
+                f"errors={result.get('errors', [])}, warnings={result.get('warnings', [])}"
+            )
+            server_logger.info(f"ZOR-SPEC-PATHS full result: {result}")
             
             if result['success']:
                 # Prepare response with output files
@@ -726,10 +731,21 @@ def process_zor_spec_paths():
                         enhanced_errors.append(f"{error} - PROBLÉM: Používáte Windows cestu na Linux systému. Zkopírujte soubory do Linux souborového systému nebo použijte WSL mount cestu (např. /mnt/d/...)")
                     else:
                         enhanced_errors.append(error)
+
+                if not enhanced_errors:
+                    fallback_messages = result.get('warnings', []) or result.get('info', [])
+                    if fallback_messages:
+                        enhanced_errors = list(fallback_messages)
+                    else:
+                        enhanced_errors = [
+                            "Procesor nevrátil detailní chybu. Zkontrolujte logy server/tools."
+                        ]
+
+                error_message = enhanced_errors[0] if enhanced_errors else "Zpracování selhalo"
                 
                 return jsonify({
                     "status": "error",
-                    "message": "Zpracování selhalo",
+                    "message": error_message,
                     "errors": enhanced_errors,
                     "warnings": result.get('warnings', [])
                 }), 400
@@ -742,6 +758,8 @@ def process_zor_spec_paths():
             
     except Exception as e:
         server_logger.error(f"Error processing zor-spec-paths: {str(e)}")
+        import traceback
+        server_logger.error(traceback.format_exc())
         return jsonify({
             "status": "error",
             "message": str(e)
