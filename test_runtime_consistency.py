@@ -63,6 +63,13 @@ class RuntimeConsistencyTests(unittest.TestCase):
         self.assertIn("test_students_16plus.py", content)
         self.assertNotIn("tests/test_students_16plus.py", content)
 
+    def test_install_windows_batch_delegates_to_powershell_installer(self) -> None:
+        batch_path = REPO_ROOT / "install-windows.bat"
+        content = batch_path.read_text(encoding="utf-8")
+
+        self.assertIn('scripts\\install_windows.ps1', content)
+        self.assertIn('powershell -NoProfile -ExecutionPolicy Bypass -File "%INSTALL_SCRIPT%" %*', content)
+
     def test_main_window_defaults_to_wide_desktop_layout(self) -> None:
         main_js = (REPO_ROOT / "src" / "electron" / "main.js").read_text(encoding="utf-8")
 
