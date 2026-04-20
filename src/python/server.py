@@ -1,8 +1,11 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+import json
 import os
 import sys
 import tempfile
+from pathlib import Path
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 # Add tools directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
@@ -11,16 +14,20 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
 from tools.inv_vzd_processor import InvVzdProcessor
 from tools.zor_spec_dat_processor import ZorSpecDatProcessor
 from tools.plakat_generator import PlakatGenerator
+from tools.dvpp_report_processor import DvppReportProcessor
+from tools.dvpp_certificate_processor import DvppCertificateProcessor
+from channel_config import load_channel_config, resolve_debug_mode
 
 # Initialize logging
 from logger import init_logging
 server_logger, tool_logger = init_logging()
+CHANNEL_CONFIG = load_channel_config()
+BACKEND_INSTANCE_TOKEN = os.environ.get("ELECTRON_APP_INSTANCE_TOKEN", "")
+BACKEND_PORT = int(os.environ.get("FLASK_PORT") or os.environ.get("PORT") or 5000)
+PACKAGE_JSON_PATH = Path(__file__).resolve().parents[2] / "package.json"
 
-# DEBUG mode - set to False for production
-DEBUG_MODE = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
-
-# Force debug mode to be always on for debugging InvVzd issues
-DEBUG_MODE = True
+# DEBUG mode is controlled by env override or channel configuration
+DEBUG_MODE = resolve_debug_mode(CHANNEL_CONFIG, os.environ)
 print(f"[SERVER] DEBUG MODE ENABLED: {DEBUG_MODE}")
 
 def debug_print(*args, **kwargs):
@@ -41,6 +48,40 @@ if sys.platform == 'win32':
 app = Flask(__name__)
 CORS(app)
 
+
+def build_backend_metadata():
+    """Return identity metadata so Electron can verify it talks to the expected backend instance."""
+    return {
+        "pid": os.getpid(),
+        "channel": CHANNEL_CONFIG.channel,
+        "branch": CHANNEL_CONFIG.branch,
+        "debugLogging": CHANNEL_CONFIG.debug_logging,
+        "instanceToken": BACKEND_INSTANCE_TOKEN,
+        "port": BACKEND_PORT,
+    }
+
+
+def get_app_version():
+    """Load the application version from package.json when available."""
+    try:
+        package_data = json.loads(PACKAGE_JSON_PATH.read_text(encoding="utf-8"))
+        return str(package_data.get("version") or "1.0.0")
+    except Exception:
+        return "1.0.0"
+
+
+def convert_path_if_needed(path):
+    """Convert Windows path to WSL path when the backend runs on Linux/WSL."""
+    if path and isinstance(path, str):
+        import platform
+        if platform.system() == 'Linux' and len(path) >= 3 and path[1:3] == ':\\':
+            drive_letter = path[0].lower()
+            remaining_path = path[3:].replace('\\', '/')
+            converted = f'/mnt/{drive_letter}/{remaining_path}'
+            server_logger.info(f"Converting Windows path to WSL: {path} -> {converted}")
+            return converted
+    return path
+
 # Configure Flask logging
 import logging
 app.logger.handlers = []
@@ -57,7 +98,8 @@ def health_check():
     """Health check endpoint"""
     return jsonify({
         "status": "healthy",
-        "message": "Python backend is running"
+        "message": "Python backend is running",
+        **build_backend_metadata(),
     })
 
 @app.route('/api/detect/template-version', methods=['POST'])
@@ -198,6 +240,7 @@ def select_folder():
         data = request.get_json()
         folder_path = data.get('folderPath')
         tool_type = data.get('toolType', 'inv-vzd')
+        template_path = data.get('templatePath')
         
         server_logger.info(f"[SELECT-FOLDER] Request received for tool: {tool_type}")
         server_logger.info(f"[SELECT-FOLDER] Folder path: {folder_path}")
@@ -217,9 +260,30 @@ def select_folder():
             server_logger.info(f"[SELECT-FOLDER] Converted to WSL path: {folder_path}")
         
         if tool_type == 'inv-vzd':
-            # Create InvVzdProcessor without version for scanning
+            # Create InvVzdProcessor and detect template version if provided
             processor = InvVzdProcessor(logger=tool_logger)
-            result = processor.select_folder(folder_path)
+            
+            # If template is provided, detect its version first
+            if template_path:
+                server_logger.info(f"[SELECT-FOLDER] Template path: {template_path}")
+                # Convert Windows template path to WSL if needed
+                if platform.system() == 'Linux' and len(template_path) >= 3 and template_path[1:3] == ':\\':
+                    drive_letter = template_path[0].lower()
+                    remaining_path = template_path[3:].replace('\\', '/')
+                    template_path = f'/mnt/{drive_letter}/{remaining_path}'
+                    server_logger.info(f"[SELECT-FOLDER] Converted template to WSL path: {template_path}")
+                
+                template_version = processor._detect_template_version(template_path)
+                server_logger.info(f"[SELECT-FOLDER] Detected template version: {template_version}")
+                if template_version:
+                    processor.version = template_version
+                    processor.config = processor.__class__.__dict__.get('VERSIONS', {}).get(template_version)
+                    if not processor.config:
+                        # Access VERSIONS from module level
+                        from tools.inv_vzd_processor import VERSIONS
+                        processor.config = VERSIONS.get(template_version)
+            
+            result = processor.select_folder(folder_path, template_path)
             server_logger.info(f"[SELECT-FOLDER] InvVzd scan result: {result}")
             return jsonify(result)
         else:
@@ -549,6 +613,7 @@ def process_zor_spec():
                     "data": {
                         "files_processed": data['files_processed'],
                         "unique_students": data['unique_students'],
+                        "students_16plus": data.get('students_16plus', {}),  # Add student counts by type
                         "output_files": output_files
                     },
                     "errors": result.get('errors', []),
@@ -592,18 +657,6 @@ def process_zor_spec_paths():
         auto_save = data.get('autoSave', False)  # Auto-save to source folder
         
         # Convert Windows paths to WSL paths if needed (only on Linux/WSL)
-        def convert_path_if_needed(path):
-            if path and isinstance(path, str):
-                # Only convert if we're on Linux/WSL and path is Windows format
-                import platform
-                if platform.system() == 'Linux' and len(path) >= 3 and path[1:3] == ':\\':
-                    drive_letter = path[0].lower()
-                    remaining_path = path[3:].replace('\\', '/')
-                    wsl_path = f'/mnt/{drive_letter}/{remaining_path}'
-                    server_logger.info(f"Converting Windows path to WSL: {path} -> {wsl_path}")
-                    return wsl_path
-            return path
-        
         # Convert paths
         file_paths = [convert_path_if_needed(fp) for fp in file_paths]
         
@@ -650,6 +703,7 @@ def process_zor_spec_paths():
                     "data": {
                         "files_processed": result['files_processed'],
                         "unique_students": result['unique_students'],
+                        "students_16plus": result.get('students_16plus', {}),  # Add student counts by type
                         "output_files": output_files,
                         "auto_saved": auto_save,
                         "output_directory": output_dir if auto_save else None
@@ -805,44 +859,402 @@ def process_plakat():
             'output_dir': temp_dir
         }
         
-        result = processor.process([], options)
-        
-        if result['success']:
-            # Read output files and prepare response
-            output_files = []
-            for file_path in result['data'].get('output_files', []):
-                with open(file_path, 'rb') as f:
-                    output_content = f.read()
-                    output_files.append({
-                        'filename': os.path.basename(file_path),
-                        'content': output_content.hex(),  # Convert to hex for JSON
-                        'size': len(output_content)
-                    })
+        try:
+            result = processor.process([], options)
             
-            return jsonify({
-                "status": "success", 
-                "message": result.get('message', 'Generování dokončeno'),
-                "data": {
-                    "successful_projects": result['data'].get('successful_projects', 0),
-                    "failed_projects": result['data'].get('failed_projects', 0),
-                    "total_projects": result['data'].get('total_projects', 0),
-                    "output_files": output_files
-                },
-                "errors": result.get('errors', []),
-                "warnings": result.get('warnings', []),
-                "info": result.get('info', [])
-            })
-        else:
+            if result['success']:
+                # Read output files and prepare response
+                output_files = []
+                for file_path in result['data'].get('output_files', []):
+                    with open(file_path, 'rb') as f:
+                        output_content = f.read()
+                        output_files.append({
+                            'filename': os.path.basename(file_path),
+                            'content': output_content.hex(),  # Convert to hex for JSON
+                            'size': len(output_content)
+                        })
+                
+                return jsonify({
+                    "status": "success", 
+                    "message": result.get('message', 'Generování dokončeno'),
+                    "data": {
+                        "successful_projects": result['data'].get('successful_projects', 0),
+                        "failed_projects": result['data'].get('failed_projects', 0),
+                        "total_projects": result['data'].get('total_projects', 0),
+                        "output_files": output_files
+                    },
+                    "errors": result.get('errors', []),
+                    "warnings": result.get('warnings', []),
+                    "info": result.get('info', [])
+                })
+
             return jsonify({
                 "status": "error",
                 "message": result.get('message', 'Generování selhalo'),
                 "errors": result.get('errors', []),
                 "warnings": result.get('warnings', [])
             }), 400
+        finally:
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
             
     except Exception as e:
         server_logger.error(f"Error in plakat processing: {str(e)}")
         return jsonify({"error": f"Vnitřní chyba serveru: {str(e)}"}), 500
+
+
+@app.route('/api/scan/dvpp-directory', methods=['POST'])
+def scan_dvpp_directory():
+    """Scan a project directory for DVPP workbooks."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "success": False,
+                "message": "No data provided"
+            }), 400
+
+        project_dir = convert_path_if_needed(data.get('projectDir'))
+        if not project_dir:
+            return jsonify({
+                "success": False,
+                "message": "No project directory provided"
+            }), 400
+
+        processor = DvppReportProcessor(tool_logger)
+        matches = processor.scan_project_directory(project_dir)
+
+        return jsonify({
+            "success": True,
+            "message": f"Nalezeno {len(matches)} DVPP souborů",
+            "matches": matches
+        })
+
+    except Exception as e:
+        server_logger.error(f"Error scanning DVPP directory: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/process/dvpp-report', methods=['POST'])
+def process_dvpp_report():
+    """Generate a DVPP HTML report from selected workbook paths."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        project_dir = convert_path_if_needed(data.get('projectDir'))
+        file_paths = [convert_path_if_needed(path) for path in data.get('filePaths', [])]
+
+        processor = DvppReportProcessor(tool_logger)
+        result = processor.process(file_paths, {"project_dir": project_dir})
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "DVPP report byl úspěšně vygenerován",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", [])
+            })
+
+        return jsonify({
+            "status": "error",
+            "message": "Zpracování DVPP reportu selhalo",
+            "errors": result.get("errors", []),
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", [])
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error processing DVPP report: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/dvpp-certificates/import/gemini', methods=['POST'])
+def import_dvpp_certificates_gemini():
+    """Import DVPP certificates from selected files through Gemini."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        folder_path = convert_path_if_needed(data.get('folderPath'))
+        file_paths = [convert_path_if_needed(path) for path in data.get('selectedFiles', [])]
+        model_name = data.get('modelName')
+        api_key = data.get('apiKey')
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.process(
+            file_paths,
+            {
+                "folder_path": folder_path,
+                "model_name": model_name,
+                "api_key": api_key,
+            }
+        )
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "DVPP certifikáty byly úspěšně vytěženy",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        error_messages = result.get("errors", [])
+        batch_errors = (((result.get("data") or {}).get("batch") or {}).get("errors") or [])
+        preferred_message = next(
+            (
+                message
+                for message in batch_errors + error_messages
+                if message and message != "Nepodařilo se vytěžit žádné certifikáty"
+            ),
+            None,
+        )
+        return jsonify({
+            "status": "error",
+            "message": preferred_message or (error_messages[0] if error_messages else "Vytěžení DVPP certifikátů selhalo"),
+            "data": result.get("data"),
+            "errors": error_messages,
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error importing DVPP certificates via Gemini: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/dvpp-certificates/scan', methods=['POST'])
+def scan_dvpp_certificates_folder():
+    """Scan a selected folder for supported DVPP certificate files."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        folder_path = convert_path_if_needed(data.get('folderPath'))
+        if not folder_path:
+            return jsonify({
+                "status": "error",
+                "message": "Nebyla zadána složka s certifikáty"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        matches = processor.scan_folder(folder_path)
+
+        return jsonify({
+            "status": "success",
+            "message": "Podporované certifikáty byly načteny",
+            "matches": matches,
+        })
+    except Exception as e:
+        server_logger.error(f"Error scanning DVPP certificate folder: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
+
+
+@app.route('/api/dvpp-certificates/import/raw-text', methods=['POST'])
+def import_dvpp_certificates_raw_text():
+    """Import DVPP certificates from pasted raw TSV text."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.import_raw_text(data.get("rawText", ""))
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "DVPP certifikáty byly úspěšně načteny z textu",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        return jsonify({
+            "status": "error",
+            "message": "Načtení DVPP certifikátů z textu selhalo",
+            "errors": result.get("errors", []),
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error importing DVPP certificates raw text: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/dvpp-certificates/export/tsv', methods=['POST'])
+def export_dvpp_certificates_tsv():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.export_tsv(
+            data.get("records", []),
+            output_path=convert_path_if_needed(data.get("outputPath")),
+        )
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "TSV export byl úspěšně vytvořen",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        return jsonify({
+            "status": "error",
+            "message": "TSV export selhal",
+            "errors": result.get("errors", []),
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error exporting DVPP certificates TSV: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/dvpp-certificates/export/excel', methods=['POST'])
+def export_dvpp_certificates_excel():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.export_excel(
+            data.get("records", []),
+            data.get("exportMetadata", {}),
+            template_path=convert_path_if_needed(data.get("templatePath")),
+            output_path=convert_path_if_needed(data.get("outputPath")),
+        )
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "Excel export byl úspěšně vytvořen",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        error_messages = result.get("errors", [])
+        message = error_messages[0] if error_messages else "Excel export selhal"
+        return jsonify({
+            "status": "error",
+            "message": message,
+            "errors": error_messages,
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error exporting DVPP certificates Excel: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/dvpp-certificates/export/esf', methods=['POST'])
+def export_dvpp_certificates_esf():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.export_esf(
+            data.get("records", []),
+            export_metadata_payload=data.get("exportMetadata", {}),
+            output_path=convert_path_if_needed(data.get("outputPath")),
+        )
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "ESF import byl úspěšně vytvořen",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        return jsonify({
+            "status": "error",
+            "message": "ESF import selhal",
+            "errors": result.get("errors", []),
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error exporting DVPP certificates ESF import: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 @app.route('/api/config', methods=['GET'])
 def get_config():
@@ -850,7 +1262,11 @@ def get_config():
     return jsonify({
         "status": "success",
         "data": {
-            "version": "1.0.0",
+            "version": get_app_version(),
+            "channel": CHANNEL_CONFIG.channel,
+            "updateBranch": CHANNEL_CONFIG.branch,
+            "debugLogging": CHANNEL_CONFIG.debug_logging,
+            "backend": build_backend_metadata(),
             "tools": [
                 {
                     "id": "inv-vzd",
@@ -866,6 +1282,16 @@ def get_config():
                     "id": "plakat",
                     "name": "Generátor plakátů",
                     "description": "Generování PDF plakátů"
+                },
+                {
+                    "id": "dvpp",
+                    "name": "DVPP report",
+                    "description": "Souhrnný HTML report podpory DVPP"
+                },
+                {
+                    "id": "dvpp-certificates",
+                    "name": "Vytěžování certifikátů",
+                    "description": "Import certifikátů DVPP přes Gemini API nebo raw text"
                 }
             ]
         }
@@ -873,7 +1299,8 @@ def get_config():
 
 if __name__ == '__main__':
     # Run the Flask server
-    port = int(os.environ.get('PORT', 5000))
-    server_logger.info(f"Starting Flask server on port {port}")
+    server_logger.info(f"Starting Flask server on port {BACKEND_PORT}")
+    server_logger.info(f"Active channel: {CHANNEL_CONFIG.channel} ({CHANNEL_CONFIG.branch})")
     server_logger.info(f"DEBUG MODE: {DEBUG_MODE}")
-    app.run(host='127.0.0.1', port=port, debug=DEBUG_MODE)
+    server_logger.info(f"Backend instance token: {BACKEND_INSTANCE_TOKEN or 'none'}")
+    app.run(host='127.0.0.1', port=BACKEND_PORT, debug=DEBUG_MODE)

@@ -36,6 +36,7 @@ app.log
 .env
 .env.local
 .env.*.local
+CLAUDE.local.md
 
 # Test coverage
 coverage/
@@ -55,4 +56,5 @@ htmlcov/
 # Temporary files
 *.tmp
 *.temp
-.cache/
+.cache/tests/result.html
+.worktrees/

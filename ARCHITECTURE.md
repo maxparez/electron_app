@@ -14,6 +14,10 @@
 │  │   Inv Vzd   │  │  Zor Spec   │  │   Plakát    │        │
 │  │     UI      │  │     UI      │  │     UI      │        │
 │  └─────────────┘  └─────────────┘  └─────────────┘        │
+│  ┌─────────────┐                                        │
+│  │    DVPP     │                                        │
+│  │     UI      │                                        │
+│  └─────────────┘                                        │
 │                                                             │
 │  ┌─────────────────────────────────────────────────┐      │
 │  │            Renderer Process (UI)                 │      │
@@ -45,6 +49,10 @@
 │  │  InvVzd     │  │  ZorSpec    │  │  Plakat     │        │
 │  │  Processor  │  │  Processor  │  │  Generator  │        │
 │  └─────────────┘  └─────────────┘  └─────────────┘        │
+│  ┌─────────────┐                                        │
+│  │    DVPP     │                                        │
+│  │  Processor  │                                        │
+│  └─────────────┘                                        │
 │         │                │                │                 │
 │         ▼                ▼                ▼                 │
 │  ┌─────────────────────────────────────────────────┐      │
@@ -74,7 +82,7 @@
 - **Technologie**: Electron, Node.js
 - **Klíčové soubory**:
   - `main.js` - Vstupní bod aplikace
-  - `process-manager.js` - Správa Python procesu
+  - `backend-manager.js` - Správa Python procesu a restartů
 
 #### Renderer Process
 - **Zodpovědnost**: Uživatelské rozhraní
@@ -111,8 +119,9 @@ mainWindow.webContents.send('process-complete', {
 | `/api/health` | GET | Health check |
 | `/api/process/inv-vzd` | POST | Zpracování Inv Vzd |
 | `/api/process/zor-spec` | POST | Zpracování Zor Spec |
-| `/api/generate/plakat` | POST | Generování plakátů |
-| `/api/status/{task_id}` | GET | Stav úlohy |
+| `/api/process/plakat` | POST | Generování plakátů |
+| `/api/scan/dvpp-directory` | POST | Vyhledání DVPP workbooků |
+| `/api/process/dvpp-report` | POST | Generování DVPP HTML reportu |
 
 #### Request/Response Format
 ```json
@@ -215,26 +224,38 @@ class PlakatGenerator:
 ### 3. Plakát Generator workflow
 ```
 1. Uživatel vloží seznam projektů
-2. Frontend → POST /api/generate/plakat
+2. Frontend → POST /api/process/plakat
 3. Backend:
-   - Parsuje Excel data
+   - Volá externí službu pro povinnou publicitu
    - Generuje PDF plakáty
-   - Spojí do jednoho souboru
+   - Vrací PDF soubory rendereru
 4. Backend → Response s PDF
 5. Frontend nabídne stažení
+```
+
+### 4. DVPP report workflow
+```
+1. Uživatel vybere projektovou složku
+2. Frontend → POST /api/scan/dvpp-directory
+3. Backend:
+   - Rekurzivně projde Excel workbooky
+   - Vyfiltruje soubory s požadovanou DVPP strukturou
+4. Frontend zobrazí nalezené workbooky a výběr
+5. Frontend → POST /api/process/dvpp-report
+6. Backend vytvoří HTML report přímo do projektové složky
 ```
 
 ## Bezpečnost
 
 ### 1. Komunikace
-- Pouze localhost (127.0.0.1:5000)
-- Žádná externí síťová komunikace
-- CORS omezeno na Electron origin
+- Lokální komunikace Electron ↔ Flask backend běží na `127.0.0.1`, výchozí port je `5000`
+- Generátor plakátů navíc komunikuje s externí službou `publicita.dotaceeu.cz`
+- CORS je povoleno pro desktop aplikaci
 
 ### 2. File Access
-- Sandboxed file access
-- Validace cest souborů
-- Žádné spouštění externích příkazů
+- Lokální práce se soubory přes Electron dialogy a Python zpracování
+- Validace a normalizace cest souborů včetně převodu Windows cest ve WSL scénáři
+- Na Windows se při správě backendu používají i externí systémové příkazy pro ukončení procesů
 
 ### 3. Data Protection
 - Žádné ukládání citlivých dat

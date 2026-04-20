@@ -22,7 +22,7 @@ try:
     XLWINGS_AVAILABLE = True
 except ImportError:
     XLWINGS_AVAILABLE = False
-from datetime import datetime
+from datetime import datetime, time
 import unicodedata
 import re
 
@@ -247,10 +247,11 @@ class InvVzdProcessor(BaseTool):
                 
         except Exception as e:
             self.logger.error(f"[INVVZD] === PROCESS EXCEPTION ===")
+            self.logger.error(f"[INVVZD] Soubory k zpracování: {[os.path.basename(f) for f in files]}")
             self.logger.error(f"[INVVZD] Exception: {str(e)}")
             import traceback
             self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
-            self.add_error(f"Chyba při zpracování: {str(e)}")
+            self.add_error(f"Kritická chyba při zpracování ({len(files)} souborů): {str(e)}")
             result = self.get_result(False)
             self.logger.info(f"[INVVZD] Returning exception result: {result}")
             return result
@@ -428,7 +429,8 @@ class InvVzdProcessor(BaseTool):
     def _read_source_data(self, source_file: str) -> Optional[pd.DataFrame]:
         """Read and process source data"""
         try:
-            self.logger.info(f"[INVVZD] Reading source data for version: {self.version}")
+            file_name = os.path.basename(source_file)
+            self.logger.info(f"[INVVZD] Čtu zdrojová data z '{file_name}' (verze {self.version})")
             if self.version == "16":
                 return self._read_16_hour_data(source_file)
             elif self.version == "32":
@@ -439,13 +441,18 @@ class InvVzdProcessor(BaseTool):
                 return None
                 
         except Exception as e:
-            self.add_error(f"Chyba při čtení zdrojových dat: {str(e)}")
+            import traceback
+            file_name = os.path.basename(source_file)
+            error_msg = f"Chyba při čtení zdrojových dat ze souboru '{file_name}': {str(e)}"
+            self.logger.error(f"[INVVZD] {error_msg}")
+            self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
+            self.add_error(error_msg)
             return None
             
     def _read_16_hour_data(self, source_file: str) -> Optional[pd.DataFrame]:
         """Read data from 16 hour source file (zdroj-dochazka sheet)"""
         try:
-            wb = load_workbook(source_file)
+            wb = load_workbook(source_file, data_only=True)
             
             # Find the correct sheet - prefer zdroj-dochazka
             sheet_name = None
@@ -505,14 +512,38 @@ class InvVzdProcessor(BaseTool):
                     else:
                         datum = str(date_cell).strip()
                 else:
-                    from openpyxl.utils import get_column_letter
                     col_letter = get_column_letter(col)
                     self.add_error(f"Chybí datum aktivity v buňce {col_letter}6")
                     datum = None
                 
                 # Get time (row 7) - specific to 16h
                 time_cell = sheet.cell(row=7, column=col).value
-                cas = str(time_cell) if time_cell else ''
+
+                # Handle different types openpyxl may return
+                if time_cell is None:
+                    cas = ''
+                elif isinstance(time_cell, datetime):
+                    # Excel datetime object - format time part only
+                    cas = time_cell.strftime('%H:%M')
+                elif isinstance(time_cell, time):
+                    # Excel time object
+                    cas = time_cell.strftime('%H:%M')
+                elif isinstance(time_cell, str):
+                    cas_raw = time_cell.strip()
+
+                    # Check if it's a time range pattern (HH:MM-HH:MM or HH.MM-HH.MM with various dashes)
+                    if re.match(r'^\s*\d{1,2}[:.]\d{2}\s*[-–—]\s*\d{1,2}[:.]\d{2}', cas_raw):
+                        # Extract start time from range
+                        cas = re.split(r'\s*[-–—]\s*', cas_raw, maxsplit=1)[0].strip()
+                        # Normalize dot to colon for consistency
+                        cas = cas.replace('.', ':')
+                        col_letter = get_column_letter(col)
+                        self.add_info(f"Upraven čas v buňce {col_letter}7: {cas_raw} → {cas}")
+                    else:
+                        cas = cas_raw
+                else:
+                    # Fallback for unexpected types
+                    cas = str(time_cell).strip()
                 
                 # Get form (row 8)
                 forma_cell = sheet.cell(row=8, column=col).value
@@ -547,6 +578,12 @@ class InvVzdProcessor(BaseTool):
             
             self.logger.info(f"[INVVZD] 16h Debug - Total data collected: {len(data)} activities")
             
+            # Check if we have any errors about missing dates
+            missing_date_errors = [err for err in self.errors if "Chybí datum aktivity" in err]
+            if missing_date_errors:
+                self.add_info("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
+                return None
+            
             if not data:
                 self.add_error("Nenalezena žádná data aktivit")
                 return None
@@ -560,20 +597,22 @@ class InvVzdProcessor(BaseTool):
             # Format dates properly - ensure they include full date (DD.MM.YYYY)
             if 'datum' in df.columns:
                 # First try to fix incomplete dates if they exist
-                # For 16h template, data starts at row 6 (C6)
-                df['datum'] = self._fix_incomplete_dates(df['datum'], start_row=6)
+                # For 16h template, data starts at row 6, column C (3)
+                df['datum'] = self._fix_incomplete_dates(df['datum'], start_row=6, start_col=3)
                 # Then convert to datetime and format - SPECIFY dayfirst=True for DD.MM.YYYY format!
                 df['datum'] = pd.to_datetime(df['datum'], format='%d.%m.%Y', dayfirst=True, errors='coerce')
                 
                 # Check for any failed date conversions
                 nan_count = df['datum'].isna().sum()
                 if nan_count > 0:
-                    # Find which rows have invalid dates and report specific cells
+                    # Find which activities have invalid dates and report specific cells
                     failed_indices = df[df['datum'].isna()].index.tolist()
                     for idx in failed_indices:
-                        # Row number in Excel is idx + 3 (header at 1, data starts at 3, 0-based index)
-                        excel_row = idx + 3
-                        self.add_error(f"Chybí nebo neplatné datum v řádku {excel_row}")
+                        # For 16h format, dates are in row 6, columns start at C (3)
+                        # idx 0 = column C, idx 1 = column D, etc.
+                        col_letter = get_column_letter(3 + idx)  # C=3, D=4, E=5, etc.
+                        cell_ref = f"{col_letter}6"  # Row 6 for dates in 16h format
+                        self.add_error(f"Chybí nebo neplatné datum v buňce {cell_ref}")
                     
                     self.add_info("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
                     return None
@@ -604,7 +643,7 @@ class InvVzdProcessor(BaseTool):
     def _read_32_hour_data(self, source_file: str) -> Optional[pd.DataFrame]:
         """Read data from 32 hour source file (List1 or zdroj-dochazka sheet)"""
         try:
-            wb = load_workbook(source_file)
+            wb = load_workbook(source_file, data_only=True)
             
             # Try to find the correct sheet - prefer zdroj-dochazka, fallback to List1
             sheet_name = None
@@ -652,7 +691,6 @@ class InvVzdProcessor(BaseTool):
                             datum = str(date_cell).strip()
                     else:
                         # ERROR: Missing date in activity column
-                        from openpyxl.utils import get_column_letter
                         col_letter = get_column_letter(col)
                         self.add_error(f"Chybí datum aktivity v buňce {col_letter}6")
                         datum = None  # Mark as invalid
@@ -713,7 +751,6 @@ class InvVzdProcessor(BaseTool):
                             datum = str(date_cell).strip()
                     else:
                         # ERROR: Missing date in activity column
-                        from openpyxl.utils import get_column_letter
                         col_letter = get_column_letter(col)
                         self.add_error(f"Chybí datum aktivity v buňce {col_letter}6")
                         datum = None  # Mark as invalid
@@ -771,11 +808,17 @@ class InvVzdProcessor(BaseTool):
                 # Check for any failed conversions
                 nan_count = df['datum'].isna().sum()
                 if nan_count > 0:
-                    self.add_warning(f"Upozornění: {nan_count} datumů se nepodařilo převést")
-                    # Try to show which dates failed
+                    # Find which activities have invalid dates and report specific cells
                     failed_indices = df[df['datum'].isna()].index.tolist()
-                    if failed_indices:
-                        self.add_warning(f"Problematické řádky: {failed_indices[:5]}...")  # Show first 5
+                    for idx in failed_indices:
+                        # For 32h format, dates are in row 6, columns start at C (3)
+                        col_letter = get_column_letter(3 + idx)  # C=3, D=4, E=5, etc.
+                        cell_ref = f"{col_letter}6"  # Row 6 for dates
+                        self.add_error(f"Chybí nebo neplatné datum v buňce {cell_ref}")
+                    
+                    self.add_info("Zkontrolujte správnost a případně soubor opravte a spusťte znovu")
+                    wb.close()
+                    return None
                 
                 # Format as DD.MM.YYYY
                 df['datum'] = df['datum'].dt.strftime('%d.%m.%Y')
@@ -858,7 +901,6 @@ class InvVzdProcessor(BaseTool):
         def get_cell_ref(index, row, col):
             if isinstance(col, int):
                 # For 32h version, col is starting column number
-                from openpyxl.utils import get_column_letter
                 col_letter = get_column_letter(col + index)
                 return f"{col_letter}{row}"
             else:
@@ -1133,7 +1175,16 @@ class InvVzdProcessor(BaseTool):
             # STEP 2: Write activities to "Seznam aktivit" sheet at C3
             self.logger.info(f"[INVVZD] STEP 2: Writing activities...")
             sheet = wb.sheets['Seznam aktivit']
-            
+
+            # Replace regular space with NBSP in forma column only (not tema!)
+            # Excel template expects NBSP in column F (forma), but NOT in column G (tema)
+            if len(data) > 0 and 'forma' in data.columns:
+                data['forma'] = data['forma'].str.replace(
+                    'Vzdělávání s využitím nových technologií',
+                    'Vzdělávání s\u00A0využitím nových technologií',
+                    regex=False
+                )
+
             # Prepare activities data for export (following original export_columns)
             if len(data) > 0:
                 # For 16h version include time column, for 32h version exclude it
@@ -1142,8 +1193,7 @@ class InvVzdProcessor(BaseTool):
                 else:
                     export_columns = ["datum", "hodin", "forma", "tema", "ucitel"]
                 activities_data = data[export_columns] if all(col in data.columns for col in export_columns) else data
-                
-                
+
                 self.add_info(f"Zapisuji {len(activities_data)} aktivit do Seznam aktivit")
                 sheet.range("C3").options(ndim="expand").value = activities_data.values
             
@@ -1151,8 +1201,8 @@ class InvVzdProcessor(BaseTool):
             self.logger.info(f"[INVVZD] STEP 3: Writing overview...")
             sheet = wb.sheets['Přehled']
             
-            # Create overview data (student-activity combinations)
-            overview_data = self._create_overview_data(student_names, data)
+            # Create overview data (student-activity combinations based on actual attendance)
+            overview_data = self._create_overview_data(student_names, data, source_file)
             if len(overview_data) > 0:
                 self.add_info(f"Zapisuji {len(overview_data)} záznamů do Přehled")
                 sheet.range("C3").options(ndim="expand").value = overview_data
@@ -1172,10 +1222,12 @@ class InvVzdProcessor(BaseTool):
             
         except Exception as e:
             self.logger.error(f"[INVVZD] === COPY TEMPLATE EXCEPTION ===")
+            file_name = os.path.basename(source_file)
+            self.logger.error(f"[INVVZD] Zdrojový soubor: {file_name}")
             self.logger.error(f"[INVVZD] Exception: {str(e)}")
             import traceback
             self.logger.error(f"[INVVZD] Traceback: {traceback.format_exc()}")
-            self.add_error(f"Chyba při kopírování šablony: {str(e)}")
+            self.add_error(f"Chyba při kopírování šablony pro soubor '{file_name}': {str(e)}")
             # Try to close Excel if still open
             try:
                 if 'wb' in locals():
@@ -1217,29 +1269,51 @@ class InvVzdProcessor(BaseTool):
             self.add_error(f"Chyba při načítání jmen žáků: {str(e)}")
             return []
     
-    def _create_overview_data(self, student_names: List[str], activities_data: pd.DataFrame) -> List[List]:
-        """Create overview data combining students with activity numbers"""
+    def _create_overview_data(self, student_names: List[str], activities_data: pd.DataFrame, source_file: str) -> List[List]:
+        """Create overview data combining students with activity numbers based on actual attendance"""
         try:
-            # Following original logic from create_orginal_file
+            # Read actual attendance from source file
+            wb = load_workbook(source_file, read_only=True)
+            sheet_name = "zdroj-dochazka" if "zdroj-dochazka" in wb.sheetnames else wb.sheetnames[0]
+            sheet = wb[sheet_name]
+            
             overview_result = []
             
-            # For each activity (numbered 1, 2, 3...)
-            for activity_num, (_, activity) in enumerate(activities_data.iterrows(), 1):
-                # Add all students for this activity
-                for student_name in student_names:
-                    overview_result.append([activity_num, student_name])
+            # Starting row for student data depends on version
+            start_row = 12 if self.version == "16" else 11
             
-            self.add_info(f"Vytvořen přehled: {len(activities_data)} aktivit × {len(student_names)} žáků = {len(overview_result)} záznamů")
+            # For each activity (numbered 1, 2, 3...)
+            for activity_num, (idx, activity) in enumerate(activities_data.iterrows(), 1):
+                # Activity column in source file (starts at column C = 3)
+                activity_col = 3 + idx
+                
+                # Check each student's attendance for this activity
+                for student_idx, student_name in enumerate(student_names):
+                    student_row = start_row + student_idx
+                    attendance = sheet.cell(row=student_row, column=activity_col).value
+                    
+                    # Only add to overview if student attended (has "ano" or similar)
+                    # Accept various formats: ANO, Ano, ano, with spaces, x, X, 1, etc.
+                    if attendance:
+                        attendance_str = str(attendance).strip().lower()
+                        if attendance_str in ['ano', 'yes', '1', 'true', 'x', '+', 'ok', 'a']:
+                            overview_result.append([activity_num, student_name])
+                            self.logger.info(f"[INVVZD] Student {student_name} attended activity {activity_num}")
+            
+            wb.close()
+            
+            self.add_info(f"Vytvořen přehled: {len(overview_result)} záznamů skutečné účasti")
             return overview_result
             
         except Exception as e:
             self.add_error(f"Chyba při vytváření přehledu: {str(e)}")
             return []
     
-    def select_folder(self, folder_path: str) -> Dict[str, Any]:
+    def select_folder(self, folder_path: str, template_path: str = None) -> Dict[str, Any]:
         """Scan folder for attendance files and filter them"""
         self.logger.info(f"[INVVZD] === SELECT FOLDER START ===")
         self.logger.info(f"[INVVZD] Folder path: {folder_path}")
+        self.logger.info(f"[INVVZD] Template path: {template_path}")
         
         result = {"success": False, "files": [], "message": ""}
         
@@ -1267,9 +1341,14 @@ class InvVzdProcessor(BaseTool):
                         self.logger.info(f"[INVVZD] Skipping output file: {file}")
                         continue
                     
-                    # Skip template files
+                    # Skip template files (by name pattern)
                     if 'sablona' in file.lower() or 'template' in file.lower():
                         self.logger.info(f"[INVVZD] Skipping template file: {file}")
+                        continue
+
+                    # Skip the selected template file (by path comparison)
+                    if template_path and os.path.abspath(full_path) == os.path.abspath(template_path):
+                        self.logger.info(f"[INVVZD] Skipping selected template: {file}")
                         continue
                     
                     # Try to detect version from content

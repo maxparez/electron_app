@@ -1,5 +1,10 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+async function getBackendBaseUrl() {
+    const port = await ipcRenderer.invoke('config:get', 'python.port');
+    return `http://127.0.0.1:${port || 5000}/api`;
+}
+
 // Backend recovery event listener
 ipcRenderer.on('backend-failed', (event, data) => {
     window.dispatchEvent(new CustomEvent('backend-failed', { detail: data }));
@@ -14,18 +19,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
     selectFolder: (options) => ipcRenderer.invoke('dialog:selectFolder', options),
     writeFile: (path, data) => ipcRenderer.invoke('file:write', path, data),
     openFileInApp: (filePath) => ipcRenderer.invoke('file:openInApp', filePath),
-    
+    openFolder: (folderPath) => ipcRenderer.invoke('folder:open', folderPath),
+
     // Config
     getConfig: (key) => ipcRenderer.invoke('config:get', key),
     setConfig: (key, value) => ipcRenderer.invoke('config:set', key, value),
+    getGeminiApiKeyStatus: () => ipcRenderer.invoke('secure:gemini:getStatus'),
+    getGeminiApiKey: () => ipcRenderer.invoke('secure:gemini:get'),
+    saveGeminiApiKey: (apiKey) => ipcRenderer.invoke('secure:gemini:set', apiKey),
+    deleteGeminiApiKey: () => ipcRenderer.invoke('secure:gemini:delete'),
     
     // File system operations
     scanFolder: (folderPath) => ipcRenderer.invoke('fs:scanFolder', folderPath),
     
     // API calls to Python backend
     apiCall: async (endpoint, method = 'GET', data = null) => {
-        const baseURL = 'http://localhost:5000/api';
-        const url = `${baseURL}/${endpoint}`;
+        const backendBaseUrl = await getBackendBaseUrl();
+        const url = `${backendBaseUrl}/${endpoint}`;
         
         const options = {
             method,
@@ -48,7 +58,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
             const result = await response.json();
             
             if (!response.ok) {
-                throw new Error(result.message || 'API request failed');
+                const error = new Error(result.message || 'API request failed');
+                error.data = result.data || null;
+                error.errors = result.errors || [];
+                error.warnings = result.warnings || [];
+                error.info = result.info || [];
+                error.status = result.status || 'error';
+                throw error;
             }
             
             return result;
@@ -77,8 +93,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
             formData.append('options', JSON.stringify(options));
         }
         
-        const baseURL = 'http://localhost:5000/api';
-        const url = `${baseURL}/${endpoint}`;
+        const backendBaseUrl = await getBackendBaseUrl();
+        const url = `${backendBaseUrl}/${endpoint}`;
         
         try {
             const response = await fetch(url, {
@@ -101,8 +117,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     // Upload form data directly
     uploadFormData: async (endpoint, formData) => {
-        const baseURL = 'http://localhost:5000/api';
-        const url = `${baseURL}/${endpoint}`;
+        const backendBaseUrl = await getBackendBaseUrl();
+        const url = `${backendBaseUrl}/${endpoint}`;
         
         try {
             const response = await fetch(url, {

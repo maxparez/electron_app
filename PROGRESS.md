@@ -1,8 +1,65 @@
 # Electron App Development Progress
 
-## Current Phase: DEPLOYMENT COMPLETE - Week 6/6  
-**Date:** 2025-06-03
-**Status:** 🎯 **READY FOR PRODUCTION DEPLOYMENT**
+## Current Phase: PRODUCTION READY - ZorSpecDat Enhancements + Windows Deploy
+**Date:** 2025-12-09
+**Status:** 🎯 **PRODUCTION READY - Control Sums, School Types, Windows Deployment**
+
+## 📅 Recent Updates
+
+### 2025-12-09: ZorSpecDat Control Sums + School Types + Windows Deployment
+
+#### ZorSpecDat Enhancements
+- [x] **[feat-130]** Added control sums (total hours) for forms and topics
+  - Backend: Calculate `total_forma_hours` and `total_tema_hours`
+  - Frontend: Display control sums in new UI section
+  - Reviewed and approved by gemini-consultant
+- [x] **[fix-131]** Fixed column name for control sums calculation (cena → correct column)
+- [x] **[feat-132]** Display control sums side by side (2 columns grid layout)
+
+#### School Type Statistics
+- [x] **[feat-133]** Added ZUŠ and SŠ school types to 16h+ attendance stats
+  - Extended `_identify_school_type` for ZUŠ and SŠ detection
+  - Added ZUŠ (🎨) and SŠ (🎓) to UI display
+  - Updated CSS grid: 3 → 5 columns for all school types
+  - Now tracking: MŠ, ZŠ, ŠD, ZUŠ, SŠ
+
+#### Topic Normalization & NBSP Fixes
+- [x] **[fix-134]** Added tema normalization for EVVO topic (long → short form)
+- [x] **[feat-135]** Added SŠ/VOŠ topics and normalized all topic variants
+  - New topics: "pohybové aktivity", "odborná témata sš/voš"
+  - Normalization rules for SŠ variants (gramotnost → pre/gramotnost)
+- [x] **[fix-136]** Fixed NBSP mismatch in 'Vzdělávání s využitím nových technologií'
+  - ZorSpecDat: NBSP → regular space (for matching)
+- [x] **[fix-137]** Added NBSP to InvVzd output (forma column only)
+- [x] **[fix-138]** Fixed NBSP - applies to 'forma' column, not 'tema'
+
+#### Windows-Install Branch - Production Deployment
+- [x] **[cleanup]** Removed all development files (110 files)
+  - Removed: tests/, docs/, all *.md except README.md, dev scripts
+  - Kept: src/, install scripts, templates, dependencies
+- [x] **[fix-139]** Restored update scripts (update.bat, update-windows.bat)
+- [x] **[fix-140]** Added start-app.bat + removed dev scripts
+  - Fixed desktop shortcut issue
+  - Removed: build scripts, sync scripts, backup files
+- [x] **[cleanup-141]** Removed duplicate Excel templates from root
+- [x] **[docs-142]** Rewrote README.md for production users
+  - User-friendly guide for non-technical colleagues
+  - Installation, usage, troubleshooting, update instructions
+- [x] **[security-143]** Fixed 6 npm security vulnerabilities
+  - Critical: form-data (unsafe random boundary)
+  - High: axios (DoS attack)
+  - Moderate: body-parser, electron
+  - Low: brace-expansion, tmp
+  - Result: 0 vulnerabilities ✅
+
+#### Summary
+- **13 commits** with new features, fixes, and deployment preparation
+- **ZorSpecDat** now has control sums, 5 school types, proper topic normalization
+- **InvVzd** properly handles NBSP in forma column
+- **Windows-install branch** is production-ready with security fixes
+
+### 2025-12-08: InvVzd Processing + UX Improvements
+*(Previous session content preserved below)*
 
 ## ✅ Completed Tasks
 
@@ -142,6 +199,15 @@
 - [x] Final ZorSpec and Plakat validation
 - [x] **Windows testing with xlwings** (Successfully tested - 16h and 32h both working)
 
+### 🆕 Final Production Testing (2025-06-07)
+- [x] **InvVzd Attendance Calculation Fix:** Corrected to read actual attendance instead of all combinations
+- [x] **Enhanced Attendance Formats:** Now accepts ANO, Ano, ano, x, X, +, with automatic trimming
+- [x] **Improved Error Messages:** Shows exact cell references (E6, F6) instead of confusing row numbers
+- [x] **Validation Flow Fix:** Stops processing when missing dates found, prevents invalid output files
+- [x] **Windows Installation System:** Complete Git-based installation with install-windows.bat
+- [x] **Update System:** update-windows.bat for easy Git-based updates
+- [x] **Production Test Results:** All tools (InvVzd 16h/32h, ZorSpecDat, Plakat) working perfectly
+
 ### Week 6: Testing & Deployment ✅ COMPLETE
 - [x] Windows testing with xlwings - InvVzd 16h and 32h both working perfectly
 - [x] Integration testing - All tools working on Windows
@@ -214,16 +280,112 @@
 **💻 Platform:** Windows 10/11 + MS Excel  
 **📞 Support:** Complete documentation + diagnostic tools
 
-## Recent Git commits log
-- `0eb3235`: [fix-046] Restore per-file details, remove only general processing messages
-- `eb88910`: [fix-045] Clean up UI logs and simplify file display
-- `b8a9292`: [fix-044] Improved error handling: specific cell errors, no output on data errors, continue processing
-- `c8dcdcd`: [fix-042][fix-043] Fix per-file status display and add detailed SDP verification logging
-- `4312912`: [fix-041] Perfect per-file message isolation and UI display
-- `0ed8e85`: [feat-007] Plakat generator enhancements with auto-save
-- `7b0130d`: [docs-001] Git workflow documentation and automation
+## Recent Git commits log (Latest First)
+- `86211b6`: [feat-127] Add button spacing and refresh folder button
+- `e43189d`: [fix-126] Remove debug logging - template filtering confirmed working
+- `6170e3a`: [fix-124] Exclude selected template from source file list
+- `ff6b7eb`: [fix-123] Evaluate Excel formulas automatically with data_only=True
+- `4bca711`: [fix-120] Remove all local imports of get_column_letter in _read_16_hour_data
+- `0efe11a`: [fix-121] Support dot as time separator in time ranges
+- `931913b`: [fix-118] Parse time ranges in InvVzd row 7 (start time)
+- `9f1bc04`: [fix-117] Improve Python detection and installer robustness
+- `35ff515`: [feat-051] Add Windows installation system with Git support
+- `52caa19`: [fix-050] Stop processing when missing dates found
+
+## 🚀 LATEST ENHANCEMENTS (2025-12-08)
+
+### ✅ InvVzd Time Range Parsing & Excel Formula Support
+- **[fix-118]**: Comprehensive time field parsing with type checking
+  - Handles datetime objects, time objects, and strings
+  - Extracts start time from ranges: `8:50-9:35` → `8:50`
+  - Reviewed by ChatGPT consultant for correctness
+  - UI displays info when range is simplified
+
+- **[fix-119, fix-120]**: Fixed "cannot access local variable" error
+  - Removed 6 redundant local imports of `get_column_letter`
+  - Uses global import throughout method
+  - Resolved Python scoping issue
+
+- **[fix-121]**: Support for dot as time separator
+  - Accepts both `:` and `.` in time values
+  - `7:55-8.40` → `7:55` ✅
+  - Normalizes dots to colons for consistency
+
+- **[fix-122, fix-123]**: Excel formula evaluation
+  - Detects formulas starting with `=`
+  - Uses `data_only=True` to evaluate formulas automatically
+  - Formula `=$C$7` returns actual value from C7
+  - Applies to both 16h and 32h data reading
+
+### ✅ Template Exclusion & UI Improvements
+- **[fix-124, fix-125, fix-126]**: Template file filtering
+  - Selected template no longer appears in source file list
+  - Path comparison using `os.path.abspath()`
+  - Passes template_path from API to select_folder()
+  - Verified working in production logs
+
+- **[feat-127]**: Frontend UX enhancements
+  - Added `margin-bottom: 10px` to buttons for proper spacing
+  - New "🔄 Obnovit seznam" refresh button
+  - Button appears after successful folder scan
+  - Rescans folder when clicked (useful for file changes)
+  - Tracks last selected folder in state
+
+### 📋 Technical Details
+- **Consultant reviews**: ChatGPT reviewed time parsing logic
+  - Identified datetime object corruption risk
+  - Recommended regex pattern matching
+  - Confirmed edge case handling
+
+- **Edge cases handled**:
+  - Datetime/time objects from Excel
+  - Time ranges with various dash types (-, –, —)
+  - Dot separators (`8.50`)
+  - Excel formulas (`=$C$7`)
+  - Empty/None values
+  - Unexpected types
+
+### 🎯 User Benefits
+- ✅ Automatic time range parsing (no manual editing needed)
+- ✅ Support for common user input variations
+- ✅ Excel formulas work transparently
+- ✅ Cleaner source file selection (no template confusion)
+- ✅ Quick folder refresh without re-selection
+- ✅ Better button spacing in UI
+
+## 🎉 CRITICAL WINDOWS FIXES COMPLETED (2025-06-13)
+
+### ✅ Major Production Fixes Applied:
+- **[fix-062]**: CMD window lifecycle - Electron properly manages Python backend
+- **[fix-063]**: Production detection - app.isPackaged instead of --dev flag  
+- **[fix-066]**: Python CMD hidden - windowsHide: true for Windows
+- **[fix-067]**: Robust termination - taskkill instead of SIGTERM on Windows
+- **[fix-068]**: Permission fallback - Node.js kill if taskkill fails
+- **[fix-070]**: Admin rights removed - %LOCALAPPDATA% instead of %PROGRAMFILES%
+- **[fix-072]**: Multiple cleanup strategies - taskkill + wmic + netstat
+- **[fix-073]**: Smart update script - only reinstalls dependencies when needed
+- **[fix-074]**: Hide all CMD windows - disable shell spawn + windowsHide
+- **[fix-075]**: Self-minimizing start-app.bat - completely hidden execution
+- **[rename-069]**: Icon simplified - icon.ico instead of long name
+
+### 🚀 Production Branch Status:
+- **Branch**: `production` (33 clean files, 0 development clutter)
+- **Installation**: No admin rights needed ✅
+- **Execution**: Zero CMD windows ✅  
+- **Python lifecycle**: Clean startup/shutdown ✅
+- **Git ownership**: No dubious ownership issues ✅
+- **Updates**: Smart dependency checking ✅
+
+### 📦 User Experience:
+1. **Download**: `install-windows-standalone.bat`
+2. **Install**: Double-click (no admin needed)
+3. **Run**: Completely silent execution
+4. **Update**: `update-windows.bat` (smart, fast)
 
 ## Repository & Paths
 - Repository: git@github.com-maxparez:maxparez/electron_app.git
 - Working directory: `/root/vyvoj_sw/electron_app/`
-- Current branch: `deployment-windows`
+- Distribution branch: `windows-install` - Curated install/update snapshot for colleagues
+- Development branch: `feature/next-phase` - Full development environment
+- Installation Path: `%LOCALAPPDATA%\zor_nastroje` (no admin needed)
+- User Manual: Clean installation via Git clone from windows-install branch

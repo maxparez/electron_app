@@ -10,6 +10,7 @@
 const { execSync } = require('child_process');
 const fs = require('fs-extra');
 const path = require('path');
+const packageJson = require('../package.json');
 
 class LauncherBuilder {
     constructor() {
@@ -18,7 +19,7 @@ class LauncherBuilder {
         this.launcherSource = path.join(this.projectRoot, 'src', 'launcher.js');
         this.packageJsonTemplate = {
             name: 'elektron-app-launcher',
-            version: '1.0.0',
+            version: packageJson.version,
             description: 'ElektronApp Launcher',
             main: 'launcher.js',
             bin: {

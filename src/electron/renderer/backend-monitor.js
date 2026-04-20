@@ -139,12 +139,7 @@ async function checkBackendHealth() {
     if (!isBackendHealthy) return;
     
     try {
-        const response = await fetch('http://localhost:5000/api/health');
-        if (!response.ok) {
-            throw new Error('Backend not responding');
-        }
-        
-        const data = await response.json();
+        const data = await window.electronAPI.apiCall('health');
         if (data.status !== 'healthy') {
             throw new Error('Backend unhealthy');
         }

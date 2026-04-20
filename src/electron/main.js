@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const axios = require('axios');
+const keytar = require('keytar');
 const config = require('./config');
 const BackendManager = require('./backend-manager');
 // const Updater = require('./updater');
@@ -19,12 +20,14 @@ let mainWindow;
 let pythonProcess;
 const isDev = process.argv.includes('--dev');
 const backendManager = new BackendManager();
+const GEMINI_KEY_SERVICE = 'nastroje-opjak';
+const GEMINI_KEY_ACCOUNT = 'gemini-api-key';
 // const updater = new Updater();
 
 // Create the main application window
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 1200,
+        width: 1600,
         height: 800,
         icon: path.join(__dirname, 'assets', 'icon.png'),
         autoHideMenuBar: true, // Hide menu bar in production
@@ -43,6 +46,26 @@ function createWindow() {
         mainWindow.webContents.openDevTools();
     }
 
+    // Add keyboard shortcut for DevTools (F12 or Ctrl+Shift+I)
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        // F12 key
+        if (input.key === 'F12') {
+            if (mainWindow.webContents.isDevToolsOpened()) {
+                mainWindow.webContents.closeDevTools();
+            } else {
+                mainWindow.webContents.openDevTools();
+            }
+        }
+        // Ctrl+Shift+I (or Cmd+Shift+I on Mac)
+        if (input.control && input.shift && input.key === 'I') {
+            if (mainWindow.webContents.isDevToolsOpened()) {
+                mainWindow.webContents.closeDevTools();
+            } else {
+                mainWindow.webContents.openDevTools();
+            }
+        }
+    });
+
     // Handle window closed
     mainWindow.on('closed', function () {
         mainWindow = null;
@@ -59,17 +82,31 @@ function startPythonServer() {
 
 // Wait for the Python server to be ready
 async function waitForServer(retries = 30) {
+    const expectedToken = backendManager.getInstanceToken();
+    let lastIdentity = null;
+    const healthUrl = `${backendManager.getBaseUrl()}/api/health`;
+
     for (let i = 0; i < retries; i++) {
         try {
-            const response = await axios.get('http://localhost:5000/api/health');
-            if (response.data.status === 'healthy') {
-                console.log('Python server is ready');
+            const response = await axios.get(healthUrl);
+            if (response.data.status === 'healthy' && response.data.instanceToken === expectedToken) {
+                console.log(`Python server is ready (pid=${response.data.pid}, token=${expectedToken})`);
                 return true;
             }
+            lastIdentity = response.data;
+            console.log(
+                '[BackendManager] Waiting for expected backend instance. ' +
+                `Expected token=${expectedToken}, got token=${response.data.instanceToken || 'none'}`
+            );
         } catch (error) {
             // Server not ready yet
         }
         await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    if (lastIdentity) {
+        throw new Error(
+            `Python server identity mismatch (expected token ${expectedToken}, got ${lastIdentity.instanceToken || 'none'})`
+        );
     }
     throw new Error('Python server failed to start');
 }
@@ -196,6 +233,51 @@ ipcMain.handle('config:set', (event, key, value) => {
     return true;
 });
 
+ipcMain.handle('secure:gemini:getStatus', async () => {
+    try {
+        const storedKey = await keytar.getPassword(GEMINI_KEY_SERVICE, GEMINI_KEY_ACCOUNT);
+        return { stored: Boolean(storedKey) };
+    } catch (error) {
+        console.error('Secure storage status error:', error);
+        throw new Error('Nepodařilo se zjistit stav uloženého Gemini API klíče.');
+    }
+});
+
+ipcMain.handle('secure:gemini:get', async () => {
+    try {
+        const storedKey = await keytar.getPassword(GEMINI_KEY_SERVICE, GEMINI_KEY_ACCOUNT);
+        return storedKey || '';
+    } catch (error) {
+        console.error('Secure storage read error:', error);
+        throw new Error('Nepodařilo se načíst uložený Gemini API klíč.');
+    }
+});
+
+ipcMain.handle('secure:gemini:set', async (event, apiKey) => {
+    const normalizedKey = typeof apiKey === 'string' ? apiKey.trim() : '';
+    if (!normalizedKey) {
+        throw new Error('Gemini API klíč nesmí být prázdný.');
+    }
+
+    try {
+        await keytar.setPassword(GEMINI_KEY_SERVICE, GEMINI_KEY_ACCOUNT, normalizedKey);
+        return { stored: true };
+    } catch (error) {
+        console.error('Secure storage write error:', error);
+        throw new Error('Nepodařilo se uložit Gemini API klíč.');
+    }
+});
+
+ipcMain.handle('secure:gemini:delete', async () => {
+    try {
+        const deleted = await keytar.deletePassword(GEMINI_KEY_SERVICE, GEMINI_KEY_ACCOUNT);
+        return { deleted };
+    } catch (error) {
+        console.error('Secure storage delete error:', error);
+        throw new Error('Nepodařilo se odstranit uložený Gemini API klíč.');
+    }
+});
+
 ipcMain.handle('fs:scanFolder', async (event, folderPath) => {
     const fs = require('fs').promises;
     const path = require('path');
@@ -230,7 +312,7 @@ ipcMain.handle('fs:scanFolder', async (event, folderPath) => {
 // Open file in associated application
 ipcMain.handle('file:openInApp', async (event, filePath) => {
     const fs = require('fs');
-    
+
     try {
         // Check if file exists
         if (!fs.existsSync(filePath)) {
@@ -239,10 +321,10 @@ ipcMain.handle('file:openInApp', async (event, filePath) => {
                 error: 'Soubor neexistuje'
             };
         }
-        
+
         // Open file with default application
         await shell.openPath(filePath);
-        
+
         return {
             success: true,
             filename: require('path').basename(filePath)
@@ -256,12 +338,44 @@ ipcMain.handle('file:openInApp', async (event, filePath) => {
     }
 });
 
+// Open folder in file explorer
+ipcMain.handle('folder:open', async (event, folderPath) => {
+    const fs = require('fs');
+
+    try {
+        // Check if folder exists
+        if (!fs.existsSync(folderPath)) {
+            return {
+                success: false,
+                error: 'Složka neexistuje'
+            };
+        }
+
+        // Open folder in file explorer
+        await shell.openPath(folderPath);
+
+        return {
+            success: true
+        };
+    } catch (error) {
+        console.error('Error opening folder:', error);
+        return {
+            success: false,
+            error: error.message || 'Neznámá chyba'
+        };
+    }
+});
+
 // App event handlers
 app.whenReady().then(async () => {
     try {
         // Start Python server first
-        await startPythonServer();
-        
+        const started = await startPythonServer();
+        if (!started) {
+            throw new Error('Python backend process failed to start');
+        }
+        await waitForServer();
+
         // Then create the window
         createWindow();
         
@@ -293,8 +407,28 @@ app.on('activate', () => {
 });
 
 app.on('will-quit', () => {
-    // Clean up Python process
-    stopPythonServer();
+    console.log('[App] Shutting down, stopping backend...');
+    if (backendManager) {
+        backendManager.stop();
+    }
+});
+
+// Emergency cleanup for unexpected shutdowns
+app.on('before-quit', () => {
+    console.log('[App] Before quit - emergency Python cleanup...');
+    if (process.platform === 'win32') {
+        // Multiple cleanup strategies for stubborn Python processes
+        const { exec } = require('child_process');
+        
+        // Strategy 1: Kill our specific Python process (minimized)
+        exec('taskkill /F /IM python.exe', { windowsHide: true }, () => {});
+        
+        // Strategy 2: Kill any Python running Flask (minimized)
+        exec('wmic process where "commandline like \'%server.py%\'" delete', { windowsHide: true }, () => {});
+        
+        // Strategy 3: Kill Python processes on port 5000 (minimized)
+        exec('netstat -ano | findstr :5000 | for /f "tokens=5" %a in (\'more\') do taskkill /F /PID %a', { windowsHide: true }, () => {});
+    }
 });
 
 // IPC handler for backend status
@@ -309,7 +443,12 @@ ipcMain.handle('backend:restart', async () => {
     backendManager.resetRestartAttempts();
     backendManager.stop();
     await new Promise(resolve => setTimeout(resolve, 1000));
-    return await backendManager.start();
+    const started = await backendManager.start();
+    if (!started) {
+        return false;
+    }
+    await waitForServer();
+    return true;
 });
 
 // IPC handlers for updater

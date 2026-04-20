@@ -1,7 +1,8 @@
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
+const axios = require('axios');
 
 class BackendManager {
     constructor() {
@@ -15,14 +16,82 @@ class BackendManager {
         const config = require('./config');
         this.maxRestartAttempts = config.get('backend.maxRestartAttempts', 5);
         this.restartDelay = config.get('backend.restartDelay', 3000);
+        this.port = config.get('python.port', 5000);
+        this.instanceToken = null;
+    }
+
+    getBaseUrl() {
+        return `http://127.0.0.1:${this.port}`;
+    }
+
+    getInstanceToken() {
+        return this.instanceToken;
+    }
+
+    sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    async fetchHealth(timeout = 1000) {
+        const response = await axios.get(`${this.getBaseUrl()}/api/health`, { timeout });
+        return response.data;
+    }
+
+    execCommand(command) {
+        return new Promise((resolve, reject) => {
+            exec(command, { windowsHide: true }, (error, stdout, stderr) => {
+                if (error) {
+                    reject(new Error(stderr || stdout || error.message));
+                    return;
+                }
+                resolve({ stdout, stderr });
+            });
+        });
+    }
+
+    async killProcessOnPort() {
+        if (process.platform !== 'win32') {
+            return false;
+        }
+
+        try {
+            await this.execCommand(`for /f "tokens=5" %a in ('netstat -ano ^| findstr :${this.port}') do taskkill /F /PID %a`);
+            return true;
+        } catch (error) {
+            console.warn(`[BackendManager] Failed to kill process on port ${this.port}: ${error.message}`);
+            return false;
+        }
+    }
+
+    async ensureNoConflictingBackend() {
+        try {
+            const health = await this.fetchHealth();
+            if (health.status === 'healthy' && health.instanceToken !== this.instanceToken) {
+                console.warn(
+                    `[BackendManager] Conflicting backend detected on port ${this.port}. ` +
+                    `PID=${health.pid || 'unknown'}, token=${health.instanceToken || 'none'}`
+                );
+                const killed = await this.killProcessOnPort();
+                if (killed) {
+                    await this.sleep(1000);
+                }
+            }
+        } catch (error) {
+            // Fresh start: nothing healthy is listening yet.
+        }
     }
 
     async start() {
         console.log('[BackendManager] Starting Python backend...');
+        this.isShuttingDown = false;
         this.lastStartTime = Date.now();
+        this.instanceToken = `${Date.now()}-${process.pid}-${Math.random().toString(16).slice(2)}`;
         
         try {
-            const isProd = !process.argv.includes('--dev');
+            await this.ensureNoConflictingBackend();
+
+            // Better production detection - check if we're in packaged app
+            const isProd = app.isPackaged;
             const appPath = isProd ? process.resourcesPath : app.getAppPath();
             
             // Determine Python executable path
@@ -97,10 +166,19 @@ class BackendManager {
                 }
             } else {
                 scriptPath = path.join(appPath, 'src', 'python', 'server.py');
+                
+                // Check if script exists in development
+                if (!fs.existsSync(scriptPath)) {
+                    console.error(`[BackendManager] Development script not found: ${scriptPath}`);
+                    console.error(`[BackendManager] App path: ${appPath}`);
+                    console.error(`[BackendManager] Current working directory: ${process.cwd()}`);
+                    throw new Error(`Python script not found at: ${scriptPath}`);
+                }
             }
             
             console.log('[BackendManager] Python path:', pythonPath);
             console.log('[BackendManager] Script path:', scriptPath);
+            console.log('[BackendManager] Instance token:', this.instanceToken);
             
             // Set environment variables
             const config = require('./config');
@@ -111,13 +189,25 @@ class BackendManager {
                 PYTHONPATH: isProd 
                     ? path.join(process.resourcesPath, 'app.asar.unpacked', 'src', 'python')
                     : path.join(appPath, 'src', 'python'),
-                FLASK_PORT: config.get('python.port', 5000)
+                FLASK_PORT: String(this.port),
+                PORT: String(this.port),
+                ELECTRON_APP_INSTANCE_TOKEN: this.instanceToken
             };
             
-            this.pythonProcess = spawn(pythonPath, [scriptPath], {
+            // Windows-specific options to hide CMD window
+            const spawnOptions = {
                 cwd: appPath,
                 env: env
-            });
+            };
+            
+            // Hide console window on Windows
+            if (process.platform === 'win32') {
+                spawnOptions.windowsHide = true;
+                spawnOptions.stdio = ['ignore', 'pipe', 'pipe'];
+                spawnOptions.shell = false; // Disable shell to prevent CMD window
+            }
+            
+            this.pythonProcess = spawn(pythonPath, [scriptPath], spawnOptions);
             
             this.pythonProcess.stdout.on('data', (data) => {
                 console.log(`[Python] ${data.toString().trim()}`);
@@ -219,17 +309,57 @@ class BackendManager {
         
         if (this.pythonProcess) {
             console.log('[BackendManager] Stopping Python backend...');
+            const pid = this.pythonProcess.pid;
             
-            // Try graceful shutdown first
-            this.pythonProcess.kill('SIGTERM');
+            if (process.platform === 'win32') {
+                // On Windows, use taskkill for reliable termination
+                const { exec } = require('child_process');
+                
+                // First try graceful termination
+                exec(`taskkill /PID ${pid}`, (error) => {
+                    if (error) {
+                        console.log('[BackendManager] Taskkill graceful failed, trying force taskkill');
+                        // Force kill if graceful fails
+                        exec(`taskkill /F /PID ${pid}`, (forceError) => {
+                            if (forceError) {
+                                console.log('[BackendManager] Taskkill force failed (permissions?), using Node.js kill');
+                                // Final fallback to Node.js kill
+                                try {
+                                    this.pythonProcess.kill('SIGKILL');
+                                } catch (nodeError) {
+                                    console.log('[BackendManager] All kill methods failed:', nodeError.message);
+                                }
+                            } else {
+                                console.log('[BackendManager] Python process forcefully terminated');
+                            }
+                        });
+                    } else {
+                        console.log('[BackendManager] Python process gracefully terminated');
+                    }
+                });
+                
+                // Also try Node.js kill as backup
+                setTimeout(() => {
+                    if (this.pythonProcess && !this.pythonProcess.killed) {
+                        try {
+                            this.pythonProcess.kill('SIGKILL');
+                        } catch (error) {
+                            console.log('[BackendManager] Node kill backup failed:', error.message);
+                        }
+                    }
+                }, 2000);
+            } else {
+                // On Linux/Mac use standard approach
+                this.pythonProcess.kill('SIGTERM');
+                setTimeout(() => {
+                    if (this.pythonProcess && !this.pythonProcess.killed) {
+                        this.pythonProcess.kill('SIGKILL');
+                    }
+                }, 3000);
+            }
             
-            // Force kill after 5 seconds if still running
-            setTimeout(() => {
-                if (this.pythonProcess) {
-                    console.log('[BackendManager] Force killing Python process...');
-                    this.pythonProcess.kill('SIGKILL');
-                }
-            }, 5000);
+            // Clean up reference
+            this.pythonProcess = null;
         }
     }
     
