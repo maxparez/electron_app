@@ -70,6 +70,19 @@ class RuntimeConsistencyTests(unittest.TestCase):
         self.assertIn('scripts\\install_windows.ps1', content)
         self.assertIn('powershell -NoProfile -ExecutionPolicy Bypass -File "%INSTALL_SCRIPT%" %*', content)
 
+    def test_windows_entrypoint_scripts_use_crlf_line_endings(self) -> None:
+        script_paths = [
+            REPO_ROOT / "install-windows.bat",
+            REPO_ROOT / "update-windows.bat",
+            REPO_ROOT / "scripts" / "install_windows.ps1",
+            REPO_ROOT / "scripts" / "update_windows.ps1",
+        ]
+
+        for script_path in script_paths:
+            content = script_path.read_bytes()
+            self.assertIn(b"\r\n", content, f"{script_path.name} should use CRLF line endings")
+            self.assertNotIn(b"\n", content.replace(b"\r\n", b""), f"{script_path.name} contains LF-only line endings")
+
     def test_main_window_defaults_to_wide_desktop_layout(self) -> None:
         main_js = (REPO_ROOT / "src" / "electron" / "main.js").read_text(encoding="utf-8")
 
