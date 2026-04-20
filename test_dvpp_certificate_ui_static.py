@@ -26,6 +26,13 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn('ag-grid-community.min.js', html)
         self.assertIn('id="cert-gemini-panel"', html)
         self.assertIn('id="cert-raw-panel"', html)
+        self.assertIn('class="cert-section cert-import-block"', html)
+        self.assertIn('class="cert-section cert-review-block"', html)
+        self.assertIn('class="cert-section cert-export-block"', html)
+        self.assertIn('class="cert-section cert-diagnostics-block"', html)
+        self.assertIn('class="cert-export-grid"', html)
+        self.assertIn('class="cert-export-card cert-excel-export-card"', html)
+        self.assertIn('class="cert-export-card cert-esf-export-card"', html)
         self.assertIn('id="cert-files-list"', html)
         self.assertIn('id="cert-records-table"', html)
         self.assertIn('id="cert-bulk-template-select"', html)
@@ -50,12 +57,15 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn('id="cert-fill-header"', html)
         self.assertIn('id="cert-esf-entry-date"', html)
         self.assertIn('id="cert-esf-exit-date"', html)
+        self.assertLess(html.index('class="cert-section cert-import-block"'), html.index('class="cert-section cert-review-block"'))
+        self.assertLess(html.index('class="cert-section cert-review-block"'), html.index('class="cert-section cert-export-block"'))
+        self.assertLess(html.index('class="cert-section cert-export-block"'), html.index('class="cert-section cert-diagnostics-block"'))
         self.assertLess(html.index('<span>Vytěžování certifikátů</span>'), html.index('<span>DVPP report</span>'))
         self.assertLess(html.index('<h3>🧾 Vytěžování certifikátů</h3>'), html.index('<h3>📚 DVPP report</h3>'))
         self.assertLess(html.index('<span>Vytěžování certifikátů</span>'), html.index('<span>Generátor plakátů</span>'))
         self.assertLess(html.index('<h3>🧾 Vytěžování certifikátů</h3>'), html.index('<h3>🖼️ Generátor plakátů</h3>'))
-        self.assertLess(html.index('id="save-cert-excel"'), html.index('id="save-cert-esf"'))
-        self.assertLess(html.index('id="save-cert-esf"'), html.index('id="copy-cert-tsv"'))
+        self.assertLess(html.index('id="save-cert-excel"'), html.index('id="save-cert-tsv"'))
+        self.assertLess(html.index('id="save-cert-tsv"'), html.index('id="copy-cert-tsv"'))
         self.assertIn('class="btn btn-primary" id="save-cert-esf"', html)
 
     def test_renderer_js_wires_certificate_import_and_export_actions(self) -> None:
@@ -144,6 +154,7 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("certApplyPohlaviAllBtn.addEventListener('click', applyCertificatePohlaviToAllRecords);", renderer)
         self.assertIn("certToggleImportPanelBtn.addEventListener('click', toggleCertificateImportPanel);", renderer)
         self.assertIn("setCertificateImportCollapsed(true);", renderer)
+        self.assertNotIn("cert-review-side", renderer)
 
     def test_certificate_grid_styles_include_vertical_lines(self) -> None:
         styles = (REPO_ROOT / "src" / "electron" / "renderer" / "styles.css").read_text(encoding="utf-8")
@@ -154,6 +165,11 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("border-right: 1px solid #dbe4f0;", styles)
         self.assertIn("min-height: 220px;", styles)
         self.assertIn("overflow: hidden;", styles)
+        self.assertIn(".cert-export-grid", styles)
+        self.assertIn(".cert-export-card", styles)
+        self.assertNotIn(".cert-review-layout {", styles)
+        self.assertIn("@media (max-width: 980px)", styles)
+        self.assertNotIn("@media (max-width: 1100px)", styles)
         self.assertNotIn(".cert-import-toggle-btn {\n    margin-left: auto;\n}", styles)
 
     def test_renderer_does_not_block_excel_export_on_missing_header_fields(self) -> None:

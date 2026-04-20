@@ -27,7 +27,7 @@ const GEMINI_KEY_ACCOUNT = 'gemini-api-key';
 // Create the main application window
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 1200,
+        width: 1024,
         height: 800,
         icon: path.join(__dirname, 'assets', 'icon.png'),
         autoHideMenuBar: true, // Hide menu bar in production
