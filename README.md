@@ -101,9 +101,16 @@ Aktuální omezení POC:
 
 ## Instalace pro Windows uživatele
 
-Pro jednoduchou instalaci klientské verze na Windows sledujte
-`docs/windows_install.html`, kde je popsána větev `windows-install`,
-požadované programy a skripty pro kontrolu závislostí a vytvoření zástupce.
+Pro běžné Windows uživatele je doporučený instalační i aktualizační tok přes
+release skript `install.bat`:
+
+- stáhnout aktuální `install.bat` z `Releases`
+- spustit ho dvojklikem
+- skript provede čistou instalaci nebo aktualizuje existující `C:\OPJAK\electron_app`
+
+Podrobný návod je v [docs/windows_install.html](docs/windows_install.html).
+Skripty `update-windows.bat` a `update.bat` berte jako interní/servisní cestu,
+ne jako primární doporučený postup pro koncové uživatele.
 
 ## Build
 

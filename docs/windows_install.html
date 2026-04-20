@@ -184,7 +184,7 @@
       <ul>
         <li>Skript zkontroluje, zda máte nainstalované všechny potřebné programy</li>
         <li>Pokud něco chybí, zobrazí se seznam s odkazy ke stažení</li>
-        <li>Po dokončení kontrol spustí automatickou instalaci</li>
+        <li>Po dokončení kontrol spustí automatickou instalaci nebo aktualizaci stávající složky <code>C:\OPJAK\electron_app</code></li>
       </ul>
     </div>
 
@@ -217,24 +217,26 @@
 
     <h2>4️⃣ Aktualizace aplikace</h2>
 
-      <p>Po instalaci najdete ve složce aplikace soubor <code>update.bat</code>:</p>
+    <p>
+      Doporučený způsob aktualizace je stejný jako první instalace:
+      <strong>stáhnout znovu aktuální <code>install.bat</code> z GitHub Releases a spustit ho</strong>.
+    </p>
 
     <ol>
-      <li>Přejděte do složky <code>C:\OPJAK\electron_app</code></li>
-      <li>Spusťte <code>update.bat</code> nebo <code>update-windows.bat</code> dvojklikem</li>
-      <li>Skript synchronizuje větev uloženou v <code>channel-config.json</code> a aktualizuje knihovny</li>
+      <li>Stáhněte si znovu <code>install.bat</code> z <a href="https://github.com/maxparez/electron_app/releases/latest">posledního release</a></li>
+      <li>Spusťte ho dvojklikem stejně jako při první instalaci</li>
+      <li>Pokud už složka <code>C:\OPJAK\electron_app</code> existuje, skript ji pozná a provede aktualizaci</li>
     </ol>
 
     <div class="callout success">
-      <strong>✅ Rychlá aktualizace:</strong> Skript stahuje pouze curated obsah
-      z aktivního instalačního kanálu, takže se na počítače kolegů netahají vývojářské soubory.
+      <strong>✅ Doporučený postup:</strong> Release <code>install.bat</code> je dnes nejspolehlivější cesta pro první instalaci, opravu instalace i běžnou aktualizaci.
     </div>
 
     <div class="callout">
-      <strong>🧪 Testovací kanál:</strong> Pokud vám kolega pošle testovací větev, můžete instalaci jednorázově přepnout příkazem
+      <strong>🧪 Testovací kanál / servisní režim:</strong> Pokud vám kolega pošle testovací větev, můžete instalaci jednorázově přepnout příkazem
       <code>powershell -ExecutionPolicy Bypass -File .\scripts\update_windows.ps1 -Branch windows-install-test</code>.
       Návrat zpět proběhne stejným způsobem s větví <code>windows-install</code>.
-      Aktualizační logy najdete v <code>logs\update\</code>, start aplikace v testovacím kanálu zapisuje do <code>logs\launcher\</code>.
+      Tohle je technická cesta pro řízené testování, ne hlavní doporučený workflow pro běžné uživatele.
     </div>
 
     <h2>5️⃣ Řešení problémů</h2>
