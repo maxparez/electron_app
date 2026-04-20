@@ -15,6 +15,7 @@ from tools.inv_vzd_processor import InvVzdProcessor
 from tools.zor_spec_dat_processor import ZorSpecDatProcessor
 from tools.plakat_generator import PlakatGenerator
 from tools.dvpp_report_processor import DvppReportProcessor
+from tools.dvpp_certificate_processor import DvppCertificateProcessor
 from channel_config import load_channel_config, resolve_debug_mode
 
 # Initialize logging
@@ -981,6 +982,280 @@ def process_dvpp_report():
             "message": str(e)
         }), 500
 
+
+@app.route('/api/dvpp-certificates/import/gemini', methods=['POST'])
+def import_dvpp_certificates_gemini():
+    """Import DVPP certificates from selected files through Gemini."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        folder_path = convert_path_if_needed(data.get('folderPath'))
+        file_paths = [convert_path_if_needed(path) for path in data.get('selectedFiles', [])]
+        model_name = data.get('modelName')
+        api_key = data.get('apiKey')
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.process(
+            file_paths,
+            {
+                "folder_path": folder_path,
+                "model_name": model_name,
+                "api_key": api_key,
+            }
+        )
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "DVPP certifikáty byly úspěšně vytěženy",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        error_messages = result.get("errors", [])
+        batch_errors = (((result.get("data") or {}).get("batch") or {}).get("errors") or [])
+        preferred_message = next(
+            (
+                message
+                for message in batch_errors + error_messages
+                if message and message != "Nepodařilo se vytěžit žádné certifikáty"
+            ),
+            None,
+        )
+        return jsonify({
+            "status": "error",
+            "message": preferred_message or (error_messages[0] if error_messages else "Vytěžení DVPP certifikátů selhalo"),
+            "data": result.get("data"),
+            "errors": error_messages,
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error importing DVPP certificates via Gemini: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/dvpp-certificates/scan', methods=['POST'])
+def scan_dvpp_certificates_folder():
+    """Scan a selected folder for supported DVPP certificate files."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        folder_path = convert_path_if_needed(data.get('folderPath'))
+        if not folder_path:
+            return jsonify({
+                "status": "error",
+                "message": "Nebyla zadána složka s certifikáty"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        matches = processor.scan_folder(folder_path)
+
+        return jsonify({
+            "status": "success",
+            "message": "Podporované certifikáty byly načteny",
+            "matches": matches,
+        })
+    except Exception as e:
+        server_logger.error(f"Error scanning DVPP certificate folder: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
+
+
+@app.route('/api/dvpp-certificates/import/raw-text', methods=['POST'])
+def import_dvpp_certificates_raw_text():
+    """Import DVPP certificates from pasted raw TSV text."""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.import_raw_text(data.get("rawText", ""))
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "DVPP certifikáty byly úspěšně načteny z textu",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        return jsonify({
+            "status": "error",
+            "message": "Načtení DVPP certifikátů z textu selhalo",
+            "errors": result.get("errors", []),
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error importing DVPP certificates raw text: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/dvpp-certificates/export/tsv', methods=['POST'])
+def export_dvpp_certificates_tsv():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.export_tsv(
+            data.get("records", []),
+            output_path=convert_path_if_needed(data.get("outputPath")),
+        )
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "TSV export byl úspěšně vytvořen",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        return jsonify({
+            "status": "error",
+            "message": "TSV export selhal",
+            "errors": result.get("errors", []),
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error exporting DVPP certificates TSV: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/dvpp-certificates/export/excel', methods=['POST'])
+def export_dvpp_certificates_excel():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.export_excel(
+            data.get("records", []),
+            data.get("exportMetadata", {}),
+            template_path=convert_path_if_needed(data.get("templatePath")),
+            output_path=convert_path_if_needed(data.get("outputPath")),
+        )
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "Excel export byl úspěšně vytvořen",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        error_messages = result.get("errors", [])
+        message = error_messages[0] if error_messages else "Excel export selhal"
+        return jsonify({
+            "status": "error",
+            "message": message,
+            "errors": error_messages,
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error exporting DVPP certificates Excel: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/dvpp-certificates/export/esf', methods=['POST'])
+def export_dvpp_certificates_esf():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "No data provided"
+            }), 400
+
+        processor = DvppCertificateProcessor(tool_logger)
+        result = processor.export_esf(
+            data.get("records", []),
+            export_metadata_payload=data.get("exportMetadata", {}),
+            output_path=convert_path_if_needed(data.get("outputPath")),
+        )
+
+        if result["success"]:
+            return jsonify({
+                "status": "success",
+                "message": "ESF import byl úspěšně vytvořen",
+                "data": result["data"],
+                "errors": result.get("errors", []),
+                "warnings": result.get("warnings", []),
+                "info": result.get("info", []),
+            })
+
+        return jsonify({
+            "status": "error",
+            "message": "ESF import selhal",
+            "errors": result.get("errors", []),
+            "warnings": result.get("warnings", []),
+            "info": result.get("info", []),
+        }), 400
+
+    except Exception as e:
+        server_logger.error(f"Error exporting DVPP certificates ESF import: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
 @app.route('/api/config', methods=['GET'])
 def get_config():
     """Get application configuration"""
@@ -1012,6 +1287,11 @@ def get_config():
                     "id": "dvpp",
                     "name": "DVPP report",
                     "description": "Souhrnný HTML report podpory DVPP"
+                },
+                {
+                    "id": "dvpp-certificates",
+                    "name": "Vytěžování certifikátů",
+                    "description": "Import certifikátů DVPP přes Gemini API nebo raw text"
                 }
             ]
         }

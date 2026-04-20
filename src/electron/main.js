@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const axios = require('axios');
+const keytar = require('keytar');
 const config = require('./config');
 const BackendManager = require('./backend-manager');
 // const Updater = require('./updater');
@@ -19,12 +20,14 @@ let mainWindow;
 let pythonProcess;
 const isDev = process.argv.includes('--dev');
 const backendManager = new BackendManager();
+const GEMINI_KEY_SERVICE = 'nastroje-opjak';
+const GEMINI_KEY_ACCOUNT = 'gemini-api-key';
 // const updater = new Updater();
 
 // Create the main application window
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 1200,
+        width: 1600,
         height: 800,
         icon: path.join(__dirname, 'assets', 'icon.png'),
         autoHideMenuBar: true, // Hide menu bar in production
@@ -228,6 +231,51 @@ ipcMain.handle('config:get', (event, key) => {
 ipcMain.handle('config:set', (event, key, value) => {
     config.set(key, value);
     return true;
+});
+
+ipcMain.handle('secure:gemini:getStatus', async () => {
+    try {
+        const storedKey = await keytar.getPassword(GEMINI_KEY_SERVICE, GEMINI_KEY_ACCOUNT);
+        return { stored: Boolean(storedKey) };
+    } catch (error) {
+        console.error('Secure storage status error:', error);
+        throw new Error('Nepodařilo se zjistit stav uloženého Gemini API klíče.');
+    }
+});
+
+ipcMain.handle('secure:gemini:get', async () => {
+    try {
+        const storedKey = await keytar.getPassword(GEMINI_KEY_SERVICE, GEMINI_KEY_ACCOUNT);
+        return storedKey || '';
+    } catch (error) {
+        console.error('Secure storage read error:', error);
+        throw new Error('Nepodařilo se načíst uložený Gemini API klíč.');
+    }
+});
+
+ipcMain.handle('secure:gemini:set', async (event, apiKey) => {
+    const normalizedKey = typeof apiKey === 'string' ? apiKey.trim() : '';
+    if (!normalizedKey) {
+        throw new Error('Gemini API klíč nesmí být prázdný.');
+    }
+
+    try {
+        await keytar.setPassword(GEMINI_KEY_SERVICE, GEMINI_KEY_ACCOUNT, normalizedKey);
+        return { stored: true };
+    } catch (error) {
+        console.error('Secure storage write error:', error);
+        throw new Error('Nepodařilo se uložit Gemini API klíč.');
+    }
+});
+
+ipcMain.handle('secure:gemini:delete', async () => {
+    try {
+        const deleted = await keytar.deletePassword(GEMINI_KEY_SERVICE, GEMINI_KEY_ACCOUNT);
+        return { deleted };
+    } catch (error) {
+        console.error('Secure storage delete error:', error);
+        throw new Error('Nepodařilo se odstranit uložený Gemini API klíč.');
+    }
 });
 
 ipcMain.handle('fs:scanFolder', async (event, folderPath) => {

@@ -9,7 +9,7 @@ class I18n {
     // Load translations from JSON
     async load(locale = 'cs') {
         try {
-            const response = await fetch(`./locales/${locale}.json`);
+            const response = await fetch(`../locales/${locale}.json`);
             if (!response.ok) {
                 throw new Error(`Failed to load locale: ${locale}`);
             }

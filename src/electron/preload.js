@@ -24,6 +24,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Config
     getConfig: (key) => ipcRenderer.invoke('config:get', key),
     setConfig: (key, value) => ipcRenderer.invoke('config:set', key, value),
+    getGeminiApiKeyStatus: () => ipcRenderer.invoke('secure:gemini:getStatus'),
+    getGeminiApiKey: () => ipcRenderer.invoke('secure:gemini:get'),
+    saveGeminiApiKey: (apiKey) => ipcRenderer.invoke('secure:gemini:set', apiKey),
+    deleteGeminiApiKey: () => ipcRenderer.invoke('secure:gemini:delete'),
     
     // File system operations
     scanFolder: (folderPath) => ipcRenderer.invoke('fs:scanFolder', folderPath),
@@ -54,7 +58,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
             const result = await response.json();
             
             if (!response.ok) {
-                throw new Error(result.message || 'API request failed');
+                const error = new Error(result.message || 'API request failed');
+                error.data = result.data || null;
+                error.errors = result.errors || [];
+                error.warnings = result.warnings || [];
+                error.info = result.info || [];
+                error.status = result.status || 'error';
+                throw error;
             }
             
             return result;

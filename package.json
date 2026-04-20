@@ -1,6 +1,6 @@
 {
   "name": "nastroje-opjak",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Nástroje pro ŠI a ŠII OP JAK - zpracování projektové dokumentace",
   "main": "src/electron/main.js",
   "directories": {
@@ -43,8 +43,10 @@
     "fs-extra": "^11.3.0"
   },
   "dependencies": {
+    "ag-grid-community": "^35.2.1",
     "axios": "^1.9.0",
     "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "keytar": "^7.9.0"
   }
 }

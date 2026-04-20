@@ -57,3 +57,4 @@ htmlcov/
 *.tmp
 *.temp
 .cache/tests/result.html
+.worktrees/

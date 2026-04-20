@@ -42,6 +42,63 @@ pip install -r requirements.txt
 npm run dev
 ```
 
+## DVPP Certificate Extraction POC
+
+Repo teď obsahuje i samostatný Python-only POC mimo Electron UI pro extrakci dat z DVPP certifikátů přes Gemini API.
+
+Požadavky:
+- nastavený `GEMINI_API_KEY`
+- `GOOGLE_API_KEY` je podporovaný jen jako fallback
+- nainstalované Python závislosti z `requirements.txt`
+
+Podporované vstupy:
+- `pdf`
+- `jpg`
+- `jpeg`
+- `png`
+
+Podporované modely:
+- `gemini-3-flash-preview`
+- `gemini-3.1-pro-preview`
+
+Základní použití:
+
+```bash
+export GEMINI_API_KEY=your-key
+
+python scripts/dvpp_cert_extract.py \
+  --input path/to/certificate.pdf \
+  --model gemini-3-flash-preview
+```
+
+Výstupy do souborů:
+
+```bash
+python scripts/dvpp_cert_extract.py \
+  --input path/to/certificate.jpg \
+  --model gemini-3.1-pro-preview \
+  --output-json out/result.json \
+  --output-tsv out/result.tsv
+```
+
+Batch zpracování složky:
+
+```bash
+python scripts/dvpp_cert_extract.py \
+  --input-dir path/to/folder \
+  --model gemini-3-flash-preview \
+  --output-tsv out/batch.tsv
+```
+
+Batch režim posílá každý soubor samostatně, pak výsledky jen sloučí. Nepoužívá multi-file request do jednoho Gemini callu.
+
+Aktuální omezení POC:
+- zpracovává jeden request na jeden soubor
+- nepodporuje multipage orchestraci
+- batch režim jen sekvenčně skládá výsledky z jednotlivých requestů
+- nemá automatický fallback mezi modely
+- není zatím integrovaný do Electron aplikace
+
 ## Instalace pro Windows uživatele
 
 Pro jednoduchou instalaci klientské verze na Windows sledujte
