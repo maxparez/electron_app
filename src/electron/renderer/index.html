@@ -290,7 +290,10 @@
                         </div>
 
                         <div class="form-group">
-                            <button class="btn btn-success" id="process-cert-raw" type="button">Načíst raw text</button>
+                            <div class="cert-export-actions">
+                                <button class="btn btn-success cert-action-btn" id="process-cert-raw" type="button">Načíst raw text</button>
+                                <button class="btn btn-secondary cert-action-btn" id="clear-cert-raw-text" type="button">Vymazat raw text</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -424,14 +427,6 @@
                                 <button class="btn btn-secondary" id="copy-cert-system-prompt" type="button">Kopírovat prompt</button>
                             </div>
                             <textarea id="cert-system-prompt" rows="10" readonly></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Prompt pro uživatelský vstup:</label>
-                            <div class="button-group">
-                                <button class="btn btn-secondary" id="copy-cert-user-prompt" type="button">Kopírovat prompt</button>
-                            </div>
-                            <textarea id="cert-user-prompt" rows="10" readonly></textarea>
                         </div>
 
                         <div class="form-group">

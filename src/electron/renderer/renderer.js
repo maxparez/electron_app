@@ -103,6 +103,7 @@ const elements = {
     certCopyUserPromptBtn: document.getElementById('copy-cert-user-prompt'),
     certRawText: document.getElementById('cert-raw-text'),
     certProcessRawBtn: document.getElementById('process-cert-raw'),
+    certClearRawTextBtn: document.getElementById('clear-cert-raw-text'),
     certBulkTemplateSelect: document.getElementById('cert-bulk-template-select'),
     certApplyTemplateAllBtn: document.getElementById('cert-apply-template-all'),
     certBulkFormaSelect: document.getElementById('cert-bulk-forma-select'),
@@ -256,6 +257,7 @@ async function init() {
     elements.certFolderRefreshBtn.addEventListener('click', refreshCertificateFolder);
     elements.certProcessGeminiBtn.addEventListener('click', processCertificatesWithGemini);
     elements.certProcessRawBtn.addEventListener('click', processCertificatesFromRawText);
+    elements.certClearRawTextBtn.addEventListener('click', clearCertificateRawText);
     elements.certCopySystemPromptBtn.addEventListener('click', () => copyTextToClipboard(CERT_SYSTEM_PROMPT, 'Systemový prompt byl zkopírován.'));
     elements.certCopyUserPromptBtn.addEventListener('click', () => copyTextToClipboard(CERT_USER_PROMPT, 'Uživatelský prompt byl zkopírován.'));
     elements.certCopyTsvBtn.addEventListener('click', copyCertificateTsv);
@@ -1038,6 +1040,12 @@ function openCertificatePromptsModal() {
 
 function closeCertificatePromptsModal() {
     elements.certPromptsModal.hidden = true;
+}
+
+function clearCertificateRawText() {
+    elements.certRawText.value = '';
+    state.certificateExtraction.rawText = '';
+    elements.certRawText.focus();
 }
 
 function syncCertificateImportPanels() {
