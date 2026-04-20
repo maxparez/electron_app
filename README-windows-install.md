@@ -110,6 +110,6 @@ MIT License – viz hlavní větev projektu
 
 ---
 
-**Verze:** 1.1.0
-**Poslední aktualizace:** 2025-12-07
+**Verze:** 1.3.0
+**Poslední aktualizace:** 2026-04-20
 **Autor:** Max Parez
