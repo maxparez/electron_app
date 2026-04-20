@@ -42,16 +42,19 @@ pip install -r requirements.txt
 npm run dev
 ```
 
-## DVPP Certificate Extraction POC
+## Vytěžování certifikátů DVPP
 
-Repo teď obsahuje i samostatný Python-only POC mimo Electron UI pro extrakci dat z DVPP certifikátů přes Gemini API.
+Vytěžování certifikátů je už integrované přímo v Electron aplikaci jako samostatný nástroj `Vytěžování certifikátů`.
 
-Požadavky:
-- nastavený `GEMINI_API_KEY`
-- `GOOGLE_API_KEY` je podporovaný jen jako fallback
-- nainstalované Python závislosti z `requirements.txt`
+Aktuální workflow v aplikaci:
+- import certifikátů přes `Gemini API`
+- nebo ruční vložení `Raw text z Google AI Studia`
+- společná editovatelná tabulka záznamů
+- export do `TSV`
+- export do připravené `Excel` šablony
+- generování `ESF import` CSV
 
-Podporované vstupy:
+Podporované vstupy pro Gemini režim:
 - `pdf`
 - `jpg`
 - `jpeg`
@@ -61,7 +64,9 @@ Podporované modely:
 - `gemini-3-flash-preview`
 - `gemini-3.1-pro-preview`
 
-Základní použití:
+Batch zpracování v aplikaci posílá každý soubor samostatně a výsledky potom sloučí. Nepoužívá multi-file request do jednoho Gemini callu.
+
+Repo stále obsahuje i pomocný Python CLI nástroj pro vývoj a rychlé experimenty:
 
 ```bash
 export GEMINI_API_KEY=your-key
@@ -71,17 +76,7 @@ python scripts/dvpp_cert_extract.py \
   --model gemini-3-flash-preview
 ```
 
-Výstupy do souborů:
-
-```bash
-python scripts/dvpp_cert_extract.py \
-  --input path/to/certificate.jpg \
-  --model gemini-3.1-pro-preview \
-  --output-json out/result.json \
-  --output-tsv out/result.tsv
-```
-
-Batch zpracování složky:
+Batch přes CLI:
 
 ```bash
 python scripts/dvpp_cert_extract.py \
@@ -89,15 +84,6 @@ python scripts/dvpp_cert_extract.py \
   --model gemini-3-flash-preview \
   --output-tsv out/batch.tsv
 ```
-
-Batch režim posílá každý soubor samostatně, pak výsledky jen sloučí. Nepoužívá multi-file request do jednoho Gemini callu.
-
-Aktuální omezení POC:
-- zpracovává jeden request na jeden soubor
-- nepodporuje multipage orchestraci
-- batch režim jen sekvenčně skládá výsledky z jednotlivých requestů
-- nemá automatický fallback mezi modely
-- není zatím integrovaný do Electron aplikace
 
 ## Instalace pro Windows uživatele
 
