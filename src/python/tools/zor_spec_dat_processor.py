@@ -200,6 +200,15 @@ class ZorSpecDatProcessor(BaseTool):
             return str(value) if value else "Neznámá šablona"
         except Exception:
             return "Neznámá šablona"
+
+    def _normalize_string_cells(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize string cells across pandas versions."""
+        normalizer = lambda x: x.lower().strip() if isinstance(x, str) else x
+
+        if hasattr(df, "map"):
+            return df.map(normalizer)
+
+        return df.applymap(normalizer)
             
     def _calculate_subreport(self, excel_file: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Calculate subreport for single Excel file"""
@@ -214,7 +223,7 @@ class ZorSpecDatProcessor(BaseTool):
             )
             
             # Clean string data
-            df = df.applymap(lambda x: x.lower().strip() if isinstance(x, str) else x)
+            df = self._normalize_string_cells(df)
 
             # Check for numeric values in 'jmena' column (expected to be names, not numbers)
             if 'jmena' in df.columns:
