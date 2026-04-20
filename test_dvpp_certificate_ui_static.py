@@ -138,6 +138,19 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertNotIn('onchange="updateCertificateField(', content)
         self.assertNotIn('onclick="removeCertificateRecord(', content)
 
+    def test_renderer_js_avoids_inline_handlers_in_shared_results_ui(self) -> None:
+        content = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
+
+        self.assertNotIn('onclick="openFile(', content)
+        self.assertNotIn('onclick="openFolder(', content)
+        self.assertNotIn('onclick="downloadFile(', content)
+        self.assertNotIn('onclick="toggleCollapsible(', content)
+        self.assertNotIn('onclick="removeFile(', content)
+        self.assertNotIn('onclick="keepOnly16hFiles(', content)
+        self.assertNotIn('onclick="keepOnly32hFiles(', content)
+        self.assertNotIn('onclick="clearAllZorFiles(', content)
+        self.assertNotIn('onchange="toggleDvppFile(', content)
+
     def test_renderer_preserves_certificate_diagnostics_on_failed_import(self) -> None:
         renderer = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
         preload = (REPO_ROOT / "src" / "electron" / "preload.js").read_text(encoding="utf-8")

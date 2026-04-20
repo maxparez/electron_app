@@ -281,6 +281,7 @@ async function init() {
             closeCertificatePromptsModal();
         }
     });
+    bindSharedResultInteractionHandlers();
     bindCertificateInteractionHandlers();
     bindCertificateMetadataInputs();
     createCertificateGrid();
@@ -494,7 +495,13 @@ function updateFilesList(tool) {
                             <strong>Cesta:</strong> ${wslToWindowsPath(file)}
                             <br><strong>Verze:</strong> ${state.zorFileVersions[file]}
                         </div>
-                        <button class="btn-remove" onclick="removeFile('${tool}', '${file.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')">✕</button>
+                        <button
+                            class="btn-remove"
+                            type="button"
+                            data-action="remove-file"
+                            data-tool="${escapeHtml(tool)}"
+                            data-file-path="${escapeHtml(file)}"
+                        >✕</button>
                     </div>
                 `;
             } else {
@@ -503,7 +510,13 @@ function updateFilesList(tool) {
                         <div class="file-path">
                             <strong>Cesta:</strong> ${wslToWindowsPath(file)}
                         </div>
-                        <button class="btn-remove" onclick="removeFile('${tool}', '${file.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')">✕</button>
+                        <button
+                            class="btn-remove"
+                            type="button"
+                            data-action="remove-file"
+                            data-tool="${escapeHtml(tool)}"
+                            data-file-path="${escapeHtml(file)}"
+                        >✕</button>
                     </div>
                 `;
             }
@@ -873,7 +886,8 @@ function renderDvppFilesList() {
                     type="checkbox"
                     class="dvpp-checkbox"
                     ${isChecked ? 'checked' : ''}
-                    onchange="toggleDvppFile('${match.file_path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', this.checked)"
+                    data-action="toggle-dvpp-file"
+                    data-file-path="${escapeHtml(match.file_path)}"
                 >
                 <div class="checkbox-row-content">
                     <div class="file-path">
@@ -974,7 +988,7 @@ async function processDvppReport() {
                 <div class="output-section">
                     <h4>Výstupní report</h4>
                     <p>
-                        <a href="#" onclick="openFile('${reportPath.replace(/\\/g, '\\\\')}'); return false;" class="file-link">
+                        <a href="#" class="file-link" data-action="open-file" data-file-path="${escapeHtml(reportPath)}">
                             ${result.data.report_filename}
                         </a>
                     </p>
@@ -1499,6 +1513,61 @@ function bindCertificateInteractionHandlers() {
     });
 }
 
+function bindSharedResultInteractionHandlers() {
+    document.addEventListener('click', (event) => {
+        const actionElement = event.target.closest('[data-action]');
+        if (!actionElement) {
+            return;
+        }
+
+        const action = actionElement.dataset.action;
+        if (!action) {
+            return;
+        }
+
+        switch (action) {
+            case 'remove-file':
+                removeFile(actionElement.dataset.tool, actionElement.dataset.filePath);
+                break;
+            case 'open-file':
+                event.preventDefault();
+                openFile(actionElement.dataset.filePath);
+                break;
+            case 'open-folder':
+                openFolder(actionElement.dataset.folderPath);
+                break;
+            case 'download-file':
+                downloadFile(actionElement.dataset.filename, actionElement.dataset.fileContent);
+                break;
+            case 'toggle-collapsible':
+                toggleCollapsible(actionElement.dataset.blockId);
+                break;
+            case 'keep-only-16h':
+                keepOnly16hFiles();
+                break;
+            case 'keep-only-32h':
+                keepOnly32hFiles();
+                break;
+            case 'clear-all-zor':
+                clearAllZorFiles();
+                break;
+            default:
+                break;
+        }
+    });
+
+    document.addEventListener('change', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement)) {
+            return;
+        }
+
+        if (target.dataset.action === 'toggle-dvpp-file' && target.dataset.filePath) {
+            toggleDvppFile(target.dataset.filePath, target.checked);
+        }
+    });
+}
+
 function renderCertificateDiagnostics() {
     if (!state.certificateExtraction.diagnostics.length) {
         elements.certDiagnostics.className = 'cert-diagnostics empty-state';
@@ -1780,15 +1849,15 @@ function showZorVersionError(versionCheck) {
                 <p><strong>Jak to vyřešit:</strong></p>
                 <p>Odeberte všechny soubory jedné verze ze seznamu níže, nebo:</p>
                 <div class="version-error-actions">
-                    <button class="btn-action btn-keep-16h" onclick="keepOnly16hFiles()">
+                    <button class="btn-action btn-keep-16h" type="button" data-action="keep-only-16h">
                         <span class="btn-icon">📋</span>
                         Ponechat pouze 16h verzi
                     </button>
-                    <button class="btn-action btn-keep-32h" onclick="keepOnly32hFiles()">
+                    <button class="btn-action btn-keep-32h" type="button" data-action="keep-only-32h">
                         <span class="btn-icon">📋</span>
                         Ponechat pouze 32h verzi
                     </button>
-                    <button class="btn-action btn-clear-all" onclick="clearAllZorFiles()">
+                    <button class="btn-action btn-clear-all" type="button" data-action="clear-all-zor">
                         <span class="btn-icon">🗑️</span>
                         Smazat vše a začít znovu
                     </button>
@@ -2088,7 +2157,7 @@ async function processZorSpec() {
                                 <h4><span class="folder-icon">📁</span> Výstupní soubory</h4>
                                 <div class="output-path-display">
                                     <span class="path-text">${displayPath}</span>
-                                    <button class="copy-btn" onclick="openFolder('${displayPath.replace(/\\/g, '\\\\')}')" title="Otevřít složku s výsledky">
+                                    <button class="copy-btn" type="button" data-action="open-folder" data-folder-path="${escapeHtml(displayPath)}" title="Otevřít složku s výsledky">
                                         📂
                                     </button>
                                 </div>
@@ -2112,7 +2181,7 @@ async function processZorSpec() {
                                     </div>
                                 </div>
                                 <div class="file-actions">
-                                    <button class="file-btn btn-view" onclick="openFile('${fullPath.replace(/\\/g, '\\\\')}')">
+                                    <button class="file-btn btn-view" type="button" data-action="open-file" data-file-path="${escapeHtml(fullPath)}">
                                         👁️ Zobrazit
                                     </button>
                                 </div>
@@ -2138,7 +2207,7 @@ async function processZorSpec() {
                             <div class="file-item">
                                 <span class="file-name">${file.filename}</span>
                                 <span class="file-size">(${Math.round(file.size / 1024)} KB)</span>
-                                <button class="btn btn-small" onclick="downloadFile('${file.filename}', '${file.content}')">
+                                <button class="btn btn-small" type="button" data-action="download-file" data-filename="${escapeHtml(file.filename)}" data-file-content="${escapeHtml(file.content)}">
                                     💾 Stáhnout
                                 </button>
                             </div>
@@ -2174,7 +2243,7 @@ async function processZorSpec() {
                                 fullPath = `${driveLetter}:${fullPath.substring(6).replace(/\//g, '\\')}`;
                             }
                             
-                            resultHtml += `<li>${description}: <a href="#" onclick="openFile('${fullPath.replace(/\\/g, '\\\\')}'); return false;" class="file-link">${filename}</a></li>`;
+                            resultHtml += `<li>${description}: <a href="#" class="file-link" data-action="open-file" data-file-path="${escapeHtml(fullPath)}">${filename}</a></li>`;
                         } else {
                             resultHtml += `<li>${msg}</li>`;
                         }
@@ -2592,7 +2661,7 @@ function formatFileProcessingBlock(file) {
     
     let blockHtml = `
         <div class="file-processing-block collapsible">
-            <div class="file-header collapsible-header" onclick="toggleCollapsible('${blockId}')">
+            <div class="file-header collapsible-header" data-action="toggle-collapsible" data-block-id="${escapeHtml(blockId)}">
                 <span class="collapse-icon" id="icon-${blockId}">▶</span>
                 📄 <strong>${sourceBasename} → ${outputFilename}</strong>
                 <span class="file-status ${statusClass}">${statusIcon} ${statusText}</span>
