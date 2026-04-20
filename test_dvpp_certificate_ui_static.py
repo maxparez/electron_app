@@ -160,6 +160,15 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("if (error.data && error.data.batch)", renderer)
         self.assertIn("applyCertificateBatchResult(error.data.batch, error.data.diagnostics || []);", renderer)
 
+    def test_renderer_preserves_zor_error_details_on_failed_processing(self) -> None:
+        renderer = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
+        process_zor_body = renderer.split("async function processZorSpec() {", 1)[1].split("// Generate Plakat", 1)[0]
+
+        self.assertIn("error.errors && error.errors.length > 0", process_zor_body)
+        self.assertIn("Detailní chyby:", process_zor_body)
+        self.assertIn("elements.zorResults.innerHTML = errorHtml;", process_zor_body)
+        self.assertIn("elements.zorResults.classList.add('show');", process_zor_body)
+
     def test_renderer_supports_template_select_and_copy_feedback(self) -> None:
         renderer = (REPO_ROOT / "src" / "electron" / "renderer" / "renderer.js").read_text(encoding="utf-8")
 

@@ -1979,7 +1979,33 @@ async function processInvVzd() {
     } catch (error) {
         showLoading(false);
         console.error('Processing error:', error);
-        showMessage('Chyba při zpracování souborů: ' + error.message, 'error');
+
+        let errorHtml = `
+            <h3 class="error">Zpracování selhalo ❌</h3>
+            <p><strong>Hlavní zpráva:</strong> ${escapeHtml(error.message || 'Neznámá chyba')}</p>
+        `;
+
+        if (error.errors && error.errors.length > 0) {
+            errorHtml += '<h4>Detailní chyby:</h4><ul class="error-messages">';
+            error.errors.forEach((item) => {
+                errorHtml += `<li class="error-item">${escapeHtml(item)}</li>`;
+            });
+            errorHtml += '</ul>';
+        }
+
+        if (error.warnings && error.warnings.length > 0) {
+            errorHtml += '<h4>Varování:</h4><ul class="warning-messages">';
+            error.warnings.forEach((item) => {
+                errorHtml += `<li class="warning-item">${escapeHtml(item)}</li>`;
+            });
+            errorHtml += '</ul>';
+        }
+
+        elements.zorResults.innerHTML = errorHtml;
+        elements.zorResults.classList.add('show');
+
+        const primaryError = error.errors && error.errors.length > 0 ? error.errors[0] : error.message;
+        showMessage('Chyba při zpracování souborů: ' + primaryError, 'error');
     }
 }
 
@@ -2291,7 +2317,33 @@ async function processZorSpec() {
     } catch (error) {
         showLoading(false);
         console.error('Processing error:', error);
-        showMessage('Chyba při zpracování souborů: ' + error.message, 'error');
+
+        let errorHtml = `
+            <h3 class="error">Zpracování selhalo ❌</h3>
+            <p><strong>Hlavní zpráva:</strong> ${escapeHtml(error.message || 'Neznámá chyba')}</p>
+        `;
+
+        if (error.errors && error.errors.length > 0) {
+            errorHtml += '<h4>Detailní chyby:</h4><ul class="error-messages">';
+            error.errors.forEach((item) => {
+                errorHtml += `<li class="error-item">${escapeHtml(item)}</li>`;
+            });
+            errorHtml += '</ul>';
+        }
+
+        if (error.warnings && error.warnings.length > 0) {
+            errorHtml += '<h4>Varování:</h4><ul class="warning-messages">';
+            error.warnings.forEach((item) => {
+                errorHtml += `<li class="warning-item">${escapeHtml(item)}</li>`;
+            });
+            errorHtml += '</ul>';
+        }
+
+        elements.zorResults.innerHTML = errorHtml;
+        elements.zorResults.classList.add('show');
+
+        const primaryError = error.errors && error.errors.length > 0 ? error.errors[0] : error.message;
+        showMessage('Chyba při zpracování souborů: ' + primaryError, 'error');
     }
 }
 
