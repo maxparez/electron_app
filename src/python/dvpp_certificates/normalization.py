@@ -50,6 +50,11 @@ FORMA_CATALOG = (
     "koučink",
 )
 FORMA_WHITELIST = frozenset(FORMA_CATALOG)
+POHLAVI_CATALOG = (
+    "POHZENY",
+    "POHMUZI",
+)
+POHLAVI_WHITELIST = frozenset(POHLAVI_CATALOG)
 TOPIC_ALIASES = {
     "vzdělávání pro udržitelný rozvoj – např. EVVO (environmentální vzdělávání, výchova a osvěta), klimatické vzdělávání, principy místně zakotveného učení": (
         "vzdělávání pro udržitelný rozvoj – např. EVVO, klimatické vzdělávání, principy místně zakotveného učení"
@@ -167,6 +172,13 @@ def normalize_forma(value: str) -> str:
     return stripped if stripped in FORMA_WHITELIST else ""
 
 
+def normalize_pohlavi(value: str) -> str:
+    stripped = value.strip()
+    if not stripped:
+        return ""
+    return stripped if stripped in POHLAVI_WHITELIST else ""
+
+
 def _require_string_field(raw_record: Mapping[str, object], field_name: str) -> str:
     if field_name not in raw_record:
         raise TypeError(f"Missing required field: {field_name}")
@@ -197,6 +209,7 @@ def normalize_certificate_fields(
         "completion_date": _require_string_field(raw_record, "completion_date"),
         "hours": _require_string_field(raw_record, "hours"),
         "forma": _optional_string_field(raw_record, "forma"),
+        "pohlavi": _optional_string_field(raw_record, "pohlavi"),
         "sablona": _optional_string_field(raw_record, "sablona"),
         "topic": _optional_string_field(raw_record, "topic"),
         "uncertainty_notes": _optional_string_field(raw_record, "uncertainty_notes"),

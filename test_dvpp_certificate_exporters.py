@@ -32,6 +32,7 @@ def build_working_record_payload() -> dict:
         hours="8",
         forma="neakreditovaný kurz",
         topic="umela inteligence",
+        pohlavi="",
     )
     working = CertificateRecord(
         surname="Novakova",
@@ -43,6 +44,7 @@ def build_working_record_payload() -> dict:
         forma="stáž",
         topic="well-being a psychohygiena",
         sablona="vzdělávání ZŠ_2_II_4",
+        pohlavi="POHZENY",
     )
     return {
         "extracted_record": {
@@ -55,6 +57,7 @@ def build_working_record_payload() -> dict:
             "forma": extracted.forma,
             "sablona": extracted.sablona,
             "topic": extracted.topic,
+            "pohlavi": extracted.pohlavi,
             "uncertainty_notes": extracted.uncertainty_notes,
             "origin": None,
         },
@@ -68,6 +71,7 @@ def build_working_record_payload() -> dict:
             "forma": working.forma,
             "sablona": working.sablona,
             "topic": working.topic,
+            "pohlavi": working.pohlavi,
             "uncertainty_notes": working.uncertainty_notes,
             "origin": None,
         },
@@ -80,6 +84,8 @@ def build_export_metadata(**overrides) -> ExportMetadata:
         "recipient_name": "Zakladni skola Test",
         "zor_number": "1",
         "fill_header": True,
+        "esf_entry_date": "",
+        "esf_exit_date": "",
     }
     payload.update(overrides)
     return ExportMetadata(**payload)
@@ -314,11 +320,31 @@ class DvppCertificateExportersTests(unittest.TestCase):
             self.assertEqual("", row[8])
             self.assertEqual("35201", row[9])
             self.assertEqual("01.09.2025", row[16])
-            self.assertEqual("POHMUZI", row[17])
+            self.assertEqual("POHZENY", row[17])
             self.assertEqual("TPZAMCI", row[18])
             self.assertEqual("", row[19])
             self.assertEqual("VZISCED5-8", row[20])
             self.assertTrue(lines[1].endswith(";;;;;;;;;;;"))
+
+    def test_export_records_to_esf_csv_overrides_gender_and_project_dates(self) -> None:
+        record = build_working_record_payload()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "osoby.csv"
+            result = export_records_to_esf_csv(
+                [record],
+                export_metadata=build_export_metadata(
+                    esf_entry_date="02.09.2025",
+                    esf_exit_date="31.12.2025",
+                ),
+                output_path=str(output_path),
+            )
+
+            self.assertEqual(str(output_path), result["output_path"])
+            row = output_path.read_text(encoding="utf-8-sig").splitlines()[1].split(";")
+            self.assertEqual("31.12.2025", row[12])
+            self.assertEqual("02.09.2025", row[16])
+            self.assertEqual("POHZENY", row[17])
 
     def test_resolve_excel_template_path_uses_default_template(self) -> None:
         self.assertEqual(DEFAULT_EXCEL_TEMPLATE_PATH, resolve_excel_template_path(None))
@@ -425,7 +451,7 @@ class DvppCertificateExportersTests(unittest.TestCase):
             def __init__(self, logger, importer=None) -> None:
                 self.logger = logger
 
-            def export_esf(self, records_payload, output_path=None):
+            def export_esf(self, records_payload, export_metadata_payload=None, output_path=None):
                 return {
                     "success": True,
                     "data": {

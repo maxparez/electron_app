@@ -1227,6 +1227,7 @@ def export_dvpp_certificates_esf():
         processor = DvppCertificateProcessor(tool_logger)
         result = processor.export_esf(
             data.get("records", []),
+            export_metadata_payload=data.get("exportMetadata", {}),
             output_path=convert_path_if_needed(data.get("outputPath")),
         )
 

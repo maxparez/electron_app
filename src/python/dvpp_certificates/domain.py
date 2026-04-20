@@ -4,6 +4,7 @@ from copy import deepcopy
 from dataclasses import asdict, dataclass, field, replace
 from dvpp_certificates.normalization import (
     normalize_forma,
+    normalize_pohlavi,
     normalize_person_name,
     normalize_topic,
     validate_record_date,
@@ -28,6 +29,7 @@ class CertificateRecord:
     completion_date: str
     hours: str
     forma: str = ""
+    pohlavi: str = ""
     sablona: str = ""
     topic: str = ""
     uncertainty_notes: str = ""
@@ -53,6 +55,8 @@ class CertificateRecord:
 
         if not isinstance(self.forma, str):
             raise TypeError("forma must be a string")
+        if not isinstance(self.pohlavi, str):
+            raise TypeError("pohlavi must be a string")
         if not isinstance(self.sablona, str):
             raise TypeError("sablona must be a string")
         if not isinstance(self.topic, str):
@@ -69,6 +73,7 @@ class CertificateRecord:
             self.completion_date, "completion_date"
         )
         self.forma = normalize_forma(self.forma)
+        self.pohlavi = normalize_pohlavi(self.pohlavi)
         self.sablona = self.sablona.strip()
         self.topic = normalize_topic(self.topic)
         self.uncertainty_notes = self.uncertainty_notes.strip()
@@ -106,7 +111,37 @@ class ExportMetadata:
     project_number: str = ""
     recipient_name: str = ""
     zor_number: str = ""
+    esf_entry_date: str = ""
+    esf_exit_date: str = ""
     fill_header: bool = False
+
+    def __post_init__(self) -> None:
+        string_fields = (
+            "template_path",
+            "output_path",
+            "project_number",
+            "recipient_name",
+            "zor_number",
+            "esf_entry_date",
+            "esf_exit_date",
+        )
+        for field_name in string_fields:
+            value = getattr(self, field_name)
+            if not isinstance(value, str):
+                raise TypeError(f"{field_name} must be a string")
+            setattr(self, field_name, value.strip())
+
+        if not isinstance(self.fill_header, bool):
+            self.fill_header = bool(self.fill_header)
+
+        if self.esf_entry_date:
+            self.esf_entry_date = validate_record_date(
+                self.esf_entry_date, "esf_entry_date"
+            )
+        if self.esf_exit_date:
+            self.esf_exit_date = validate_record_date(
+                self.esf_exit_date, "esf_exit_date"
+            )
 
 
 @dataclass(slots=True)

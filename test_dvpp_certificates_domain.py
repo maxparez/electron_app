@@ -42,6 +42,7 @@ class DvppCertificatesDomainTests(unittest.TestCase):
         self.assertEqual("14.03.2024", record.completion_date)
         self.assertEqual("8", record.hours)
         self.assertEqual("", record.forma)
+        self.assertEqual("", record.pohlavi)
         self.assertEqual(
             "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
             record.topic,
@@ -74,6 +75,31 @@ class DvppCertificatesDomainTests(unittest.TestCase):
         )
 
         self.assertEqual("", invalid.forma)
+
+    def test_certificate_record_keeps_only_exact_pohlavi_choices(self) -> None:
+        record = CertificateRecord(
+            surname="Novakova",
+            name="Jana",
+            birth_date="05.09.1980",
+            course_name="Kurz AI ve vyuce",
+            completion_date="14.03.2024",
+            hours="8",
+            pohlavi="POHZENY",
+        )
+
+        self.assertEqual("POHZENY", record.pohlavi)
+
+        invalid = CertificateRecord(
+            surname="Novakova",
+            name="Jana",
+            birth_date="05.09.1980",
+            course_name="Kurz AI ve vyuce",
+            completion_date="14.03.2024",
+            hours="8",
+            pohlavi="zena",
+        )
+
+        self.assertEqual("", invalid.pohlavi)
 
     def test_record_origin_keeps_provenance_fields(self) -> None:
         origin = RecordOrigin(
@@ -187,6 +213,8 @@ class DvppCertificatesDomainTests(unittest.TestCase):
                 project_number="CZ.02.02.XX/00/00_000/0000000",
                 recipient_name="Zakladni skola",
                 zor_number="1ZoR",
+                esf_entry_date="01.09.2025",
+                esf_exit_date="31.12.2025",
                 fill_header=True,
             ),
         )
@@ -204,6 +232,8 @@ class DvppCertificatesDomainTests(unittest.TestCase):
             "CZ.02.02.XX/00/00_000/0000000",
             batch.export_metadata.project_number,
         )
+        self.assertEqual("01.09.2025", batch.export_metadata.esf_entry_date)
+        self.assertEqual("31.12.2025", batch.export_metadata.esf_exit_date)
         self.assertTrue(batch.export_metadata.fill_header)
 
 

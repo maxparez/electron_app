@@ -32,6 +32,8 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn('id="cert-apply-template-all"', html)
         self.assertIn('id="cert-bulk-forma-select"', html)
         self.assertIn('id="cert-apply-forma-all"', html)
+        self.assertIn('id="cert-bulk-pohlavi-select"', html)
+        self.assertIn('id="cert-apply-pohlavi-all"', html)
         self.assertIn('class="btn btn-success cert-mode-btn active" id="cert-mode-gemini"', html)
         self.assertIn('class="btn btn-secondary cert-import-toggle-btn" id="cert-toggle-import-panel" type="button" disabled', html)
         self.assertIn('>Zobrazit import</button>', html)
@@ -46,6 +48,8 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn('id="cert-diagnostics"', html)
         self.assertIn('Hlavička evidence DVPP', html)
         self.assertIn('id="cert-fill-header"', html)
+        self.assertIn('id="cert-esf-entry-date"', html)
+        self.assertIn('id="cert-esf-exit-date"', html)
         self.assertLess(html.index('<span>Vytěžování certifikátů</span>'), html.index('<span>DVPP report</span>'))
         self.assertLess(html.index('<h3>🧾 Vytěžování certifikátů</h3>'), html.index('<h3>📚 DVPP report</h3>'))
         self.assertLess(html.index('<span>Vytěžování certifikátů</span>'), html.index('<span>Generátor plakátů</span>'))
@@ -72,6 +76,7 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("resetCertificateExtractionOutput", content)
         self.assertIn("applyCertificateTemplateToAllRecords", content)
         self.assertIn("applyCertificateFormaToAllRecords", content)
+        self.assertIn("applyCertificatePohlaviToAllRecords", content)
         self.assertIn("setCertificateImportCollapsed", content)
         self.assertIn("if (state.certificateExtraction.importCollapsed) {", switch_mode_body)
         self.assertIn("setCertificateImportCollapsed(false);", switch_mode_body)
@@ -81,6 +86,7 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("dvpp-certificates/import/raw-text", content)
         self.assertIn("dvpp-certificates/export/tsv", content)
         self.assertIn("dvpp-certificates/export/excel", content)
+        self.assertIn("dvpp-certificates/export/esf", content)
         self.assertIn(
             "mediální gramotnost, prevence kyberšikany, chování na sociálních sítích, umělá inteligence",
             content,
@@ -93,6 +99,8 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("akreditovaný kurz průběžné DVPP", content)
         self.assertIn("kvalifikační_studium_DVPP", content)
         self.assertIn("supevize", content)
+        self.assertIn("POHZENY", content)
+        self.assertIn("POHMUZI", content)
         self.assertNotIn("akreditovaný kurz při DVPP", content)
         self.assertNotIn("kvalifikační studium_DVPP", content)
         self.assertNotIn("supervize", content)
@@ -119,6 +127,7 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("agSelectCellEditor", renderer)
         self.assertIn("cellEditorParams: { values: TEMPLATE_OPTIONS }", renderer)
         self.assertIn("cellEditorParams: { values: FORMA_OPTIONS }", renderer)
+        self.assertIn("cellEditorParams: { values: POHLAVI_OPTIONS }", renderer)
         self.assertIn("theme: 'legacy'", renderer)
         self.assertIn("domLayout: 'autoHeight'", renderer)
         self.assertIn("singleClickEdit: true", renderer)
@@ -132,6 +141,7 @@ class DvppCertificateUiStaticTests(unittest.TestCase):
         self.assertIn("resetCertificateExtractionOutput();", renderer)
         self.assertIn("certApplyTemplateAllBtn.addEventListener('click', applyCertificateTemplateToAllRecords);", renderer)
         self.assertIn("certApplyFormaAllBtn.addEventListener('click', applyCertificateFormaToAllRecords);", renderer)
+        self.assertIn("certApplyPohlaviAllBtn.addEventListener('click', applyCertificatePohlaviToAllRecords);", renderer)
         self.assertIn("certToggleImportPanelBtn.addEventListener('click', toggleCertificateImportPanel);", renderer)
         self.assertIn("setCertificateImportCollapsed(true);", renderer)
 

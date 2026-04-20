@@ -330,6 +330,14 @@
                                     </select>
                                     <button class="btn btn-secondary" id="cert-apply-forma-all" type="button">Vyplnit formu do všech řádků</button>
                                 </div>
+                                <div class="cert-bulk-row">
+                                    <select id="cert-bulk-pohlavi-select">
+                                        <option value="">Vyberte pohlaví pro hromadné vyplnění</option>
+                                        <option value="POHZENY">POHZENY</option>
+                                        <option value="POHMUZI">POHMUZI</option>
+                                    </select>
+                                    <button class="btn btn-secondary" id="cert-apply-pohlavi-all" type="button">Vyplnit pohlaví do všech řádků</button>
+                                </div>
                             </div>
                             <div id="cert-records-table" class="cert-records-table empty-state">
                                 Zatím nejsou načtené žádné certifikáty.
@@ -349,6 +357,14 @@
                                 <input type="checkbox" id="cert-fill-header">
                                 Vyplnit hlavičku
                             </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>ESF import metadata:</label>
+                            <div class="cert-metadata-grid">
+                                <input type="text" id="cert-esf-entry-date" placeholder="Vstup do projektu (dd.mm.yyyy)">
+                                <input type="text" id="cert-esf-exit-date" placeholder="Výstup z projektu (dd.mm.yyyy)">
+                            </div>
                         </div>
 
                         <div class="form-group">

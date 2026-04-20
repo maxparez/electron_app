@@ -223,11 +223,16 @@ class DvppCertificateProcessor(BaseTool):
         self,
         records_payload: list[dict[str, Any]],
         *,
+        export_metadata_payload: dict[str, Any] | None = None,
         output_path: str | None = None,
     ) -> Dict[str, Any]:
         self.clear_messages()
         try:
-            data = export_records_to_esf_csv(records_payload, output_path=output_path)
+            data = export_records_to_esf_csv(
+                records_payload,
+                export_metadata=export_metadata_payload,
+                output_path=output_path,
+            )
             return self.get_result(True, data)
         except Exception as exc:
             self.add_error(str(exc))

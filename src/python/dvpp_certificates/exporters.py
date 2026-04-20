@@ -107,14 +107,20 @@ def export_records_to_tsv(
 def export_records_to_esf_csv(
     records: list[WorkingRecord | Mapping[str, Any]],
     *,
+    export_metadata: ExportMetadata | Mapping[str, Any] | None = None,
     output_path: str | None = None,
 ) -> dict[str, str | None]:
+    metadata = (
+        ExportMetadata()
+        if export_metadata is None
+        else _coerce_export_metadata(export_metadata)
+    )
     buffer = io.StringIO()
     writer = csv.writer(buffer, delimiter=";", lineterminator="\n")
     writer.writerow(ESF_HEADER)
 
     for record in records:
-        writer.writerow(_format_esf_row(_coerce_working_record(record)))
+        writer.writerow(_format_esf_row(_coerce_working_record(record), metadata))
 
     content = buffer.getvalue()
 
@@ -196,11 +202,17 @@ def _format_tsv_row(record: CertificateRecord) -> str:
     return "\t".join(str(field) for field in fields)
 
 
-def _format_esf_row(record: CertificateRecord) -> list[str]:
+def _format_esf_row(record: CertificateRecord, export_metadata: ExportMetadata) -> list[str]:
     row = ESF_DEFAULT_ROW.copy()
     row[0] = record.name
     row[1] = record.surname
     row[2] = record.birth_date
+    if export_metadata.esf_exit_date:
+        row[12] = export_metadata.esf_exit_date
+    if export_metadata.esf_entry_date:
+        row[16] = export_metadata.esf_entry_date
+    if record.pohlavi:
+        row[17] = record.pohlavi
     return row
 
 

@@ -34,6 +34,8 @@ const state = {
             project_number: '',
             recipient_name: '',
             zor_number: '',
+            esf_entry_date: '',
+            esf_exit_date: '',
             fill_header: false,
             template_path: 'D:\\JAK2024\\Dokumenty\\Evidence_podpor_poskytnutych_ucastnikum_vzdelavani_MS_ZS_upravene_DVPP.xlsx'
         }
@@ -102,11 +104,15 @@ const elements = {
     certApplyTemplateAllBtn: document.getElementById('cert-apply-template-all'),
     certBulkFormaSelect: document.getElementById('cert-bulk-forma-select'),
     certApplyFormaAllBtn: document.getElementById('cert-apply-forma-all'),
+    certBulkPohlaviSelect: document.getElementById('cert-bulk-pohlavi-select'),
+    certApplyPohlaviAllBtn: document.getElementById('cert-apply-pohlavi-all'),
     certRecordsTable: document.getElementById('cert-records-table'),
     certDiagnostics: document.getElementById('cert-diagnostics'),
     certProjectNumber: document.getElementById('cert-project-number'),
     certRecipientName: document.getElementById('cert-recipient-name'),
     certZorNumber: document.getElementById('cert-zor-number'),
+    certEsfEntryDate: document.getElementById('cert-esf-entry-date'),
+    certEsfExitDate: document.getElementById('cert-esf-exit-date'),
     certFillHeader: document.getElementById('cert-fill-header'),
     certTemplatePath: document.getElementById('cert-template-path'),
     certSelectTemplateBtn: document.getElementById('select-cert-template'),
@@ -169,6 +175,11 @@ const FORMA_OPTIONS = [
     'mentoring',
     'supevize',
     'koučink'
+];
+
+const POHLAVI_OPTIONS = [
+    'POHZENY',
+    'POHMUZI'
 ];
 
 // Status bar functions
@@ -248,6 +259,7 @@ async function init() {
     elements.certSaveEsfBtn.addEventListener('click', saveCertificateEsfImport);
     elements.certApplyTemplateAllBtn.addEventListener('click', applyCertificateTemplateToAllRecords);
     elements.certApplyFormaAllBtn.addEventListener('click', applyCertificateFormaToAllRecords);
+    elements.certApplyPohlaviAllBtn.addEventListener('click', applyCertificatePohlaviToAllRecords);
     elements.certSelectTemplateBtn.addEventListener('click', selectCertificateTemplate);
     elements.certModelSelect.addEventListener('change', (event) => {
         state.certificateExtraction.modelName = event.target.value;
@@ -282,6 +294,8 @@ async function init() {
     elements.certProjectNumber.value = state.certificateExtraction.exportMetadata.project_number;
     elements.certRecipientName.value = state.certificateExtraction.exportMetadata.recipient_name;
     elements.certZorNumber.value = state.certificateExtraction.exportMetadata.zor_number;
+    elements.certEsfEntryDate.value = state.certificateExtraction.exportMetadata.esf_entry_date;
+    elements.certEsfExitDate.value = state.certificateExtraction.exportMetadata.esf_exit_date;
     elements.certFillHeader.checked = !!state.certificateExtraction.exportMetadata.fill_header;
     elements.certTemplatePath.value = state.certificateExtraction.exportMetadata.template_path;
     setCertificateImportCollapsed(false);
@@ -1036,6 +1050,8 @@ function bindCertificateMetadataInputs() {
         ['project_number', elements.certProjectNumber],
         ['recipient_name', elements.certRecipientName],
         ['zor_number', elements.certZorNumber],
+        ['esf_entry_date', elements.certEsfEntryDate],
+        ['esf_exit_date', elements.certEsfExitDate],
         ['template_path', elements.certTemplatePath]
     ];
 
@@ -1316,6 +1332,7 @@ function buildCertificateGridRowData() {
         completion_date: record.working_record.completion_date || '',
         hours: record.working_record.hours || '',
         forma: record.working_record.forma || '',
+        pohlavi: record.working_record.pohlavi || '',
         topic: record.working_record.topic || ''
     }));
 }
@@ -1383,6 +1400,13 @@ function createCertificateGrid() {
                 cellEditor: 'agSelectCellEditor',
                 cellEditorParams: { values: FORMA_OPTIONS },
                 cellClass: 'cert-grid-forma-cell'
+            },
+            {
+                field: 'pohlavi',
+                headerName: 'Pohlaví',
+                minWidth: 140,
+                cellEditor: 'agSelectCellEditor',
+                cellEditorParams: { values: POHLAVI_OPTIONS }
             },
             { field: 'topic', headerName: 'Téma', minWidth: 220, flex: 1.4 },
             {
@@ -1518,6 +1542,26 @@ function applyCertificateFormaToAllRecords() {
     showMessage(`Forma ${selectedForma} byla nastavena do všech řádků.`, 'success');
 }
 
+function applyCertificatePohlaviToAllRecords() {
+    const selectedPohlavi = elements.certBulkPohlaviSelect.value;
+    if (!selectedPohlavi) {
+        showMessage('Nejprve vyberte pohlaví pro hromadné vyplnění.', 'warning');
+        return;
+    }
+
+    if (!state.certificateExtraction.records.length) {
+        showMessage('Zatím nejsou načtené žádné certifikáty.', 'warning');
+        return;
+    }
+
+    state.certificateExtraction.records.forEach((record) => {
+        record.working_record.pohlavi = selectedPohlavi;
+    });
+
+    refreshCertificateGridRows();
+    showMessage(`Pohlaví ${selectedPohlavi} bylo nastaveno do všech řádků.`, 'success');
+}
+
 function updateCertificateActions() {
     const hasSelectedFiles = state.selectedFiles['dvpp-certificates'].length > 0;
     elements.certProcessGeminiBtn.disabled = !state.certificateExtraction.folderPath || !hasSelectedFiles;
@@ -1528,6 +1572,7 @@ function updateCertificateActions() {
     elements.certSaveEsfBtn.disabled = !hasRecords;
     elements.certApplyTemplateAllBtn.disabled = !hasRecords;
     elements.certApplyFormaAllBtn.disabled = !hasRecords;
+    elements.certApplyPohlaviAllBtn.disabled = !hasRecords;
 }
 
 async function copyCertificateTsv() {
@@ -1590,6 +1635,7 @@ async function saveCertificateEsfImport() {
 
         const result = await window.electronAPI.apiCall('dvpp-certificates/export/esf', 'POST', {
             records: state.certificateExtraction.records,
+            exportMetadata: state.certificateExtraction.exportMetadata,
             outputPath
         });
         showMessage(`ESF import byl vytvořen: ${wslToWindowsPath(result.data.output_path)}`, 'success');
