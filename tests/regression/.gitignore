@@ -1,0 +1,2 @@
+# Ignorovat aktuální výstupy - ty se generují při testech
+outputs/
