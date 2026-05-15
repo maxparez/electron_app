@@ -150,6 +150,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         });
     },
     
-    // App info
-    getVersion: () => ipcRenderer.invoke('app:getVersion')
+    // App info and updates
+    getVersion: () => ipcRenderer.invoke('app:getVersion'),
+    checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
+    startUpdate: () => ipcRenderer.invoke('app:startUpdate')
 });

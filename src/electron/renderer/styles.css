@@ -2077,6 +2077,37 @@ h3.error {
     color: #999;
 }
 
+#update-status {
+    color: #777;
+}
+
+.status-action {
+    border: 1px solid #c8d4e3;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #35506f;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 18px;
+    padding: 0 10px;
+}
+
+.status-action:hover:not(:disabled) {
+    border-color: #7ea2c8;
+    color: #183a61;
+}
+
+.status-action:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.status-action.update-available {
+    background: #1f6f43;
+    border-color: #1f6f43;
+    color: #ffffff;
+}
+
 /* Adjust app container to make room for status bar */
 .app-container {
     height: calc(100vh - 24px);
