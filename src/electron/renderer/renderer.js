@@ -128,8 +128,14 @@ const elements = {
 
     // Plakat elements
     plakatForm: document.getElementById('plakat-form'),
-    plakatResults: document.getElementById('plakat-results')
+    plakatResults: document.getElementById('plakat-results'),
+
+    // Updates
+    updateStatus: document.getElementById('update-status'),
+    updateCheckBtn: document.getElementById('update-check-btn')
 };
+
+let pendingUpdateInfo = null;
 
 const CERT_SYSTEM_PROMPT = `### ROLE A CÍL ###
 Jsi "Certifikátor v2.1", ultra-přesný AI asistent specializovaný na OCR extrakci dat z certifikátů a osvědčení o dalším vzdělávání pedagogických pracovníků (DVPP). Tvým jediným cílem je bezchybně extrahovat klíčové údaje z dodaných dokumentů a zformátovat je pro přímé vložení do tabulkového procesoru.
@@ -206,6 +212,10 @@ async function init() {
         document.getElementById('version-info').textContent = `Verze: ${versionInfo.full}`;
     } catch (error) {
         console.error('Failed to get version info:', error);
+    }
+
+    if (elements.updateCheckBtn) {
+        elements.updateCheckBtn.addEventListener('click', handleUpdateAction);
     }
     
     // Setup navigation
@@ -363,6 +373,79 @@ function switchTool(toolId) {
     if (targetContent) {
         targetContent.classList.add('active');
         state.currentTool = toolId;
+    }
+}
+
+async function handleUpdateAction() {
+    if (pendingUpdateInfo) {
+        await startApplicationUpdate();
+        return;
+    }
+
+    await checkApplicationUpdates();
+}
+
+async function checkApplicationUpdates() {
+    elements.updateCheckBtn.disabled = true;
+    elements.updateCheckBtn.textContent = 'Kontroluji...';
+    elements.updateStatus.textContent = 'Aktualizace: kontroluji';
+    setStatusMessage('Kontroluji dostupnost aktualizací...');
+
+    try {
+        const response = await window.electronAPI.checkForUpdates();
+        if (!response.success) {
+            throw new Error(response.message || 'Kontrola aktualizací selhala.');
+        }
+
+        const updateInfo = response.data;
+        if (updateInfo.updateAvailable) {
+            pendingUpdateInfo = updateInfo;
+            elements.updateStatus.textContent = `Aktualizace: dostupná (${updateInfo.branch})`;
+            elements.updateCheckBtn.textContent = 'Spustit update';
+            elements.updateCheckBtn.classList.add('update-available');
+            setStatusMessage(`Dostupná aktualizace: ${updateInfo.latestSummary}`, 8000);
+        } else {
+            pendingUpdateInfo = null;
+            elements.updateStatus.textContent = 'Aktualizace: aktuální';
+            elements.updateCheckBtn.textContent = 'Zkontrolovat aktualizace';
+            elements.updateCheckBtn.classList.remove('update-available');
+            setStatusMessage('Aplikace je aktuální.', 4000);
+        }
+    } catch (error) {
+        console.error('Update check failed:', error);
+        pendingUpdateInfo = null;
+        elements.updateStatus.textContent = 'Aktualizace: chyba';
+        elements.updateCheckBtn.textContent = 'Zkusit znovu';
+        elements.updateCheckBtn.classList.remove('update-available');
+        showMessage(`Kontrola aktualizací selhala: ${error.message}`, 'error');
+    } finally {
+        elements.updateCheckBtn.disabled = false;
+    }
+}
+
+async function startApplicationUpdate() {
+    const confirmed = window.confirm(
+        'Aplikace spustí update-windows.bat v novém okně a ukončí se. Pokračovat?'
+    );
+    if (!confirmed) {
+        return;
+    }
+
+    elements.updateCheckBtn.disabled = true;
+    elements.updateStatus.textContent = 'Aktualizace: spouštím';
+    setStatusMessage('Spouštím aktualizaci...');
+
+    try {
+        const response = await window.electronAPI.startUpdate();
+        if (!response.success) {
+            throw new Error(response.message || 'Spuštění aktualizace selhalo.');
+        }
+        setStatusMessage(response.message, 5000);
+    } catch (error) {
+        console.error('Update start failed:', error);
+        elements.updateCheckBtn.disabled = false;
+        elements.updateStatus.textContent = 'Aktualizace: chyba';
+        showMessage(`Spuštění aktualizace selhalo: ${error.message}`, 'error');
     }
 }
 

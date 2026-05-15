@@ -1,10 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
 const axios = require('axios');
 const keytar = require('keytar');
 const config = require('./config');
 const BackendManager = require('./backend-manager');
+const updateManager = require('./update-manager');
 // const Updater = require('./updater');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -23,6 +23,14 @@ const backendManager = new BackendManager();
 const GEMINI_KEY_SERVICE = 'nastroje-opjak';
 const GEMINI_KEY_ACCOUNT = 'gemini-api-key';
 // const updater = new Updater();
+
+function getInstallRepoRoot() {
+    return updateManager.findRepoRoot([
+        process.cwd(),
+        app.getAppPath(),
+        path.dirname(process.execPath)
+    ]);
+}
 
 // Create the main application window
 function createWindow() {
@@ -231,6 +239,34 @@ ipcMain.handle('config:get', (event, key) => {
 ipcMain.handle('config:set', (event, key, value) => {
     config.set(key, value);
     return true;
+});
+
+ipcMain.handle('app:checkForUpdates', async () => {
+    try {
+        const repoRoot = getInstallRepoRoot();
+        const result = updateManager.checkForUpdate({ repoRoot });
+        return {
+            success: true,
+            data: result
+        };
+    } catch (error) {
+        console.error('Update check error:', error);
+        return {
+            success: false,
+            message: error.message || 'Nepodařilo se zkontrolovat aktualizace.'
+        };
+    }
+});
+
+ipcMain.handle('app:startUpdate', async () => {
+    const repoRoot = getInstallRepoRoot();
+    const result = updateManager.startUpdate({ repoRoot });
+    if (result.success) {
+        setTimeout(() => {
+            app.quit();
+        }, 1000);
+    }
+    return result;
 });
 
 ipcMain.handle('secure:gemini:getStatus', async () => {
