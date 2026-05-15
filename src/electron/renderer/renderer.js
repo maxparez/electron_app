@@ -2469,11 +2469,12 @@ function updateCharacterCounter(textarea, counter) {
 function parseProjectsInput(input) {
     const projects = [];
     const lines = input.trim().split('\n');
-    
+    const projectIdPattern = /^(CZ\.\d{2}\.\d{2}\.\d{2}\/\d{2}\/\d{2}_\d{3}\/[A-Z0-9]{7})(?:\s+(.+))?$/i;
+
     for (const line of lines) {
         const trimmedLine = line.trim();
         if (!trimmedLine) continue;
-        
+
         let parts;
         // Try different separators - semicolon and tab are primary
         if (trimmedLine.includes(';')) {
@@ -2483,9 +2484,17 @@ function parseProjectsInput(input) {
         } else if (trimmedLine.includes(' - ')) {
             parts = trimmedLine.split(' - ', 2);
         } else {
-            continue; // Skip invalid lines
+            const match = trimmedLine.match(projectIdPattern);
+            if (!match) {
+                continue; // Skip invalid lines
+            }
+
+            const id = match[1].trim();
+            const name = (match[2] || id).trim();
+            projects.push({ id, name });
+            continue;
         }
-        
+
         if (parts.length === 2) {
             const id = parts[0].trim();
             const name = parts[1].trim();
