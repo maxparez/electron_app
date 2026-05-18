@@ -5,6 +5,10 @@ const path = require('path');
 const DEFAULT_BRANCH = 'windows-install';
 const DEFAULT_CHANNEL = 'stable';
 
+function quoteCmdPath(value) {
+    return `"${String(value).replace(/"/g, '\\"')}"`;
+}
+
 function loadChannelConfig(repoRoot) {
     const configPath = path.join(repoRoot, 'channel-config.json');
     if (!fs.existsSync(configPath)) {
@@ -90,7 +94,7 @@ function startUpdate({
         child.unref();
     });
 
-    launcher('cmd.exe', ['/c', 'start', 'OPJAK-Update', 'cmd', '/k', scriptPath], {
+    launcher('cmd.exe', ['/c', `start "" cmd /k ${quoteCmdPath(scriptPath)}`], {
         cwd: repoRoot,
         detached: true,
         stdio: 'ignore',
