@@ -2472,38 +2472,19 @@ async function generatePlakat(event) {
             // Save files automatically
             if (result.data.output_files && result.data.output_files.length > 0 && targetFolder) {
                 const saveResults = await saveFilesAutomatically(result.data.output_files, targetFolder);
-                
-                // Display results with save status
-                let resultHtml = `
-                    <h3>Plakáty vygenerovány ✅</h3>
-                    <div class="result-summary">
-                        <p><strong>Úspěšně:</strong> ${result.data.successful_projects}/${result.data.total_projects}</p>
-                        ${result.data.failed_projects > 0 ? `<p><strong>Selhalo:</strong> ${result.data.failed_projects}</p>` : ''}
-                        <p><strong>Složka:</strong> ${targetFolder}</p>
-                    </div>
-                `;
-                
-                resultHtml += '<h4>Uložené soubory:</h4><div class="output-files">';
-                saveResults.forEach((saveResult, index) => {
-                    const file = result.data.output_files[index];
-                    resultHtml += `
-                        <div class="file-item">
-                            <span class="file-name">${saveResult.filename}</span>
-                            <span class="file-size">(${Math.round(file.size / 1024)} KB)</span>
-                            <span class="file-status ${saveResult.success ? 'success' : 'error'}">
-                                ${saveResult.success ? '✅ Uloženo' : '❌ Chyba'}
-                            </span>
-                        </div>
-                    `;
-                });
-                resultHtml += '</div>';
-                
+
+                const resultHtml = buildPlakatResultHtml(result, saveResults, targetFolder);
                 elements.plakatResults.innerHTML = resultHtml;
                 elements.plakatResults.classList.add('show');
-                
+
                 // Show success message
                 const successCount = saveResults.filter(r => r.success).length;
-                showMessage(`Uloženo ${successCount} plakátů do složky ${targetFolder}`, 'success');
+                const failedCount = result.data.failed_projects || 0;
+                if (failedCount > 0) {
+                    showMessage(`Uloženo ${successCount} plakátů, ${failedCount} se nevygenerovalo - detaily jsou ve výsledku`, 'warning');
+                } else {
+                    showMessage(`Uloženo ${successCount} plakátů do složky ${targetFolder}`, 'success');
+                }
             } else {
                 showMessage('Nebyla vybrána složka pro uložení', 'error');
             }
@@ -2516,6 +2497,65 @@ async function generatePlakat(event) {
         console.error('Generation error:', error);
         showMessage('Chyba při generování plakátu: ' + error.message, 'error');
     }
+}
+
+function buildPlakatResultHtml(result, saveResults, targetFolder) {
+    const data = result.data || {};
+    const failedCount = data.failed_projects || 0;
+    const outputFiles = data.output_files || [];
+    const errors = result.errors || [];
+    const warnings = result.warnings || [];
+
+    let resultHtml = `
+        <h3>Plakáty vygenerovány ✅</h3>
+        <div class="result-summary">
+            <p><strong>Úspěšně:</strong> ${data.successful_projects || 0}/${data.total_projects || 0}</p>
+            ${failedCount > 0 ? `<p class="plakat-failed-count"><strong>Selhalo:</strong> ${failedCount}</p>` : ''}
+            <p><strong>Složka:</strong> ${escapeHtml(targetFolder)}</p>
+        </div>
+    `;
+
+    if (failedCount > 0 || errors.length > 0) {
+        resultHtml += `
+            <div class="plakat-failure-details">
+                <h4>Nevygenerované plakáty</h4>
+                <p>Tyto položky backend zpracoval jako neúspěšné. Zkontrolujte registrační číslo, dostupnost služby publicita.dotaceeu.cz nebo opakujte generování později.</p>
+                <ul class="error-messages">
+        `;
+        if (errors.length > 0) {
+            errors.forEach((item) => {
+                resultHtml += `<li class="error-item">${escapeHtml(item)}</li>`;
+            });
+        } else {
+            resultHtml += `<li class="error-item">Backend nevrátil detailní důvod selhání.</li>`;
+        }
+        resultHtml += '</ul></div>';
+    }
+
+    if (warnings.length > 0) {
+        resultHtml += '<h4>Varování:</h4><ul class="warning-messages">';
+        warnings.forEach((item) => {
+            resultHtml += `<li class="warning-item">${escapeHtml(item)}</li>`;
+        });
+        resultHtml += '</ul>';
+    }
+
+    resultHtml += '<h4>Uložené soubory:</h4><div class="output-files">';
+    saveResults.forEach((saveResult, index) => {
+        const file = outputFiles[index] || {};
+        resultHtml += `
+            <div class="file-item">
+                <span class="file-name">${escapeHtml(saveResult.filename)}</span>
+                <span class="file-size">(${Math.round((file.size || 0) / 1024)} KB)</span>
+                <span class="file-status ${saveResult.success ? 'success' : 'error'}">
+                    ${saveResult.success ? '✅ Uloženo' : '❌ Chyba'}
+                </span>
+            </div>
+        `;
+    });
+    resultHtml += '</div>';
+
+    return resultHtml;
 }
 
 // Save plakat

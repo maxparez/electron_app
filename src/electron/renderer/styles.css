@@ -527,6 +527,29 @@ body {
     font-size: 13px;
 }
 
+.plakat-failed-count {
+    color: #721c24;
+}
+
+.plakat-failure-details {
+    background: #fff5f5;
+    border: 1px solid #f5c6cb;
+    border-left: 5px solid #dc3545;
+    border-radius: 6px;
+    margin: 16px 0;
+    padding: 14px 16px;
+}
+
+.plakat-failure-details h4 {
+    color: #721c24;
+    margin-top: 0;
+}
+
+.plakat-failure-details p {
+    color: #7a3a42;
+    margin-bottom: 10px;
+}
+
 h3.error {
     color: #dc3545;
     margin-bottom: 16px;
