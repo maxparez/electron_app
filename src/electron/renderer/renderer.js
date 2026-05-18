@@ -2441,9 +2441,23 @@ async function generatePlakat(event) {
         const commonText = document.getElementById('common-text').value;
         
         // Parse projects input
-        const projects = parseProjectsInput(projectsInput);
+        const parseResult = parseProjectsInputDetailed(projectsInput);
+        const projects = parseResult.projects;
         if (projects.length === 0) {
-            showMessage('Nebyli nalezeny žádné platné projekty', 'error');
+            let errorHtml = `
+                <h3 class="error">Nebyly nalezeny žádné platné projekty ❌</h3>
+                <p>Zkontrolujte formát registračních čísel projektu.</p>
+            `;
+            if (parseResult.invalidLines.length > 0) {
+                errorHtml += '<h4>Přeskočené řádky:</h4><ul class="error-messages">';
+                parseResult.invalidLines.forEach((line) => {
+                    errorHtml += `<li class="error-item">${escapeHtml(line)}</li>`;
+                });
+                errorHtml += '</ul>';
+                elements.plakatResults.innerHTML = errorHtml;
+                elements.plakatResults.classList.add('show');
+            }
+            showMessage('Nebyly nalezeny žádné platné projekty', 'error');
             return;
         }
         
@@ -2462,7 +2476,11 @@ async function generatePlakat(event) {
         };
         
         const result = await window.electronAPI.apiCall('process/plakat', 'POST', requestData);
-        
+        result.warnings = [
+            ...(result.warnings || []),
+            ...parseResult.invalidLines.map((line) => `Přeskočený neplatný řádek: ${line}`)
+        ];
+
         showLoading(false);
         
         if (result.status === 'success') {
@@ -2590,9 +2608,14 @@ function updateCharacterCounter(textarea, counter) {
 
 // Parse projects input
 function parseProjectsInput(input) {
+    return parseProjectsInputDetailed(input).projects;
+}
+
+function parseProjectsInputDetailed(input) {
     const projects = [];
     const lines = input.trim().split('\n');
     const projectIdPattern = /^(CZ\.\d{2}\.\d{2}\.[A-Z0-9]{2}\/\d{2}\/\d{2}_\d{3}\/[A-Z0-9]{7})(?:\s+(.+))?$/i;
+    const invalidLines = [];
 
     for (const line of lines) {
         const trimmedLine = line.trim();
@@ -2609,7 +2632,8 @@ function parseProjectsInput(input) {
         } else {
             const match = trimmedLine.match(projectIdPattern);
             if (!match) {
-                continue; // Skip invalid lines
+                invalidLines.push(trimmedLine);
+                continue;
             }
 
             const id = match[1].trim();
@@ -2621,14 +2645,18 @@ function parseProjectsInput(input) {
         if (parts.length === 2) {
             const id = parts[0].trim();
             const name = parts[1].trim();
-            
-            if (id && name) {
+
+            if (id && name && projectIdPattern.test(id)) {
                 projects.push({ id, name });
+            } else {
+                invalidLines.push(trimmedLine);
             }
+        } else {
+            invalidLines.push(trimmedLine);
         }
     }
-    
-    return projects;
+
+    return { projects, invalidLines };
 }
 
 // Show/hide loading overlay with optional progress
