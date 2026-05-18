@@ -5,10 +5,6 @@ const path = require('path');
 const DEFAULT_BRANCH = 'windows-install';
 const DEFAULT_CHANNEL = 'stable';
 
-function quoteCmdPath(value) {
-    return `"${String(value).replace(/"/g, '\\"')}"`;
-}
-
 function loadChannelConfig(repoRoot) {
     const configPath = path.join(repoRoot, 'channel-config.json');
     if (!fs.existsSync(configPath)) {
@@ -81,7 +77,8 @@ function startUpdate({
         };
     }
 
-    const scriptPath = path.join(repoRoot || '', 'update-windows.bat');
+    const scriptName = 'update-windows.bat';
+    const scriptPath = path.join(repoRoot || '', scriptName);
     if (!repoRoot || !fileExists(scriptPath)) {
         return {
             success: false,
@@ -94,7 +91,7 @@ function startUpdate({
         child.unref();
     });
 
-    launcher('cmd.exe', ['/c', `start "" cmd /k ${quoteCmdPath(scriptPath)}`], {
+    launcher('cmd.exe', ['/d', '/k', scriptName], {
         cwd: repoRoot,
         detached: true,
         stdio: 'ignore',
