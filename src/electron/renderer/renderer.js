@@ -2552,7 +2552,7 @@ function updateCharacterCounter(textarea, counter) {
 function parseProjectsInput(input) {
     const projects = [];
     const lines = input.trim().split('\n');
-    const projectIdPattern = /^(CZ\.\d{2}\.\d{2}\.\d{2}\/\d{2}\/\d{2}_\d{3}\/[A-Z0-9]{7})(?:\s+(.+))?$/i;
+    const projectIdPattern = /^(CZ\.\d{2}\.\d{2}\.[A-Z0-9]{2}\/\d{2}\/\d{2}_\d{3}\/[A-Z0-9]{7})(?:\s+(.+))?$/i;
 
     for (const line of lines) {
         const trimmedLine = line.trim();

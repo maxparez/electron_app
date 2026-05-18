@@ -42,6 +42,13 @@ class PlakatProjectParsingTests(unittest.TestCase):
 
         self.assertEqual([{"id": project_id, "name": project_id}], projects)
 
+    def test_parses_bare_registration_number_with_xx_program_code(self) -> None:
+        project_id = "CZ.02.02.XX/00/24_034/0012741"
+
+        projects = parse_projects_with_renderer(project_id)
+
+        self.assertEqual([{"id": project_id, "name": project_id}], projects)
+
     def test_parses_registration_number_followed_by_name(self) -> None:
         project_id = "CZ.02.02.03/00/24_034/0010781"
 
