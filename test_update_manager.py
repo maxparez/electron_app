@@ -106,6 +106,36 @@ class UpdateManagerTests(unittest.TestCase):
 
         self.assertFalse(result["success"])
 
+    def test_start_update_wraps_windows_start_title_and_script_path(self) -> None:
+        script = textwrap.dedent(
+            """
+            const assert = require('assert');
+            const { startUpdate } = require('./src/electron/update-manager');
+
+            let spawnCall = null;
+            const result = startUpdate({
+                repoRoot: 'C:/OPJAK/electron_app',
+                platform: 'win32',
+                fileExists: () => true,
+                spawnDetached: (command, args, options) => {
+                    spawnCall = { command, args, options };
+                },
+            });
+
+            assert.strictEqual(result.success, true);
+            assert.strictEqual(spawnCall.command, 'cmd.exe');
+            assert.deepStrictEqual(spawnCall.args, [
+                '/c',
+                'start "" cmd /k "C:/OPJAK/electron_app/update-windows.bat"',
+            ]);
+            process.stdout.write(JSON.stringify(spawnCall));
+            """
+        )
+
+        result = run_node(script)
+
+        self.assertEqual("cmd.exe", result["command"])
+
 
 if __name__ == "__main__":
     unittest.main()
