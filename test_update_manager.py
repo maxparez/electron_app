@@ -106,7 +106,7 @@ class UpdateManagerTests(unittest.TestCase):
 
         self.assertFalse(result["success"])
 
-    def test_start_update_wraps_windows_start_title_and_script_path(self) -> None:
+    def test_start_update_launches_batch_from_install_directory(self) -> None:
         script = textwrap.dedent(
             """
             const assert = require('assert');
@@ -124,10 +124,10 @@ class UpdateManagerTests(unittest.TestCase):
 
             assert.strictEqual(result.success, true);
             assert.strictEqual(spawnCall.command, 'cmd.exe');
-            assert.deepStrictEqual(spawnCall.args, [
-                '/c',
-                'start "" cmd /k "C:/OPJAK/electron_app/update-windows.bat"',
-            ]);
+            assert.deepStrictEqual(spawnCall.args, ['/d', '/k', 'update-windows.bat']);
+            assert.strictEqual(spawnCall.options.cwd, 'C:/OPJAK/electron_app');
+            assert.strictEqual(spawnCall.options.detached, true);
+            assert.strictEqual(spawnCall.options.windowsHide, false);
             process.stdout.write(JSON.stringify(spawnCall));
             """
         )
