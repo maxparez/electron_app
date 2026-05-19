@@ -131,6 +131,19 @@ function Publish-UpdateTranscript {
     return $finalLogPath
 }
 
+function Start-ApplicationAfterUpdate {
+    param([string]$ResolvedRepoPath)
+
+    $launcherPath = Join-Path $ResolvedRepoPath "start-app.bat"
+    if (-not (Test-Path $launcherPath)) {
+        Write-Host "Varování: start-app.bat nebyl nalezen, aplikaci spusťte ručně." -ForegroundColor Yellow
+        return
+    }
+
+    Write-Host "Aplikace se znovu spouští..." -ForegroundColor Green
+    Start-Process -FilePath $launcherPath -WorkingDirectory $resolvedRepoPath
+}
+
 Ensure-Command -CommandName "git" -DisplayName "Git for Windows" -DownloadUrl "https://git-scm.com/download/win"
 Ensure-Command -CommandName "python" -DisplayName "Python 3.11+" -DownloadUrl "https://www.python.org/downloads/"
 Ensure-Command -CommandName "npm" -DisplayName "Node.js 18 LTS" -DownloadUrl "https://nodejs.org/"
@@ -210,7 +223,7 @@ try {
     }
 
     Write-Step "Aktualizace dokončena"
-    Write-Host "Aplikaci můžete spustit zástupcem nebo start-app.bat." -ForegroundColor Green
+    Start-ApplicationAfterUpdate -ResolvedRepoPath $resolvedRepoPath
 }
 finally {
     if ($locationPushed) {
