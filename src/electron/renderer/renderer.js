@@ -136,6 +136,8 @@ const elements = {
 };
 
 let pendingUpdateInfo = null;
+let automaticUpdatePromptShown = false;
+const AUTO_UPDATE_CHECK_DELAY_MS = 3000;
 
 const CERT_SYSTEM_PROMPT = `### ROLE A CÍL ###
 Jsi "Certifikátor v2.1", ultra-přesný AI asistent specializovaný na OCR extrakci dat z certifikátů a osvědčení o dalším vzdělávání pedagogických pracovníků (DVPP). Tvým jediným cílem je bezchybně extrahovat klíčové údaje z dodaných dokumentů a zformátovat je pro přímé vložení do tabulkového procesoru.
@@ -348,6 +350,7 @@ async function init() {
     
     // Check backend connection
     checkBackendConnection();
+    scheduleAutomaticUpdateCheck();
 }
 
 // Switch between tools
@@ -385,11 +388,57 @@ async function handleUpdateAction() {
     await checkApplicationUpdates();
 }
 
-async function checkApplicationUpdates() {
+function formatUpdatePromptMessage(updateInfo, { automatic = false } = {}) {
+    const intro = automatic
+        ? 'Je dostupná nová verze aplikace.'
+        : 'Aplikace spustí aktualizaci v novém okně a ukončí se.';
+    const summary = updateInfo?.latestSummary ? `\n\nNová verze: ${updateInfo.latestSummary}` : '';
+    const branch = updateInfo?.branch ? `\nKanál: ${updateInfo.branch}` : '';
+
+    return `${intro}${summary}${branch}\n\nSpustit aktualizaci a restartovat aplikaci?`;
+}
+
+async function maybePromptForAutomaticUpdate(
+    updateInfo,
+    {
+        prompt = window.confirm,
+        startUpdate = startApplicationUpdate
+    } = {}
+) {
+    if (!updateInfo?.updateAvailable || automaticUpdatePromptShown) {
+        return false;
+    }
+
+    automaticUpdatePromptShown = true;
+    const confirmed = prompt(formatUpdatePromptMessage(updateInfo, { automatic: true }));
+    if (!confirmed) {
+        return false;
+    }
+
+    await startUpdate({ skipConfirmation: true });
+    return true;
+}
+
+function scheduleAutomaticUpdateCheck({
+    delayMs = AUTO_UPDATE_CHECK_DELAY_MS,
+    setTimer = (callback, delay) => window.setTimeout(callback, delay)
+} = {}) {
+    if (!window.electronAPI?.checkForUpdates || !elements.updateCheckBtn || !elements.updateStatus) {
+        return;
+    }
+
+    setTimer(() => {
+        checkApplicationUpdates({ automatic: true, promptForUpdate: true });
+    }, delayMs);
+}
+
+async function checkApplicationUpdates({ automatic = false, promptForUpdate = false } = {}) {
     elements.updateCheckBtn.disabled = true;
     elements.updateCheckBtn.textContent = 'Kontroluji...';
     elements.updateStatus.textContent = 'Aktualizace: kontroluji';
-    setStatusMessage('Kontroluji dostupnost aktualizací...');
+    if (!automatic) {
+        setStatusMessage('Kontroluji dostupnost aktualizací...');
+    }
 
     try {
         const response = await window.electronAPI.checkForUpdates();
@@ -404,30 +453,34 @@ async function checkApplicationUpdates() {
             elements.updateCheckBtn.textContent = 'Spustit update';
             elements.updateCheckBtn.classList.add('update-available');
             setStatusMessage(`Dostupná aktualizace: ${updateInfo.latestSummary}`, 8000);
+            if (promptForUpdate) {
+                await maybePromptForAutomaticUpdate(updateInfo);
+            }
         } else {
             pendingUpdateInfo = null;
             elements.updateStatus.textContent = 'Aktualizace: aktuální';
             elements.updateCheckBtn.textContent = 'Zkontrolovat aktualizace';
             elements.updateCheckBtn.classList.remove('update-available');
-            setStatusMessage('Aplikace je aktuální.', 4000);
+            if (!automatic) {
+                setStatusMessage('Aplikace je aktuální.', 4000);
+            }
         }
     } catch (error) {
         console.error('Update check failed:', error);
         pendingUpdateInfo = null;
-        elements.updateStatus.textContent = 'Aktualizace: chyba';
+        elements.updateStatus.textContent = automatic ? 'Aktualizace: nezkontrolováno' : 'Aktualizace: chyba';
         elements.updateCheckBtn.textContent = 'Zkusit znovu';
         elements.updateCheckBtn.classList.remove('update-available');
-        showMessage(`Kontrola aktualizací selhala: ${error.message}`, 'error');
+        if (!automatic) {
+            showMessage(`Kontrola aktualizací selhala: ${error.message}`, 'error');
+        }
     } finally {
         elements.updateCheckBtn.disabled = false;
     }
 }
 
-async function startApplicationUpdate() {
-    const confirmed = window.confirm(
-        'Aplikace spustí update-windows.bat v novém okně a ukončí se. Pokračovat?'
-    );
-    if (!confirmed) {
+async function startApplicationUpdate({ skipConfirmation = false } = {}) {
+    if (!skipConfirmation && !window.confirm(formatUpdatePromptMessage(pendingUpdateInfo))) {
         return;
     }
 
