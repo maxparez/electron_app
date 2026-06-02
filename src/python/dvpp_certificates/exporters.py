@@ -119,8 +119,15 @@ def export_records_to_esf_csv(
     writer = csv.writer(buffer, delimiter=";", lineterminator="\n")
     writer.writerow(ESF_HEADER)
 
+    seen_people = set()
     for record in records:
-        writer.writerow(_format_esf_row(_coerce_working_record(record), metadata))
+        working_record = _coerce_working_record(record)
+        person_key = _person_identity_key(working_record)
+        if person_key in seen_people:
+            continue
+
+        seen_people.add(person_key)
+        writer.writerow(_format_esf_row(working_record, metadata))
 
     content = buffer.getvalue()
 
@@ -214,6 +221,14 @@ def _format_esf_row(record: CertificateRecord, export_metadata: ExportMetadata) 
     if record.pohlavi:
         row[17] = record.pohlavi
     return row
+
+
+def _person_identity_key(record: CertificateRecord) -> tuple[str, str, str]:
+    return (
+        record.surname.strip().casefold(),
+        record.name.strip().casefold(),
+        record.birth_date.strip(),
+    )
 
 
 def _write_records_with_xlwings(

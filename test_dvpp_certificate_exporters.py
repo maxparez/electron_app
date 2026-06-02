@@ -346,6 +346,31 @@ class DvppCertificateExportersTests(unittest.TestCase):
             self.assertEqual("02.09.2025", row[16])
             self.assertEqual("POHZENY", row[17])
 
+    def test_export_records_to_esf_csv_writes_each_person_once(self) -> None:
+        first_record = build_working_record_payload()
+        duplicate_record = build_working_record_payload()
+        duplicate_record["working_record"]["course_name"] = "Jiny kurz"
+        duplicate_record["working_record"]["completion_date"] = "20.04.2024"
+        duplicate_record["working_record"]["hours"] = "24"
+        unique_record = build_working_record_payload()
+        unique_record["working_record"]["name"] = "Petr"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "osoby.csv"
+            result = export_records_to_esf_csv(
+                [first_record, duplicate_record, unique_record],
+                output_path=str(output_path),
+            )
+
+            self.assertEqual(str(output_path), result["output_path"])
+            lines = output_path.read_text(encoding="utf-8-sig").splitlines()
+            self.assertEqual(3, len(lines))
+            rows = [line.split(";") for line in lines[1:]]
+            self.assertEqual(
+                [("Jana", "Novakova", "05.09.1980"), ("Petr", "Novakova", "05.09.1980")],
+                [(row[0], row[1], row[2]) for row in rows],
+            )
+
     def test_resolve_excel_template_path_uses_default_template(self) -> None:
         self.assertEqual(DEFAULT_EXCEL_TEMPLATE_PATH, resolve_excel_template_path(None))
 
