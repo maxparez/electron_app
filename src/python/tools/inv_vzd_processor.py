@@ -619,6 +619,7 @@ class InvVzdProcessor(BaseTool):
                 
                 # Format as DD.MM.YYYY
                 df['datum'] = df['datum'].dt.strftime('%d.%m.%Y')
+                self._add_16h_date_interval_warnings(df['datum'])
             
             # Format time if present
             if 'cas' in df.columns:
@@ -639,6 +640,43 @@ class InvVzdProcessor(BaseTool):
         except Exception as e:
             self.add_error(f"Chyba při čtení 16 hodinových dat: {str(e)}")
             return None
+
+    def _get_16h_allowed_date_interval(self, reference_date: datetime) -> Tuple[datetime, datetime]:
+        """Return the allowed half-year interval for a 16h activity date."""
+        month = reference_date.month
+        year = reference_date.year
+
+        if 2 <= month <= 7:
+            return datetime(year, 2, 1), datetime(year, 7, 31)
+
+        if month == 1:
+            return datetime(year - 1, 8, 1), datetime(year, 1, 31)
+
+        return datetime(year, 8, 1), datetime(year + 1, 1, 31)
+
+    def _add_16h_date_interval_warnings(self, date_values: pd.Series):
+        """Warn when 16h activity dates do not fit one allowed half-year interval."""
+        parsed_dates = pd.to_datetime(
+            date_values,
+            format='%d.%m.%Y',
+            dayfirst=True,
+            errors='coerce'
+        ).dropna()
+
+        if parsed_dates.empty:
+            return
+
+        interval_start, interval_end = self._get_16h_allowed_date_interval(parsed_dates.iloc[0])
+
+        for activity_date in parsed_dates:
+            if interval_start <= activity_date <= interval_end:
+                continue
+
+            self.add_warning(
+                "Datum "
+                f"{activity_date.strftime('%d.%m.%Y')} je mimo povolený interval "
+                f"{interval_start.strftime('%d.%m.%Y')} - {interval_end.strftime('%d.%m.%Y')}"
+            )
             
     def _read_32_hour_data(self, source_file: str) -> Optional[pd.DataFrame]:
         """Read data from 32 hour source file (List1 or zdroj-dochazka sheet)"""
