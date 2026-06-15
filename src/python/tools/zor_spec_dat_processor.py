@@ -271,6 +271,7 @@ class ZorSpecDatProcessor(BaseTool):
             # Add template name
             template_name = self._get_template_name(excel_file)
             df['sablona'] = template_name
+            df['source_file'] = os.path.basename(excel_file)
             
             # Generate aggregated results
             forma_agg = self._aggregate(df, "forma", "forma")
@@ -615,8 +616,14 @@ class ZorSpecDatProcessor(BaseTool):
         Returns:
             DataFrame with single row: MŠ, ZŠ, ŠD, ZUŠ, SŠ columns with student counts
         """
-        # Group by student name and school (sablona), sum all hours
-        student_hours = df.groupby(['jmena', 'sablona'], as_index=False)['pocet_hodin'].sum()
+        # Group by student name, school (sablona), and source file if available.
+        # A single class can complete multiple innovation records with the same
+        # template name; each source file is reported as a separate record.
+        group_columns = ['jmena', 'sablona']
+        if 'source_file' in df.columns:
+            group_columns.append('source_file')
+
+        student_hours = df.groupby(group_columns, as_index=False)['pocet_hodin'].sum()
 
         # Filter records with >= threshold hours
         students_threshold_plus = student_hours[student_hours['pocet_hodin'] >= hour_threshold].copy()
