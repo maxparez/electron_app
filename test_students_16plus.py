@@ -131,6 +131,26 @@ def test_edge_cases():
 
     print("✅ All edge cases passed!")
 
+def test_same_students_in_multiple_source_files_count_per_file():
+    """Same students in separate source files should count once per file."""
+    print("\n=== Testing Multiple Source Files With Same Template ===\n")
+
+    processor = ZorSpecDatProcessor()
+
+    df_multiple_files = pd.DataFrame({
+        'ca': ['ca1'] * 4 + ['ca2'] * 4,
+        'jmena': ['Student 1'] * 2 + ['Student 2'] * 2 + ['Student 1'] * 2 + ['Student 2'] * 2,
+        'sablona': ['ZŠ Same Template'] * 8,
+        'source_file': ['record_a.xlsx'] * 4 + ['record_b.xlsx'] * 4,
+        'pocet_hodin': [8, 8, 10, 6, 8, 8, 10, 6]
+    })
+
+    result = processor._calculate_students_16plus_by_type(df_multiple_files)
+
+    assert result['ZŠ'].values[0] == 4
+    print(f"  Result: ZŠ={result['ZŠ'].values[0]} (expected 4)")
+    print("  ✅ PASS\n")
+
 if __name__ == "__main__":
     try:
         print("=" * 60)
@@ -139,6 +159,7 @@ if __name__ == "__main__":
 
         result1 = test_students_16plus_calculation()
         test_edge_cases()
+        test_same_students_in_multiple_source_files_count_per_file()
 
         print("\n" + "=" * 60)
         if result1:
