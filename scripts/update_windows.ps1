@@ -144,6 +144,31 @@ function Start-ApplicationAfterUpdate {
     Start-Process -FilePath $launcherPath -WorkingDirectory $resolvedRepoPath
 }
 
+function Repair-ElectronRuntime {
+    Write-Step "Kontrola Electron runtime"
+    & node "scripts\check_electron_runtime.js" "--repair-path" | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Electron runtime je v pořádku." -ForegroundColor Green
+        return
+    }
+
+    Write-Host "Electron runtime je poškozený nebo nedotažený, opravuji..." -ForegroundColor Yellow
+    $electronPath = Join-Path (Get-Location).Path "node_modules\electron"
+    if (Test-Path $electronPath) {
+        Remove-Item -Recurse -Force $electronPath
+    }
+
+    npm install --foreground-scripts
+    if ($LASTEXITCODE -ne 0) {
+        throw "Nepodařilo se opravit Electron runtime."
+    }
+
+    & node "scripts\check_electron_runtime.js" "--repair-path" | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Electron runtime stále není funkční ani po opravě."
+    }
+}
+
 Ensure-Command -CommandName "git" -DisplayName "Git for Windows" -DownloadUrl "https://git-scm.com/download/win"
 Ensure-Command -CommandName "python" -DisplayName "Python 3.11+" -DownloadUrl "https://www.python.org/downloads/"
 Ensure-Command -CommandName "npm" -DisplayName "Node.js 18 LTS" -DownloadUrl "https://nodejs.org/"
@@ -211,6 +236,10 @@ try {
 
     Write-Step "Node.js závislosti"
     npm ci
+    if ($LASTEXITCODE -ne 0) {
+        throw "npm ci selhalo."
+    }
+    Repair-ElectronRuntime
 
     if (-not $SkipTests) {
         Write-Step "Test: students_16plus"
