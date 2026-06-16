@@ -51,6 +51,29 @@ echo [START] Channel=%APP_CHANNEL% Debug=%DEBUG_LOGGING% > "%LOG_FILE%"
 echo [START] WorkingDirectory=%REPO_DIR% >> "%LOG_FILE%"
 echo [START] Timestamp=%TIMESTAMP% >> "%LOG_FILE%"
 
+node "%REPO_DIR%\scripts\check_electron_runtime.js" --repair-path >nul 2>&1
+if errorlevel 1 (
+    echo [START] Electron runtime je poskozeny nebo nedotazeny, opravuji... >> "%LOG_FILE%"
+    if exist "%REPO_DIR%\node_modules\electron" rmdir /s /q "%REPO_DIR%\node_modules\electron" >> "%LOG_FILE%" 2>&1
+    npm install --foreground-scripts >> "%LOG_FILE%" 2>&1
+    if errorlevel 1 (
+        echo [START] Oprava Electron runtime selhala. >> "%LOG_FILE%"
+        echo Nepodarilo se opravit Electron runtime. Zkontrolujte pripojeni k internetu, proxy nebo antivirus.
+        pause
+        popd
+        exit /b 1
+    )
+    node "%REPO_DIR%\scripts\check_electron_runtime.js" --repair-path >nul 2>&1
+    if errorlevel 1 (
+        echo [START] Electron runtime stale neni funkcni ani po oprave. >> "%LOG_FILE%"
+        echo Electron runtime stale neni funkcni ani po oprave.
+        pause
+        popd
+        exit /b 1
+    )
+    echo [START] Electron runtime opraven. >> "%LOG_FILE%"
+)
+
 REM Spuštění Electron aplikace (ta si sama spustí a ukončí Python backend)
 npm start >> "%LOG_FILE%" 2>&1
 

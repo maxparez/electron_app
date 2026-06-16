@@ -70,6 +70,22 @@ class RuntimeConsistencyTests(unittest.TestCase):
         self.assertIn('scripts\\install_windows.ps1', content)
         self.assertIn('powershell -NoProfile -ExecutionPolicy Bypass -File "%INSTALL_SCRIPT%" %*', content)
 
+    def test_windows_installers_repair_broken_electron_runtime(self) -> None:
+        helper = (REPO_ROOT / "scripts" / "check_electron_runtime.js").read_text(encoding="utf-8")
+        self.assertIn("fs.existsSync(electronExecutable)", helper)
+        self.assertIn("fs.writeFileSync(pathFile, executablePath", helper)
+        self.assertIn(".trim()", helper)
+
+        for script_name in ("install_windows.ps1", "update_windows.ps1"):
+            content = (REPO_ROOT / "scripts" / script_name).read_text(encoding="utf-8")
+            self.assertIn("function Repair-ElectronRuntime", content)
+            self.assertIn('node "scripts\\check_electron_runtime.js" "--repair-path"', content)
+            self.assertIn("npm install --foreground-scripts", content)
+
+        start_app = (REPO_ROOT / "start-app.bat").read_text(encoding="utf-8")
+        self.assertIn("scripts\\check_electron_runtime.js", start_app)
+        self.assertIn("npm install --foreground-scripts", start_app)
+
     def test_windows_entrypoint_scripts_use_crlf_line_endings(self) -> None:
         script_paths = [
             REPO_ROOT / "install-windows.bat",
@@ -97,6 +113,11 @@ class RuntimeConsistencyTests(unittest.TestCase):
         self.assertEqual(package_version, production_config["app"]["version"])
         self.assertEqual(f"{package_version}-dev", development_config["app"]["version"])
         self.assertIn(f'version: "{package_version}"', electron_config)
+
+    def test_package_lock_is_compatible_with_strict_npm_ci(self) -> None:
+        package_lock = json.loads((REPO_ROOT / "package-lock.json").read_text(encoding="utf-8"))
+
+        self.assertIn("node_modules/encoding", package_lock["packages"])
 
     def test_plakat_endpoint_cleans_up_temporary_directory(self) -> None:
         temp_root = Path(tempfile.mkdtemp(prefix="plakat-endpoint-root-"))
