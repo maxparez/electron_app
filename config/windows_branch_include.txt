@@ -6,6 +6,7 @@ channel-config.json
 docs/windows_install.html
 scripts/install_windows.ps1
 scripts/update_windows.ps1
+scripts/check_electron_runtime.js
 start-app.bat
 start-backend.bat
 start-frontend.bat

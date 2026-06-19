@@ -86,6 +86,40 @@ class RuntimeConsistencyTests(unittest.TestCase):
         self.assertIn("scripts\\check_electron_runtime.js", start_app)
         self.assertIn("npm install --foreground-scripts", start_app)
 
+    def test_windows_npm_commands_always_install_electron_dev_dependencies(self) -> None:
+        script_paths = [
+            REPO_ROOT / "scripts" / "install_windows.ps1",
+            REPO_ROOT / "scripts" / "update_windows.ps1",
+            REPO_ROOT / "start-app.bat",
+            REPO_ROOT / "install-windows-standalone.bat",
+        ]
+
+        for script_path in script_paths:
+            content = script_path.read_text(encoding="utf-8")
+            npm_install_commands = [
+                line.strip()
+                for line in content.splitlines()
+                if line.strip().startswith(("npm ci", "npm install", "call npm ci", "call npm install"))
+            ]
+            self.assertTrue(npm_install_commands, f"No npm install command found in {script_path.name}")
+            for command in npm_install_commands:
+                self.assertIn(
+                    "--include=dev",
+                    command,
+                    f"Electron can be omitted by production npm config: {script_path.name}: {command}",
+                )
+
+    def test_windows_branch_includes_electron_runtime_check(self) -> None:
+        include_paths = {
+            line.strip()
+            for line in (REPO_ROOT / "config" / "windows_branch_include.txt")
+            .read_text(encoding="utf-8")
+            .splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        }
+
+        self.assertIn("scripts/check_electron_runtime.js", include_paths)
+
     def test_windows_entrypoint_scripts_use_crlf_line_endings(self) -> None:
         script_paths = [
             REPO_ROOT / "install-windows.bat",
