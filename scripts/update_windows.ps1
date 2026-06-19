@@ -158,7 +158,7 @@ function Repair-ElectronRuntime {
         Remove-Item -Recurse -Force $electronPath
     }
 
-    npm install --foreground-scripts
+    npm install --foreground-scripts --include=dev
     if ($LASTEXITCODE -ne 0) {
         throw "Nepodařilo se opravit Electron runtime."
     }
@@ -235,7 +235,7 @@ try {
     & $venvPython -m pip install -r (Join-Path $resolvedRepoPath "requirements-windows.txt")
 
     Write-Step "Node.js závislosti"
-    npm ci
+    npm ci --include=dev
     if ($LASTEXITCODE -ne 0) {
         throw "npm ci selhalo."
     }

@@ -69,7 +69,7 @@ function Repair-ElectronRuntime {
         Remove-Item -Recurse -Force $electronPath
     }
 
-    npm install --foreground-scripts
+    npm install --foreground-scripts --include=dev
     if ($LASTEXITCODE -ne 0) {
         throw "Nepodařilo se opravit Electron runtime."
     }
@@ -143,7 +143,7 @@ if (-not (Test-Path $venvPython)) {
 
 Write-Step "Instalace Node modulů (runtime)"
 Push-Location $repoPath
-npm ci
+npm ci --include=dev
 if ($LASTEXITCODE -ne 0) {
     throw "npm ci selhalo."
 }

@@ -55,7 +55,7 @@ node "%REPO_DIR%\scripts\check_electron_runtime.js" --repair-path >nul 2>&1
 if errorlevel 1 (
     echo [START] Electron runtime je poskozeny nebo nedotazeny, opravuji... >> "%LOG_FILE%"
     if exist "%REPO_DIR%\node_modules\electron" rmdir /s /q "%REPO_DIR%\node_modules\electron" >> "%LOG_FILE%" 2>&1
-    npm install --foreground-scripts >> "%LOG_FILE%" 2>&1
+    npm install --foreground-scripts --include=dev >> "%LOG_FILE%" 2>&1
     if errorlevel 1 (
         echo [START] Oprava Electron runtime selhala. >> "%LOG_FILE%"
         echo Nepodarilo se opravit Electron runtime. Zkontrolujte pripojeni k internetu, proxy nebo antivirus.
