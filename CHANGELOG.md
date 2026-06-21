@@ -19,6 +19,7 @@ Všechny významné změny v tomto projektu budou zdokumentovány v tomto soubor
 
 - **Odstranění duplicit v ESF exportu**: Export evidence účastníků sjednocuje opakované osoby a zabraňuje vytváření duplicitních záznamů.
 - **Odolnější spuštění na Windows**: Instalace, aktualizace i start aplikace nyní kontrolují Electron runtime a v případě neúplné instalace jej automaticky opraví.
+- **Správný aktualizační kanál**: Kontrola i další spuštění aktualizace respektují skutečně aktivní větev a aplikace nikdy nenabídne starší verzi jako aktualizaci.
 
 ## [1.3.0] - 2026-04-20
 

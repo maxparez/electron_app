@@ -17,6 +17,16 @@ class UpdateRestartScriptTests(unittest.TestCase):
         self.assertIn("-WorkingDirectory $resolvedRepoPath", content)
         self.assertIn("Aplikace se znovu spouští", content)
 
+    def test_update_script_keeps_checked_out_branch_without_override(self) -> None:
+        content = UPDATE_SCRIPT.read_text(encoding="utf-8")
+
+        self.assertIn('git -C $resolvedRepoPath branch --show-current', content)
+        self.assertIn('$Branch = $checkedOutBranch', content)
+        self.assertLess(
+            content.index('$Branch = $checkedOutBranch'),
+            content.index('$Branch = $initialConfig.branch'),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

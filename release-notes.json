@@ -1,7 +1,7 @@
 {
   "version": "1.4.0",
   "date": "2026-06-21",
-  "summary": "Verze 1.4.0: 2 nové funkce, 3 vylepšení a 2 opravy.",
+  "summary": "Verze 1.4.0: 2 nové funkce, 3 vylepšení a 3 opravy.",
   "sections": {
     "features": [
       {
@@ -35,6 +35,10 @@
       {
         "title": "Odolnější spuštění na Windows",
         "description": "Instalace, aktualizace i start aplikace nyní kontrolují Electron runtime a v případě neúplné instalace jej automaticky opraví."
+      },
+      {
+        "title": "Správný aktualizační kanál",
+        "description": "Kontrola i další spuštění aktualizace respektují skutečně aktivní větev a aplikace nikdy nenabídne starší verzi jako aktualizaci."
       }
     ]
   }

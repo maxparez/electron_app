@@ -22,6 +22,83 @@ def run_node(script: str):
 
 
 class UpdateManagerTests(unittest.TestCase):
+    def test_check_for_update_prefers_checked_out_branch_over_stale_config(self) -> None:
+        script = textwrap.dedent(
+            """
+            const assert = require('assert');
+            const { checkForUpdate } = require('./src/electron/update-manager');
+
+            const calls = [];
+            const result = checkForUpdate({
+                repoRoot: 'C:/OPJAK/electron_app',
+                channelConfig: { branch: 'windows-install', channel: 'stable' },
+                execGit: (args) => {
+                    calls.push(args);
+                    if (args.join(' ') === 'branch --show-current') {
+                        return 'feat-171-split-attendance\\n';
+                    }
+                    if (args[0] === 'rev-parse' && args[1] === 'HEAD') return 'local-sha\\n';
+                    if (args[0] === 'rev-parse') return 'remote-sha\\n';
+                    if (args[0] === 'show' && args[1] === 'HEAD:package.json') {
+                        return JSON.stringify({ version: '1.4.0' });
+                    }
+                    if (args[0] === 'show' && args[1] === 'origin/feat-171-split-attendance:package.json') {
+                        return JSON.stringify({ version: '1.4.0' });
+                    }
+                    if (args[0] === 'show') throw new Error('notes missing');
+                    if (args[0] === 'log') return 'remote-sha 2026-06-21 [fix] Test build\\n';
+                    return '';
+                },
+            });
+
+            assert.strictEqual(result.branch, 'feat-171-split-attendance');
+            assert.strictEqual(result.channel, 'test');
+            assert.deepStrictEqual(calls[1], ['fetch', 'origin', 'feat-171-split-attendance']);
+            process.stdout.write(JSON.stringify(result));
+            """
+        )
+
+        result = run_node(script)
+
+        self.assertEqual("feat-171-split-attendance", result["branch"])
+        self.assertEqual("test", result["channel"])
+
+    def test_check_for_update_never_offers_older_remote_version(self) -> None:
+        script = textwrap.dedent(
+            """
+            const assert = require('assert');
+            const { checkForUpdate } = require('./src/electron/update-manager');
+
+            const result = checkForUpdate({
+                repoRoot: 'C:/OPJAK/electron_app',
+                channelConfig: { branch: 'windows-install', channel: 'stable' },
+                execGit: (args) => {
+                    if (args.join(' ') === 'branch --show-current') return 'windows-install\\n';
+                    if (args[0] === 'rev-parse' && args[1] === 'HEAD') return 'local-sha\\n';
+                    if (args[0] === 'rev-parse') return 'older-remote-sha\\n';
+                    if (args[0] === 'show' && args[1] === 'HEAD:package.json') {
+                        return JSON.stringify({ version: '1.4.0' });
+                    }
+                    if (args[0] === 'show' && args[1] === 'origin/windows-install:package.json') {
+                        return JSON.stringify({ version: '1.3.0' });
+                    }
+                    if (args[0] === 'show') throw new Error('notes missing');
+                    if (args[0] === 'log') return 'older 2026-06-19 [release] Old\\n';
+                    return '';
+                },
+            });
+
+            assert.strictEqual(result.updateAvailable, false);
+            assert.strictEqual(result.downgradeBlocked, true);
+            process.stdout.write(JSON.stringify(result));
+            """
+        )
+
+        result = run_node(script)
+
+        self.assertFalse(result["updateAvailable"])
+        self.assertTrue(result["downgradeBlocked"])
+
     def test_check_for_update_compares_local_head_to_remote_channel(self) -> None:
         script = textwrap.dedent(
             """
@@ -41,7 +118,8 @@ class UpdateManagerTests(unittest.TestCase):
                 },
             });
 
-            assert.deepStrictEqual(calls[0], ['fetch', 'origin', 'windows-install']);
+            assert.deepStrictEqual(calls[0], ['branch', '--show-current']);
+            assert.deepStrictEqual(calls[1], ['fetch', 'origin', 'windows-install']);
             assert.strictEqual(result.updateAvailable, true);
             assert.strictEqual(result.localCommit, 'local-sha');
             assert.strictEqual(result.remoteCommit, 'remote-sha');
@@ -109,6 +187,9 @@ class UpdateManagerTests(unittest.TestCase):
                     if (args[0] === 'rev-parse') return 'remote-sha\\n';
                     if (args[0] === 'show' && args[1] === 'HEAD:package.json') {
                         return JSON.stringify({ version: '1.3.0' });
+                    }
+                    if (args[0] === 'show' && args[1] === 'origin/windows-install:package.json') {
+                        return JSON.stringify({ version: '1.4.0' });
                     }
                     if (args[0] === 'show' && args[1] === 'origin/windows-install:release-notes.json') {
                         return JSON.stringify(releaseNotes);
@@ -191,7 +272,7 @@ class UpdateManagerTests(unittest.TestCase):
             });
 
             assert.strictEqual(result.releaseNotes, null);
-            assert.strictEqual(result.latestVersion, null);
+            assert.strictEqual(result.latestVersion, '1.4.0');
             process.stdout.write(JSON.stringify(result));
             """
         )
@@ -199,7 +280,7 @@ class UpdateManagerTests(unittest.TestCase):
         result = run_node(script)
 
         self.assertIsNone(result["releaseNotes"])
-        self.assertIsNone(result["latestVersion"])
+        self.assertEqual("1.4.0", result["latestVersion"])
 
     def test_start_update_requires_windows_and_update_script(self) -> None:
         script = textwrap.dedent(
