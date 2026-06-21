@@ -18,6 +18,8 @@ requirements-windows.txt
 requirements.txt
 package.json
 package-lock.json
+release-notes.json
+CHANGELOG.md
 icon.ico
 config
 src

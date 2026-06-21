@@ -32,6 +32,15 @@ function createGitExecutor(repoRoot) {
     });
 }
 
+function readGitJson(runGit, objectSpec) {
+    try {
+        const rawValue = runGit(['show', objectSpec]);
+        return JSON.parse(rawValue);
+    } catch (error) {
+        return null;
+    }
+}
+
 function checkForUpdate({ repoRoot, channelConfig = null, execGit = null } = {}) {
     if (!repoRoot) {
         throw new Error('Repozitář aplikace nebyl nalezen.');
@@ -53,6 +62,13 @@ function checkForUpdate({ repoRoot, channelConfig = null, execGit = null } = {})
         '--date=short',
         remoteRef
     ]).trim();
+    const localPackage = readGitJson(runGit, 'HEAD:package.json');
+    const remoteReleaseNotes = readGitJson(runGit, `${remoteRef}:release-notes.json`);
+    const releaseNotes = (
+        remoteReleaseNotes?.version &&
+        remoteReleaseNotes?.sections &&
+        remoteReleaseNotes.version !== localPackage?.version
+    ) ? remoteReleaseNotes : null;
 
     return {
         updateAvailable: localCommit !== remoteCommit,
@@ -60,7 +76,10 @@ function checkForUpdate({ repoRoot, channelConfig = null, execGit = null } = {})
         channel,
         localCommit,
         remoteCommit,
-        latestSummary
+        latestSummary,
+        currentVersion: localPackage?.version || null,
+        latestVersion: releaseNotes?.version || null,
+        releaseNotes
     };
 }
 

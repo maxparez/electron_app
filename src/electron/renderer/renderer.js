@@ -142,7 +142,15 @@ const elements = {
 
     // Updates
     updateStatus: document.getElementById('update-status'),
-    updateCheckBtn: document.getElementById('update-check-btn')
+    updateCheckBtn: document.getElementById('update-check-btn'),
+    updateModal: document.getElementById('update-modal'),
+    updateModalCurrentVersion: document.getElementById('update-modal-current-version'),
+    updateModalLatestVersion: document.getElementById('update-modal-latest-version'),
+    updateModalChannel: document.getElementById('update-modal-channel'),
+    updateModalSummary: document.getElementById('update-modal-summary'),
+    updateModalChanges: document.getElementById('update-modal-changes'),
+    updateModalLaterBtn: document.getElementById('update-modal-later'),
+    updateModalInstallBtn: document.getElementById('update-modal-install')
 };
 
 let pendingUpdateInfo = null;
@@ -229,6 +237,15 @@ async function init() {
     if (elements.updateCheckBtn) {
         elements.updateCheckBtn.addEventListener('click', handleUpdateAction);
     }
+    elements.updateModalLaterBtn.addEventListener('click', closeUpdateModal);
+    elements.updateModalInstallBtn.addEventListener('click', () => {
+        startApplicationUpdate({ skipConfirmation: true });
+    });
+    elements.updateModal.addEventListener('click', (event) => {
+        if (event.target === elements.updateModal) {
+            closeUpdateModal();
+        }
+    });
     
     // Setup navigation
     elements.navItems.forEach(item => {
@@ -305,6 +322,9 @@ async function init() {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && !elements.certPromptsModal.hidden) {
             closeCertificatePromptsModal();
+        }
+        if (event.key === 'Escape' && !elements.updateModal.hidden) {
+            closeUpdateModal();
         }
     });
     bindSharedResultInteractionHandlers();
@@ -395,7 +415,7 @@ function switchTool(toolId) {
 
 async function handleUpdateAction() {
     if (pendingUpdateInfo) {
-        await startApplicationUpdate();
+        openUpdateModal(pendingUpdateInfo);
         return;
     }
 
@@ -403,20 +423,71 @@ async function handleUpdateAction() {
 }
 
 function formatUpdatePromptMessage(updateInfo, { automatic = false } = {}) {
-    const intro = automatic
-        ? 'Je dostupná nová verze aplikace.'
-        : 'Aplikace spustí aktualizaci v novém okně a ukončí se.';
-    const summary = updateInfo?.latestSummary ? `\n\nNová verze: ${updateInfo.latestSummary}` : '';
-    const branch = updateInfo?.branch ? `\nKanál: ${updateInfo.branch}` : '';
+    const intro = automatic ? 'Je dostupná nová verze aplikace.' : 'Aktualizace aplikace';
+    const version = updateInfo?.latestVersion ? ` ${updateInfo.latestVersion}` : '';
+    return `${intro}${version}`;
+}
 
-    return `${intro}${summary}${branch}\n\nSpustit aktualizaci a restartovat aplikaci?`;
+function renderUpdateReleaseNotes(updateInfo) {
+    const notes = updateInfo?.releaseNotes;
+    const sections = notes?.sections || {};
+    const sectionDefinitions = [
+        { key: 'features', title: 'Nové funkce', icon: '✦' },
+        { key: 'improvements', title: 'Vylepšení', icon: '↗' },
+        { key: 'fixes', title: 'Opravy', icon: '✓' }
+    ];
+
+    const renderedSections = sectionDefinitions
+        .filter((section) => Array.isArray(sections[section.key]) && sections[section.key].length)
+        .map((section) => `
+            <section class="update-change-section update-change-${section.key}">
+                <h4><span>${section.icon}</span>${section.title}</h4>
+                <ul>
+                    ${sections[section.key].map((item) => `
+                        <li>
+                            <strong>${escapeHtml(item.title)}</strong>
+                            <span>${escapeHtml(item.description)}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </section>
+        `)
+        .join('');
+
+    if (renderedSections) {
+        return renderedSections;
+    }
+
+    return `
+        <section class="update-change-section update-change-fallback">
+            <h4><span>↻</span>Technická aktualizace</h4>
+            <p>${escapeHtml(updateInfo?.latestSummary || 'Podrobnosti k této aktualizaci nejsou k dispozici.')}</p>
+        </section>
+    `;
+}
+
+function openUpdateModal(updateInfo) {
+    if (!updateInfo) {
+        return;
+    }
+    pendingUpdateInfo = updateInfo;
+    elements.updateModalCurrentVersion.textContent = updateInfo.currentVersion || 'neuvedena';
+    elements.updateModalLatestVersion.textContent = updateInfo.latestVersion || 'novější sestavení';
+    elements.updateModalChannel.textContent = updateInfo.channel || updateInfo.branch || 'stable';
+    elements.updateModalSummary.textContent =
+        updateInfo.releaseNotes?.summary || 'Je dostupné novější sestavení aplikace.';
+    elements.updateModalChanges.innerHTML = renderUpdateReleaseNotes(updateInfo);
+    elements.updateModal.hidden = false;
+}
+
+function closeUpdateModal() {
+    elements.updateModal.hidden = true;
 }
 
 async function maybePromptForAutomaticUpdate(
     updateInfo,
     {
-        prompt = window.confirm,
-        startUpdate = startApplicationUpdate
+        showModal = openUpdateModal
     } = {}
 ) {
     if (!updateInfo?.updateAvailable || automaticUpdatePromptShown) {
@@ -424,12 +495,7 @@ async function maybePromptForAutomaticUpdate(
     }
 
     automaticUpdatePromptShown = true;
-    const confirmed = prompt(formatUpdatePromptMessage(updateInfo, { automatic: true }));
-    if (!confirmed) {
-        return false;
-    }
-
-    await startUpdate({ skipConfirmation: true });
+    showModal(updateInfo);
     return true;
 }
 
@@ -466,7 +532,10 @@ async function checkApplicationUpdates({ automatic = false, promptForUpdate = fa
             elements.updateStatus.textContent = `Aktualizace: dostupná (${updateInfo.branch})`;
             elements.updateCheckBtn.textContent = 'Spustit update';
             elements.updateCheckBtn.classList.add('update-available');
-            setStatusMessage(`Dostupná aktualizace: ${updateInfo.latestSummary}`, 8000);
+            setStatusMessage(
+                `Dostupná aktualizace: ${updateInfo.latestVersion || updateInfo.latestSummary}`,
+                8000
+            );
             if (promptForUpdate) {
                 await maybePromptForAutomaticUpdate(updateInfo);
             }
@@ -494,10 +563,12 @@ async function checkApplicationUpdates({ automatic = false, promptForUpdate = fa
 }
 
 async function startApplicationUpdate({ skipConfirmation = false } = {}) {
-    if (!skipConfirmation && !window.confirm(formatUpdatePromptMessage(pendingUpdateInfo))) {
+    if (!skipConfirmation) {
+        openUpdateModal(pendingUpdateInfo);
         return;
     }
 
+    closeUpdateModal();
     elements.updateCheckBtn.disabled = true;
     elements.updateStatus.textContent = 'Aktualizace: spouštím';
     setStatusMessage('Spouštím aktualizaci...');

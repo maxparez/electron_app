@@ -81,6 +81,126 @@ class UpdateManagerTests(unittest.TestCase):
 
         self.assertFalse(result["updateAvailable"])
 
+    def test_check_for_update_returns_remote_version_and_release_notes(self) -> None:
+        script = textwrap.dedent(
+            """
+            const assert = require('assert');
+            const { checkForUpdate } = require('./src/electron/update-manager');
+
+            const releaseNotes = {
+                version: '1.4.0',
+                date: '2026-06-21',
+                summary: 'Nové nástroje a přehlednější aktualizace.',
+                sections: {
+                    features: [{
+                        title: 'Rozdělení docházky',
+                        description: 'Sešit lze rozdělit podle listů.'
+                    }],
+                    improvements: [],
+                    fixes: []
+                }
+            };
+
+            const result = checkForUpdate({
+                repoRoot: 'C:/OPJAK/electron_app',
+                channelConfig: { branch: 'windows-install', channel: 'stable' },
+                execGit: (args) => {
+                    if (args[0] === 'rev-parse' && args[1] === 'HEAD') return 'local-sha\\n';
+                    if (args[0] === 'rev-parse') return 'remote-sha\\n';
+                    if (args[0] === 'show' && args[1] === 'HEAD:package.json') {
+                        return JSON.stringify({ version: '1.3.0' });
+                    }
+                    if (args[0] === 'show' && args[1] === 'origin/windows-install:release-notes.json') {
+                        return JSON.stringify(releaseNotes);
+                    }
+                    if (args[0] === 'log') return 'remote-sha 2026-06-21 [release] Sync\\n';
+                    return '';
+                },
+            });
+
+            assert.strictEqual(result.currentVersion, '1.3.0');
+            assert.strictEqual(result.latestVersion, '1.4.0');
+            assert.deepStrictEqual(result.releaseNotes, releaseNotes);
+            process.stdout.write(JSON.stringify(result));
+            """
+        )
+
+        result = run_node(script)
+
+        self.assertEqual("1.3.0", result["currentVersion"])
+        self.assertEqual("1.4.0", result["latestVersion"])
+        self.assertEqual(
+            "Rozdělení docházky",
+            result["releaseNotes"]["sections"]["features"][0]["title"],
+        )
+
+    def test_check_for_update_falls_back_when_release_notes_are_missing(self) -> None:
+        script = textwrap.dedent(
+            """
+            const assert = require('assert');
+            const { checkForUpdate } = require('./src/electron/update-manager');
+
+            const result = checkForUpdate({
+                repoRoot: 'C:/OPJAK/electron_app',
+                channelConfig: { branch: 'legacy-branch', channel: 'test' },
+                execGit: (args) => {
+                    if (args[0] === 'rev-parse' && args[1] === 'HEAD') return 'local-sha\\n';
+                    if (args[0] === 'rev-parse') return 'remote-sha\\n';
+                    if (args[0] === 'show') throw new Error('path does not exist');
+                    if (args[0] === 'log') return 'remote-sha 2026-06-21 [fix] Legacy update\\n';
+                    return '';
+                },
+            });
+
+            assert.strictEqual(result.releaseNotes, null);
+            assert.strictEqual(result.latestVersion, null);
+            assert.match(result.latestSummary, /Legacy update/);
+            process.stdout.write(JSON.stringify(result));
+            """
+        )
+
+        result = run_node(script)
+
+        self.assertIsNone(result["releaseNotes"])
+        self.assertIn("Legacy update", result["latestSummary"])
+
+    def test_check_for_update_does_not_reuse_notes_for_same_version(self) -> None:
+        script = textwrap.dedent(
+            """
+            const assert = require('assert');
+            const { checkForUpdate } = require('./src/electron/update-manager');
+
+            const result = checkForUpdate({
+                repoRoot: 'C:/OPJAK/electron_app',
+                channelConfig: { branch: 'windows-install-test', channel: 'test' },
+                execGit: (args) => {
+                    if (args[0] === 'rev-parse' && args[1] === 'HEAD') return 'local-sha\\n';
+                    if (args[0] === 'rev-parse') return 'remote-sha\\n';
+                    if (args[0] === 'show' && args[1] === 'HEAD:package.json') {
+                        return JSON.stringify({ version: '1.4.0' });
+                    }
+                    if (args[0] === 'show') {
+                        return JSON.stringify({
+                            version: '1.4.0',
+                            sections: { features: [{ title: 'Old', description: 'Old' }] }
+                        });
+                    }
+                    if (args[0] === 'log') return 'remote-sha 2026-06-22 [fix] Test build\\n';
+                    return '';
+                },
+            });
+
+            assert.strictEqual(result.releaseNotes, null);
+            assert.strictEqual(result.latestVersion, null);
+            process.stdout.write(JSON.stringify(result));
+            """
+        )
+
+        result = run_node(script)
+
+        self.assertIsNone(result["releaseNotes"])
+        self.assertIsNone(result["latestVersion"])
+
     def test_start_update_requires_windows_and_update_script(self) -> None:
         script = textwrap.dedent(
             """

@@ -1,0 +1,41 @@
+{
+  "version": "1.4.0",
+  "date": "2026-06-21",
+  "summary": "Verze 1.4.0: 2 nové funkce, 3 vylepšení a 2 opravy.",
+  "sections": {
+    "features": [
+      {
+        "title": "Rozdělení docházky podle listů",
+        "description": "Nový nástroj vyhledá sloučené sešity, rozdělí jednotlivé třídy do samostatných souborů a bezpečně zachová původní výstupy při kolizi názvů."
+      },
+      {
+        "title": "Aktualizace přímo z aplikace",
+        "description": "Aplikace automaticky kontroluje zvolený distribuční kanál a umožňuje spustit bezpečnou Windows aktualizaci bez ruční práce s Gitem."
+      }
+    ],
+    "improvements": [
+      {
+        "title": "Spolehlivější generování plakátů",
+        "description": "Generátor lépe přijímá registrační čísla, upozorňuje na přeskočené řádky a v reportu uvádí konkrétní nevygenerované plakáty."
+      },
+      {
+        "title": "Přehledné informace o nové verzi",
+        "description": "Nový aktualizační dialog ukazuje aktuální a cílovou verzi a srozumitelně seskupuje nové funkce, vylepšení a opravy."
+      },
+      {
+        "title": "Přesnější zpracování docházky a ZoR",
+        "description": "Byla doplněna kontrola šestnáctihodinových intervalů, počítání docházky po zdrojových souborech a podrobnější diagnostika chybných vstupů."
+      }
+    ],
+    "fixes": [
+      {
+        "title": "Odstranění duplicit v ESF exportu",
+        "description": "Export evidence účastníků sjednocuje opakované osoby a zabraňuje vytváření duplicitních záznamů."
+      },
+      {
+        "title": "Odolnější spuštění na Windows",
+        "description": "Instalace, aktualizace i start aplikace nyní kontrolují Electron runtime a v případě neúplné instalace jej automaticky opraví."
+      }
+    ]
+  }
+}

@@ -2,6 +2,37 @@
 
 Všechny významné změny v tomto projektu budou zdokumentovány v tomto souboru.
 
+## [1.4.0] - 2026-06-21
+
+### Nové funkce
+
+- **Rozdělení docházky podle listů**: Nový nástroj vyhledá sloučené sešity, rozdělí jednotlivé třídy do samostatných souborů a bezpečně zachová původní výstupy při kolizi názvů.
+- **Aktualizace přímo z aplikace**: Aplikace automaticky kontroluje zvolený distribuční kanál a umožňuje spustit bezpečnou Windows aktualizaci bez ruční práce s Gitem.
+
+### Vylepšení
+
+- **Spolehlivější generování plakátů**: Generátor lépe přijímá registrační čísla, upozorňuje na přeskočené řádky a v reportu uvádí konkrétní nevygenerované plakáty.
+- **Přehledné informace o nové verzi**: Nový aktualizační dialog ukazuje aktuální a cílovou verzi a srozumitelně seskupuje nové funkce, vylepšení a opravy.
+- **Přesnější zpracování docházky a ZoR**: Byla doplněna kontrola šestnáctihodinových intervalů, počítání docházky po zdrojových souborech a podrobnější diagnostika chybných vstupů.
+
+### Opravy
+
+- **Odstranění duplicit v ESF exportu**: Export evidence účastníků sjednocuje opakované osoby a zabraňuje vytváření duplicitních záznamů.
+- **Odolnější spuštění na Windows**: Instalace, aktualizace i start aplikace nyní kontrolují Electron runtime a v případě neúplné instalace jej automaticky opraví.
+
+## [1.3.0] - 2026-04-20
+
+### Nové funkce
+
+- **Vytěžování certifikátů DVPP**: Import certifikátů přes Gemini i textový výstup, editovatelná kontrolní tabulka a exporty do Excelu, TSV a ESF evidence.
+- **DVPP souhrnný report**: Vyhledání vhodných workbooků v projektové složce a vytvoření přehledného HTML reportu.
+- **Testovací aktualizační kanál**: Možnost ověřit připravované změny na samostatné distribuční větvi před jejich zveřejněním.
+
+### Vylepšení
+
+- **Bezpečné ukládání Gemini API klíče**: Klíč lze uchovat v zabezpečeném systémovém úložišti.
+- **Hromadné úpravy certifikátů**: Doplněny ovládací prvky pro společné nastavení šablony, formy DVPP a pohlaví.
+
 ## [1.2.0] - 2025-12-10
 
 ### ✨ Nové funkce

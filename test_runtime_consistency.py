@@ -119,6 +119,8 @@ class RuntimeConsistencyTests(unittest.TestCase):
         }
 
         self.assertIn("scripts/check_electron_runtime.js", include_paths)
+        self.assertIn("release-notes.json", include_paths)
+        self.assertIn("CHANGELOG.md", include_paths)
 
     def test_windows_entrypoint_scripts_use_crlf_line_endings(self) -> None:
         script_paths = [

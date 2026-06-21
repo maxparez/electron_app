@@ -476,7 +476,48 @@
             </div>
         </main>
     </div>
-    
+
+    <div id="update-modal" class="update-modal-overlay" hidden>
+        <section class="update-modal" role="dialog" aria-modal="true" aria-labelledby="update-modal-title">
+            <div class="update-modal-hero">
+                <div class="update-modal-mark" aria-hidden="true">↑</div>
+                <div>
+                    <div class="update-modal-kicker">Aktualizace aplikace</div>
+                    <h2 id="update-modal-title">Je dostupná nová verze</h2>
+                    <p id="update-modal-summary">Nová verze přináší další funkce a opravy.</p>
+                </div>
+            </div>
+
+            <div class="update-version-strip">
+                <div>
+                    <span class="update-version-label">Aktuální verze</span>
+                    <strong id="update-modal-current-version">—</strong>
+                </div>
+                <span class="update-version-arrow" aria-hidden="true">→</span>
+                <div>
+                    <span class="update-version-label">Nová verze</span>
+                    <strong id="update-modal-latest-version">—</strong>
+                </div>
+                <div class="update-channel-pill">
+                    Kanál: <span id="update-modal-channel">—</span>
+                </div>
+            </div>
+
+            <div class="update-modal-body">
+                <h3>Co je nového</h3>
+                <div id="update-modal-changes" class="update-change-sections"></div>
+            </div>
+
+            <div class="update-modal-footer">
+                <p>Aplikace spustí aktualizaci v novém okně a poté se restartuje.</p>
+                <div class="update-modal-actions">
+                    <button type="button" id="update-modal-later" class="btn btn-secondary">Později</button>
+                    <button type="button" id="update-modal-install" class="btn btn-success">Aktualizovat nyní</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
     <!-- Status Bar -->
     <div class="status-bar">
         <div class="status-bar-left">
