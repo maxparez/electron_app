@@ -1,0 +1,6 @@
+{
+  "type": "improvement",
+  "title": "Přehled o aplikaci a historii změn",
+  "description": "Nová sekce O aplikaci ukazuje aktuální verzi, aktualizační kanál, sestavení a čitelně formátované poznámky k vydání.",
+  "breaking": false
+}

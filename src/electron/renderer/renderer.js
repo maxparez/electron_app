@@ -140,6 +140,13 @@ const elements = {
     plakatForm: document.getElementById('plakat-form'),
     plakatResults: document.getElementById('plakat-results'),
 
+    // About
+    aboutCurrentVersion: document.getElementById('about-current-version'),
+    aboutChannel: document.getElementById('about-channel'),
+    aboutGit: document.getElementById('about-git'),
+    aboutReleaseSummary: document.getElementById('about-release-summary'),
+    aboutReleaseChanges: document.getElementById('about-release-changes'),
+
     // Updates
     updateStatus: document.getElementById('update-status'),
     updateCheckBtn: document.getElementById('update-check-btn'),
@@ -233,6 +240,7 @@ async function init() {
     } catch (error) {
         console.error('Failed to get version info:', error);
     }
+    await loadAboutInfo();
 
     if (elements.updateCheckBtn) {
         elements.updateCheckBtn.addEventListener('click', handleUpdateAction);
@@ -464,6 +472,55 @@ function renderUpdateReleaseNotes(updateInfo) {
             <p>${escapeHtml(updateInfo?.latestSummary || 'Podrobnosti k této aktualizaci nejsou k dispozici.')}</p>
         </section>
     `;
+}
+
+function renderAboutReleaseNotes(releaseNotes) {
+    if (!releaseNotes?.sections) {
+        return `
+            <section class="about-release-empty">
+                <h4>Poznámky k vydání nejsou k dispozici</h4>
+                <p>Tato instalace neobsahuje lokální soubor release-notes.json.</p>
+            </section>
+        `;
+    }
+
+    return renderUpdateReleaseNotes({ releaseNotes });
+}
+
+function formatAboutGitInfo(git) {
+    if (!git?.commit) {
+        return 'bez git metadat';
+    }
+
+    const branch = git.branch || 'neznámá větev';
+    const date = git.date ? ` · ${git.date}` : '';
+    return `${branch}:${git.commit}${date}`;
+}
+
+async function loadAboutInfo() {
+    if (!window.electronAPI?.getAboutInfo || !elements.aboutCurrentVersion) {
+        return;
+    }
+
+    try {
+        const info = await window.electronAPI.getAboutInfo();
+        const channel = info.channel?.channel || 'stable';
+        const branch = info.channel?.branch || 'windows-install';
+
+        elements.aboutCurrentVersion.textContent = `v${info.version || 'neuvedena'}`;
+        elements.aboutChannel.textContent = `${channel} · ${branch}`;
+        elements.aboutGit.textContent = formatAboutGitInfo(info.git);
+        elements.aboutReleaseSummary.textContent =
+            info.releaseNotes?.summary || 'Poznámky k vydání nejsou v této instalaci dostupné.';
+        elements.aboutReleaseChanges.innerHTML = renderAboutReleaseNotes(info.releaseNotes);
+    } catch (error) {
+        console.error('Failed to load about info:', error);
+        elements.aboutCurrentVersion.textContent = 'neuvedena';
+        elements.aboutChannel.textContent = 'neznámý';
+        elements.aboutGit.textContent = 'bez git metadat';
+        elements.aboutReleaseSummary.textContent = 'Informace o aplikaci se nepodařilo načíst.';
+        elements.aboutReleaseChanges.innerHTML = renderAboutReleaseNotes(null);
+    }
 }
 
 function openUpdateModal(updateInfo) {
