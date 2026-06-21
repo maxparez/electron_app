@@ -159,7 +159,12 @@ class AttendanceSplitter:
             output_dir.mkdir(parents=True, exist_ok=True)
 
             for sheet_name in inspection["attendance_sheets"]:
+                requested_filename = (
+                    f"{self.OUTPUT_FILENAME_PREFIX}_"
+                    f"{self.normalize_sheet_name(sheet_name)}.xlsx"
+                )
                 output_path = self.build_output_path(output_dir, sheet_name)
+                renamed_to_avoid_overwrite = output_path.name != requested_filename
                 try:
                     self._copy_sheet(source_path, sheet_name, output_path)
                     file_result["created_files"].append(
@@ -167,6 +172,8 @@ class AttendanceSplitter:
                             "sheet_name": sheet_name,
                             "path": str(output_path),
                             "filename": output_path.name,
+                            "requested_filename": requested_filename,
+                            "renamed_to_avoid_overwrite": renamed_to_avoid_overwrite,
                         }
                     )
                     created_count += 1

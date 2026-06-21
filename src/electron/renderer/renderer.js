@@ -745,6 +745,18 @@ function renderAttendanceSplitterResults(result) {
         `;
 
         (file.created_files || []).forEach((createdFile) => {
+            const renameNotice = createdFile.renamed_to_avoid_overwrite
+                ? `
+                    <div class="attendance-splitter-note">
+                        <span>🛡️</span>
+                        <span>
+                            Soubor <strong>${escapeHtml(createdFile.requested_filename)}</strong> již ve složce existoval.
+                            Nový výstup byl proto uložen jako <strong>${escapeHtml(createdFile.filename)}</strong>.
+                            Původní soubor zůstal beze změny.
+                        </span>
+                    </div>
+                `
+                : '';
             html += `
                 <div class="file-item">
                     <div class="file-info">
@@ -763,6 +775,7 @@ function renderAttendanceSplitterResults(result) {
                         >Otevřít soubor</button>
                     </div>
                 </div>
+                ${renameNotice}
             `;
         });
 

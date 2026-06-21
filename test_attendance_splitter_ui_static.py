@@ -53,6 +53,8 @@ class AttendanceSplitterUiStaticTests(unittest.TestCase):
         self.assertIn('class="output-section attendance-splitter-output"', renderer)
         self.assertIn('class="output-files-list"', renderer)
         self.assertIn('class="file-btn btn-view"', renderer)
+        self.assertIn("renamed_to_avoid_overwrite", renderer)
+        self.assertIn("Původní soubor zůstal beze změny", renderer)
         self.assertNotIn('<div class="file-processing-block">', renderer)
         self.assertNotIn('onclick="removeAttendanceSplitterFile(', renderer)
 

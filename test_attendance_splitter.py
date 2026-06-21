@@ -218,6 +218,36 @@ class AttendanceSplitterProcessingTests(unittest.TestCase):
                 result["data"]["files"][0]["errors"],
             )
 
+    def test_process_reports_when_existing_output_forces_renamed_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source_path = Path(temp_dir) / "combined.xlsx"
+            build_workbook(
+                source_path,
+                lambda workbook: (
+                    add_16h_attendance_sheet(workbook, "1. ročník"),
+                    add_16h_attendance_sheet(workbook, "2. ročník"),
+                ),
+            )
+            output_dir = Path(temp_dir) / "rozdelene_dochazky"
+            output_dir.mkdir()
+            (output_dir / "dochazka_inovace_1_rocnik.xlsx").touch()
+
+            def fake_copier(source, sheet_name, output_path):
+                Path(output_path).touch()
+
+            result = AttendanceSplitter(sheet_copier=fake_copier).process([source_path])
+
+            created_file = result["data"]["files"][0]["created_files"][0]
+            self.assertTrue(created_file["renamed_to_avoid_overwrite"])
+            self.assertEqual(
+                "dochazka_inovace_1_rocnik.xlsx",
+                created_file["requested_filename"],
+            )
+            self.assertEqual(
+                "dochazka_inovace_1_rocnik_2.xlsx",
+                created_file["filename"],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
