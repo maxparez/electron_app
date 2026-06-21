@@ -654,65 +654,143 @@ function checkAttendanceSplitterReady() {
 function renderAttendanceSplitterResults(result) {
     const data = result.data || {};
     const files = data.files || [];
+    const skippedCount = files.reduce(
+        (total, file) => total + (file.skipped_sheets || []).length,
+        0
+    );
+    const statusClass = result.status === 'partial'
+        ? 'warning'
+        : result.status === 'error'
+            ? 'error'
+            : '';
+    const statusIcon = result.status === 'success' ? '✓' : result.status === 'partial' ? '!' : '×';
     const heading = result.status === 'success'
-        ? 'Rozdělení dokončeno ✅'
+        ? 'Rozdělení dokončeno'
         : result.status === 'partial'
-            ? 'Rozdělení dokončeno s chybami ⚠️'
-            : 'Rozdělení selhalo ❌';
+            ? 'Rozdělení dokončeno s chybami'
+            : 'Rozdělení selhalo';
+    const statusDescription = result.status === 'success'
+        ? 'Všechny vhodné listy byly úspěšně uloženy do samostatných souborů.'
+        : result.status === 'partial'
+            ? 'Část listů byla uložena, některé položky vyžadují kontrolu.'
+            : 'Nebylo možné vytvořit žádný výstupní soubor.';
 
     let html = `
-        <h3>${heading}</h3>
-        <div class="result-summary">
-            <p><strong>Vytvořeno souborů:</strong> ${data.created_count || 0}</p>
-            <p><strong>Chyb:</strong> ${data.failed_count || 0}</p>
-            <p>Výstupy jsou uložené v podsložce <strong>rozdelene_dochazky</strong>.</p>
+        <div class="status-banner ${statusClass}">
+            <div class="status-content">
+                <div class="status-icon">${statusIcon}</div>
+                <div class="status-text">
+                    <h3>${heading}</h3>
+                    <p>${statusDescription}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-grid attendance-splitter-stats">
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-label">ZDROJOVÉ SOUBORY</div>
+                    <div class="stat-value">${files.length}</div>
+                    <div class="stat-subtext">Zpracované sloučené sešity</div>
+                </div>
+                <div class="stat-icon">📚</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-label">VYTVOŘENÉ DOCHÁZKY</div>
+                    <div class="stat-value">${data.created_count || 0}</div>
+                    <div class="stat-subtext">Samostatné Excel soubory</div>
+                </div>
+                <div class="stat-icon">📄</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-label">PŘESKOČENO / CHYBY</div>
+                    <div class="stat-value">${skippedCount} / ${data.failed_count || 0}</div>
+                    <div class="stat-subtext">Pomocné listy a neúspěšné položky</div>
+                </div>
+                <div class="stat-icon">🔎</div>
+            </div>
         </div>
     `;
 
     files.forEach((file) => {
         const sourceName = file.source.split(/[/\\]/).pop();
-        const statusIcon = file.status === 'success' ? '✅' : file.status === 'partial' ? '⚠️' : '❌';
+        const fileStatusIcon = file.status === 'success' ? '✅' : file.status === 'partial' ? '⚠️' : '❌';
+        const displayOutputPath = file.output_dir ? wslToWindowsPath(file.output_dir) : '';
+        const openFolderButton = displayOutputPath
+            ? `
+                <button
+                    class="copy-btn"
+                    type="button"
+                    data-action="open-folder"
+                    data-folder-path="${escapeHtml(displayOutputPath)}"
+                    title="Otevřít výstupní složku"
+                >📂</button>
+            `
+            : '';
+
         html += `
-            <div class="file-processing-block">
-                <div class="file-header">
-                    ${statusIcon} <strong>${escapeHtml(sourceName)}</strong>
-                    <button
-                        class="btn btn-secondary"
-                        type="button"
-                        data-action="open-folder"
-                        data-folder-path="${escapeHtml(wslToWindowsPath(file.output_dir))}"
-                    >Otevřít výstupní složku</button>
+            <div class="output-section attendance-splitter-output">
+                <div class="output-header">
+                    <h4><span class="folder-icon">${fileStatusIcon}</span>${escapeHtml(sourceName)}</h4>
+                    ${displayOutputPath ? `
+                        <div class="output-path-display">
+                            <span class="path-text">${escapeHtml(displayOutputPath)}</span>
+                            ${openFolderButton}
+                        </div>
+                    ` : ''}
                 </div>
-                <div class="processing-steps">
+                <div class="output-files-list">
         `;
 
         (file.created_files || []).forEach((createdFile) => {
             html += `
-                <div class="processing-step success">
-                    ✅ ${escapeHtml(createdFile.sheet_name)} →
-                    <button
-                        class="btn btn-secondary"
-                        type="button"
-                        data-action="open-file"
-                        data-file-path="${escapeHtml(wslToWindowsPath(createdFile.path))}"
-                    >${escapeHtml(createdFile.filename)}</button>
+                <div class="file-item">
+                    <div class="file-info">
+                        <span class="file-icon">📊</span>
+                        <div class="file-details">
+                            <span class="file-name">${escapeHtml(createdFile.filename)}</span>
+                            <span class="file-size">Zdrojový list: ${escapeHtml(createdFile.sheet_name)}</span>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button
+                            class="file-btn btn-view"
+                            type="button"
+                            data-action="open-file"
+                            data-file-path="${escapeHtml(wslToWindowsPath(createdFile.path))}"
+                        >Otevřít soubor</button>
+                    </div>
                 </div>
             `;
         });
 
         (file.skipped_sheets || []).forEach((skippedSheet) => {
             html += `
-                <div class="processing-step">
-                    Přeskočeno: ${escapeHtml(skippedSheet.sheet_name)} — ${escapeHtml(skippedSheet.reason)}
+                <div class="attendance-splitter-note">
+                    <span>ℹ️</span>
+                    <span><strong>Přeskočeno:</strong> ${escapeHtml(skippedSheet.sheet_name)} — ${escapeHtml(skippedSheet.reason)}</span>
                 </div>
             `;
         });
 
         (file.errors || []).forEach((error) => {
-            html += `<div class="processing-step error">❌ ${escapeHtml(error)}</div>`;
+            html += `
+                <div class="attendance-splitter-note error">
+                    <span>❌</span>
+                    <span>${escapeHtml(error)}</span>
+                </div>
+            `;
         });
 
-        html += '</div></div>';
+        html += `
+                </div>
+                <div class="output-footer">
+                    <p>Výstupy jsou uložené v podsložce rozdelene_dochazky.</p>
+                </div>
+            </div>
+        `;
     });
 
     elements.attendanceSplitterResults.innerHTML = html;

@@ -48,7 +48,23 @@ class AttendanceSplitterUiStaticTests(unittest.TestCase):
         self.assertIn("attendance-splitter/scan", renderer)
         self.assertIn("attendance-splitter/process", renderer)
         self.assertIn("rozdelene_dochazky", renderer)
+        self.assertIn('class="status-banner ${statusClass}"', renderer)
+        self.assertIn('class="stats-grid attendance-splitter-stats"', renderer)
+        self.assertIn('class="output-section attendance-splitter-output"', renderer)
+        self.assertIn('class="output-files-list"', renderer)
+        self.assertIn('class="file-btn btn-view"', renderer)
+        self.assertNotIn('<div class="file-processing-block">', renderer)
         self.assertNotIn('onclick="removeAttendanceSplitterFile(', renderer)
+
+    def test_styles_define_attendance_splitter_report_variants(self) -> None:
+        styles = (
+            REPO_ROOT / "src" / "electron" / "renderer" / "styles.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(".status-banner.warning", styles)
+        self.assertIn(".status-banner.error", styles)
+        self.assertIn(".attendance-splitter-stats", styles)
+        self.assertIn(".attendance-splitter-note", styles)
 
     def test_legacy_windows_sync_includes_attendance_splitter_module(self) -> None:
         sync_script = (REPO_ROOT / "scripts" / "sync-to-windows-install.sh").read_text(

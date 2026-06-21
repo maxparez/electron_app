@@ -1394,6 +1394,14 @@ h3.error {
     justify-content: space-between;
 }
 
+.status-banner.warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.status-banner.error {
+    background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
+}
+
 /* Warning Banner */
 .warning-banner {
     background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
@@ -1643,6 +1651,10 @@ h3.error {
     grid-template-columns: repeat(2, 1fr);
 }
 
+.attendance-splitter-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 /* Stat Cards */
 .stat-card {
     background: white;
@@ -1784,6 +1796,29 @@ h3.error {
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+
+.attendance-splitter-output .output-files-list {
+    background: #ffffff;
+}
+
+.attendance-splitter-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 12px;
+    border: 1px solid #dbe5ee;
+    border-radius: 6px;
+    background: #f7fafc;
+    color: #52606d;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.attendance-splitter-note.error {
+    border-color: #f1b8be;
+    background: #fff5f5;
+    color: #a61b29;
 }
 
 .file-item {
@@ -1966,6 +2001,10 @@ h3.error {
 /* Responsive Design */
 @media (max-width: 768px) {
     .primary-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .attendance-splitter-stats {
         grid-template-columns: 1fr;
     }
 
