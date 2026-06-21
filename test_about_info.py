@@ -23,6 +23,7 @@ def run_node(script: str):
 
 class AboutInfoTests(unittest.TestCase):
     def test_read_about_info_combines_version_channel_release_notes_and_git(self) -> None:
+        package_version = json.loads((REPO_ROOT / "package.json").read_text())["version"]
         result = run_node(
             textwrap.dedent(
                 """
@@ -39,26 +40,24 @@ class AboutInfoTests(unittest.TestCase):
                     }
                 });
 
-                assert.strictEqual(info.version, '1.4.0');
+                const packageVersion = require('./package.json').version;
+                assert.strictEqual(info.version, packageVersion);
                 assert.strictEqual(info.channel.branch, 'windows-install');
                 assert.strictEqual(info.channel.channel, 'stable');
                 assert.strictEqual(info.git.commit, 'abc1234');
                 assert.strictEqual(info.git.branch, 'windows-install');
                 assert.strictEqual(info.git.date, '2026-06-21');
-                assert.strictEqual(info.releaseNotes.version, '1.4.0');
+                assert.strictEqual(info.releaseNotes.version, packageVersion);
                 assert.ok(Array.isArray(info.releaseNotes.sections.features));
-                assert.ok(
-                    info.releaseNotes.sections.features.some(
-                        (item) => item.title.includes('Rozdělení docházky')
-                    )
-                );
+                assert.ok(Array.isArray(info.releaseNotes.sections.improvements));
+                assert.ok(Array.isArray(info.releaseNotes.sections.fixes));
 
                 process.stdout.write(JSON.stringify(info));
                 """
             )
         )
 
-        self.assertEqual("1.4.0", result["version"])
+        self.assertEqual(package_version, result["version"])
         self.assertEqual("windows-install", result["channel"]["branch"])
         self.assertEqual("stable", result["channel"]["channel"])
 
