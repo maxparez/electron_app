@@ -4,6 +4,7 @@
 const state = {
     currentTool: 'welcome',
     selectedFiles: {
+        'attendance-splitter': [],
         'inv-vzd': [],
         'zor-spec': [],
         'dvpp': [],
@@ -13,6 +14,7 @@ const state = {
         'inv-vzd': null
     },
     selectedFolder: {
+        'attendance-splitter': null,
         'inv-vzd': null,
         'dvpp': null,
         'dvpp-certificates': null
@@ -47,7 +49,15 @@ const elements = {
     navItems: document.querySelectorAll('.nav-item'),
     toolContents: document.querySelectorAll('.tool-content'),
     loadingOverlay: document.getElementById('loading-overlay'),
-    
+
+    // Attendance splitter elements
+    attendanceSplitterSelectBtn: document.getElementById('select-attendance-splitter-files'),
+    attendanceSplitterFolderBtn: document.getElementById('select-attendance-splitter-folder'),
+    attendanceSplitterRefreshBtn: document.getElementById('refresh-attendance-splitter-folder'),
+    attendanceSplitterFilesList: document.getElementById('attendance-splitter-files-list'),
+    attendanceSplitterProcessBtn: document.getElementById('process-attendance-splitter'),
+    attendanceSplitterResults: document.getElementById('attendance-splitter-results'),
+
     // Inv Vzd elements
     invSelectBtn: document.getElementById('select-inv-files'),
     invFolderBtn: document.getElementById('select-inv-folder'),
@@ -132,7 +142,15 @@ const elements = {
 
     // Updates
     updateStatus: document.getElementById('update-status'),
-    updateCheckBtn: document.getElementById('update-check-btn')
+    updateCheckBtn: document.getElementById('update-check-btn'),
+    updateModal: document.getElementById('update-modal'),
+    updateModalCurrentVersion: document.getElementById('update-modal-current-version'),
+    updateModalLatestVersion: document.getElementById('update-modal-latest-version'),
+    updateModalChannel: document.getElementById('update-modal-channel'),
+    updateModalSummary: document.getElementById('update-modal-summary'),
+    updateModalChanges: document.getElementById('update-modal-changes'),
+    updateModalLaterBtn: document.getElementById('update-modal-later'),
+    updateModalInstallBtn: document.getElementById('update-modal-install')
 };
 
 let pendingUpdateInfo = null;
@@ -219,6 +237,15 @@ async function init() {
     if (elements.updateCheckBtn) {
         elements.updateCheckBtn.addEventListener('click', handleUpdateAction);
     }
+    elements.updateModalLaterBtn.addEventListener('click', closeUpdateModal);
+    elements.updateModalInstallBtn.addEventListener('click', () => {
+        startApplicationUpdate({ skipConfirmation: true });
+    });
+    elements.updateModal.addEventListener('click', (event) => {
+        if (event.target === elements.updateModal) {
+            closeUpdateModal();
+        }
+    });
     
     // Setup navigation
     elements.navItems.forEach(item => {
@@ -238,6 +265,10 @@ async function init() {
     });
     
     // Setup file selection buttons
+    elements.attendanceSplitterSelectBtn.addEventListener('click', selectAttendanceSplitterFiles);
+    elements.attendanceSplitterFolderBtn.addEventListener('click', selectAttendanceSplitterFolder);
+    elements.attendanceSplitterRefreshBtn.addEventListener('click', refreshAttendanceSplitterFolder);
+    elements.attendanceSplitterProcessBtn.addEventListener('click', processAttendanceSplitter);
     elements.invSelectBtn.addEventListener('click', () => selectFiles('inv-vzd'));
     elements.invFolderBtn.addEventListener('click', selectInvFolder);
     elements.invRefreshBtn.addEventListener('click', refreshInvFolder);
@@ -291,6 +322,9 @@ async function init() {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && !elements.certPromptsModal.hidden) {
             closeCertificatePromptsModal();
+        }
+        if (event.key === 'Escape' && !elements.updateModal.hidden) {
+            closeUpdateModal();
         }
     });
     bindSharedResultInteractionHandlers();
@@ -381,7 +415,7 @@ function switchTool(toolId) {
 
 async function handleUpdateAction() {
     if (pendingUpdateInfo) {
-        await startApplicationUpdate();
+        openUpdateModal(pendingUpdateInfo);
         return;
     }
 
@@ -389,20 +423,71 @@ async function handleUpdateAction() {
 }
 
 function formatUpdatePromptMessage(updateInfo, { automatic = false } = {}) {
-    const intro = automatic
-        ? 'Je dostupná nová verze aplikace.'
-        : 'Aplikace spustí aktualizaci v novém okně a ukončí se.';
-    const summary = updateInfo?.latestSummary ? `\n\nNová verze: ${updateInfo.latestSummary}` : '';
-    const branch = updateInfo?.branch ? `\nKanál: ${updateInfo.branch}` : '';
+    const intro = automatic ? 'Je dostupná nová verze aplikace.' : 'Aktualizace aplikace';
+    const version = updateInfo?.latestVersion ? ` ${updateInfo.latestVersion}` : '';
+    return `${intro}${version}`;
+}
 
-    return `${intro}${summary}${branch}\n\nSpustit aktualizaci a restartovat aplikaci?`;
+function renderUpdateReleaseNotes(updateInfo) {
+    const notes = updateInfo?.releaseNotes;
+    const sections = notes?.sections || {};
+    const sectionDefinitions = [
+        { key: 'features', title: 'Nové funkce', icon: '✦' },
+        { key: 'improvements', title: 'Vylepšení', icon: '↗' },
+        { key: 'fixes', title: 'Opravy', icon: '✓' }
+    ];
+
+    const renderedSections = sectionDefinitions
+        .filter((section) => Array.isArray(sections[section.key]) && sections[section.key].length)
+        .map((section) => `
+            <section class="update-change-section update-change-${section.key}">
+                <h4><span>${section.icon}</span>${section.title}</h4>
+                <ul>
+                    ${sections[section.key].map((item) => `
+                        <li>
+                            <strong>${escapeHtml(item.title)}</strong>
+                            <span>${escapeHtml(item.description)}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </section>
+        `)
+        .join('');
+
+    if (renderedSections) {
+        return renderedSections;
+    }
+
+    return `
+        <section class="update-change-section update-change-fallback">
+            <h4><span>↻</span>Technická aktualizace</h4>
+            <p>${escapeHtml(updateInfo?.latestSummary || 'Podrobnosti k této aktualizaci nejsou k dispozici.')}</p>
+        </section>
+    `;
+}
+
+function openUpdateModal(updateInfo) {
+    if (!updateInfo) {
+        return;
+    }
+    pendingUpdateInfo = updateInfo;
+    elements.updateModalCurrentVersion.textContent = updateInfo.currentVersion || 'neuvedena';
+    elements.updateModalLatestVersion.textContent = updateInfo.latestVersion || 'novější sestavení';
+    elements.updateModalChannel.textContent = updateInfo.channel || updateInfo.branch || 'stable';
+    elements.updateModalSummary.textContent =
+        updateInfo.releaseNotes?.summary || 'Je dostupné novější sestavení aplikace.';
+    elements.updateModalChanges.innerHTML = renderUpdateReleaseNotes(updateInfo);
+    elements.updateModal.hidden = false;
+}
+
+function closeUpdateModal() {
+    elements.updateModal.hidden = true;
 }
 
 async function maybePromptForAutomaticUpdate(
     updateInfo,
     {
-        prompt = window.confirm,
-        startUpdate = startApplicationUpdate
+        showModal = openUpdateModal
     } = {}
 ) {
     if (!updateInfo?.updateAvailable || automaticUpdatePromptShown) {
@@ -410,12 +495,7 @@ async function maybePromptForAutomaticUpdate(
     }
 
     automaticUpdatePromptShown = true;
-    const confirmed = prompt(formatUpdatePromptMessage(updateInfo, { automatic: true }));
-    if (!confirmed) {
-        return false;
-    }
-
-    await startUpdate({ skipConfirmation: true });
+    showModal(updateInfo);
     return true;
 }
 
@@ -452,7 +532,10 @@ async function checkApplicationUpdates({ automatic = false, promptForUpdate = fa
             elements.updateStatus.textContent = `Aktualizace: dostupná (${updateInfo.branch})`;
             elements.updateCheckBtn.textContent = 'Spustit update';
             elements.updateCheckBtn.classList.add('update-available');
-            setStatusMessage(`Dostupná aktualizace: ${updateInfo.latestSummary}`, 8000);
+            setStatusMessage(
+                `Dostupná aktualizace: ${updateInfo.latestVersion || updateInfo.latestSummary}`,
+                8000
+            );
             if (promptForUpdate) {
                 await maybePromptForAutomaticUpdate(updateInfo);
             }
@@ -480,10 +563,12 @@ async function checkApplicationUpdates({ automatic = false, promptForUpdate = fa
 }
 
 async function startApplicationUpdate({ skipConfirmation = false } = {}) {
-    if (!skipConfirmation && !window.confirm(formatUpdatePromptMessage(pendingUpdateInfo))) {
+    if (!skipConfirmation) {
+        openUpdateModal(pendingUpdateInfo);
         return;
     }
 
+    closeUpdateModal();
     elements.updateCheckBtn.disabled = true;
     elements.updateStatus.textContent = 'Aktualizace: spouštím';
     setStatusMessage('Spouštím aktualizaci...');
@@ -510,6 +595,325 @@ async function checkBackendConnection() {
     } catch (error) {
         console.error('Backend connection error:', error);
         showMessage('Chyba připojení k backend serveru', 'error');
+    }
+}
+
+async function scanAttendanceSplitterSelection(payload) {
+    return window.electronAPI.apiCall('attendance-splitter/scan', 'POST', payload);
+}
+
+function applyAttendanceSplitterScanResult(result, selectedCount = null) {
+    const files = result.files || [];
+    state.selectedFiles['attendance-splitter'] = files;
+    updateAttendanceSplitterFilesList();
+    checkAttendanceSplitterReady();
+
+    if (files.length === 0) {
+        showMessage('Nebyly nalezeny žádné sešity vhodné k rozdělení.', 'warning');
+        return;
+    }
+
+    if (selectedCount !== null && selectedCount > files.length) {
+        showMessage(
+            `Nalezeno ${files.length} vhodných souborů z ${selectedCount} vybraných.`,
+            'warning'
+        );
+        return;
+    }
+
+    showMessage(`Nalezeno ${files.length} vhodných souborů.`, 'success');
+}
+
+async function selectAttendanceSplitterFiles() {
+    try {
+        const filePaths = await window.electronAPI.openFile({
+            multiple: true,
+            filters: [{ name: 'Excel Files', extensions: ['xlsx'] }]
+        });
+        if (!filePaths || filePaths.length === 0) {
+            return;
+        }
+
+        const result = await scanAttendanceSplitterSelection({ filePaths });
+        applyAttendanceSplitterScanResult(result, filePaths.length);
+    } catch (error) {
+        console.error('Attendance splitter file selection failed:', error);
+        showMessage(`Kontrola vybraných souborů selhala: ${error.message}`, 'error');
+    }
+}
+
+async function selectAttendanceSplitterFolder() {
+    try {
+        const folderPath = await window.electronAPI.selectFolder({
+            configKey: 'lastAttendanceSplitterFolder',
+            title: 'Vyberte složku se sloučenými docházkami'
+        });
+        if (!folderPath) {
+            return;
+        }
+
+        state.selectedFolder['attendance-splitter'] = folderPath;
+        const result = await scanAttendanceSplitterSelection({ folderPath });
+        applyAttendanceSplitterScanResult(result);
+        elements.attendanceSplitterRefreshBtn.style.display = 'inline-block';
+    } catch (error) {
+        console.error('Attendance splitter folder selection failed:', error);
+        showMessage(`Prohledání složky selhalo: ${error.message}`, 'error');
+    }
+}
+
+async function refreshAttendanceSplitterFolder() {
+    const folderPath = state.selectedFolder['attendance-splitter'];
+    if (!folderPath) {
+        showMessage('Není vybrána žádná složka k obnovení.', 'warning');
+        return;
+    }
+
+    try {
+        const result = await scanAttendanceSplitterSelection({ folderPath });
+        applyAttendanceSplitterScanResult(result);
+    } catch (error) {
+        console.error('Attendance splitter refresh failed:', error);
+        showMessage(`Obnovení seznamu selhalo: ${error.message}`, 'error');
+    }
+}
+
+function updateAttendanceSplitterFilesList() {
+    const files = state.selectedFiles['attendance-splitter'];
+    elements.attendanceSplitterFilesList.innerHTML = '';
+
+    if (files.length === 0) {
+        elements.attendanceSplitterFilesList.innerHTML =
+            '<p class="file-item">Žádné vhodné soubory nebyly vybrány</p>';
+        return;
+    }
+
+    files.forEach((file) => {
+        const fileDiv = document.createElement('div');
+        fileDiv.className = 'file-item';
+        const sheetNames = (file.attendance_sheets || []).map(escapeHtml).join(', ');
+        fileDiv.innerHTML = `
+            <div class="file-item-content">
+                <div class="file-path">
+                    <strong>Cesta:</strong> ${escapeHtml(wslToWindowsPath(file.path))}
+                    <br><strong>Listy k rozdělení:</strong> ${sheetNames}
+                </div>
+                <button
+                    class="btn-remove"
+                    type="button"
+                    data-action="remove-attendance-splitter-file"
+                    data-file-path="${escapeHtml(file.path)}"
+                >✕</button>
+            </div>
+        `;
+        elements.attendanceSplitterFilesList.appendChild(fileDiv);
+    });
+}
+
+function removeAttendanceSplitterFile(filePath) {
+    state.selectedFiles['attendance-splitter'] = state.selectedFiles['attendance-splitter']
+        .filter((file) => file.path !== filePath);
+    updateAttendanceSplitterFilesList();
+    checkAttendanceSplitterReady();
+}
+
+function checkAttendanceSplitterReady() {
+    elements.attendanceSplitterProcessBtn.disabled =
+        state.selectedFiles['attendance-splitter'].length === 0;
+}
+
+function renderAttendanceSplitterResults(result) {
+    const data = result.data || {};
+    const files = data.files || [];
+    const skippedCount = files.reduce(
+        (total, file) => total + (file.skipped_sheets || []).length,
+        0
+    );
+    const statusClass = result.status === 'partial'
+        ? 'warning'
+        : result.status === 'error'
+            ? 'error'
+            : '';
+    const statusIcon = result.status === 'success' ? '✓' : result.status === 'partial' ? '!' : '×';
+    const heading = result.status === 'success'
+        ? 'Rozdělení dokončeno'
+        : result.status === 'partial'
+            ? 'Rozdělení dokončeno s chybami'
+            : 'Rozdělení selhalo';
+    const statusDescription = result.status === 'success'
+        ? 'Všechny vhodné listy byly úspěšně uloženy do samostatných souborů.'
+        : result.status === 'partial'
+            ? 'Část listů byla uložena, některé položky vyžadují kontrolu.'
+            : 'Nebylo možné vytvořit žádný výstupní soubor.';
+
+    let html = `
+        <div class="status-banner ${statusClass}">
+            <div class="status-content">
+                <div class="status-icon">${statusIcon}</div>
+                <div class="status-text">
+                    <h3>${heading}</h3>
+                    <p>${statusDescription}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-grid attendance-splitter-stats">
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-label">ZDROJOVÉ SOUBORY</div>
+                    <div class="stat-value">${files.length}</div>
+                    <div class="stat-subtext">Zpracované sloučené sešity</div>
+                </div>
+                <div class="stat-icon">📚</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-label">VYTVOŘENÉ DOCHÁZKY</div>
+                    <div class="stat-value">${data.created_count || 0}</div>
+                    <div class="stat-subtext">Samostatné Excel soubory</div>
+                </div>
+                <div class="stat-icon">📄</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-label">PŘESKOČENO / CHYBY</div>
+                    <div class="stat-value">${skippedCount} / ${data.failed_count || 0}</div>
+                    <div class="stat-subtext">Pomocné listy a neúspěšné položky</div>
+                </div>
+                <div class="stat-icon">🔎</div>
+            </div>
+        </div>
+    `;
+
+    files.forEach((file) => {
+        const sourceName = file.source.split(/[/\\]/).pop();
+        const fileStatusIcon = file.status === 'success' ? '✅' : file.status === 'partial' ? '⚠️' : '❌';
+        const displayOutputPath = file.output_dir ? wslToWindowsPath(file.output_dir) : '';
+        const openFolderButton = displayOutputPath
+            ? `
+                <button
+                    class="copy-btn"
+                    type="button"
+                    data-action="open-folder"
+                    data-folder-path="${escapeHtml(displayOutputPath)}"
+                    title="Otevřít výstupní složku"
+                >📂</button>
+            `
+            : '';
+
+        html += `
+            <div class="output-section attendance-splitter-output">
+                <div class="output-header">
+                    <h4><span class="folder-icon">${fileStatusIcon}</span>${escapeHtml(sourceName)}</h4>
+                    ${displayOutputPath ? `
+                        <div class="output-path-display">
+                            <span class="path-text">${escapeHtml(displayOutputPath)}</span>
+                            ${openFolderButton}
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="output-files-list">
+        `;
+
+        (file.created_files || []).forEach((createdFile) => {
+            const renameNotice = createdFile.renamed_to_avoid_overwrite
+                ? `
+                    <div class="attendance-splitter-note">
+                        <span>🛡️</span>
+                        <span>
+                            Soubor <strong>${escapeHtml(createdFile.requested_filename)}</strong> již ve složce existoval.
+                            Nový výstup byl proto uložen jako <strong>${escapeHtml(createdFile.filename)}</strong>.
+                            Původní soubor zůstal beze změny.
+                        </span>
+                    </div>
+                `
+                : '';
+            html += `
+                <div class="file-item">
+                    <div class="file-info">
+                        <span class="file-icon">📊</span>
+                        <div class="file-details">
+                            <span class="file-name">${escapeHtml(createdFile.filename)}</span>
+                            <span class="file-size">Zdrojový list: ${escapeHtml(createdFile.sheet_name)}</span>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button
+                            class="file-btn btn-view"
+                            type="button"
+                            data-action="open-file"
+                            data-file-path="${escapeHtml(wslToWindowsPath(createdFile.path))}"
+                        >Otevřít soubor</button>
+                    </div>
+                </div>
+                ${renameNotice}
+            `;
+        });
+
+        (file.skipped_sheets || []).forEach((skippedSheet) => {
+            html += `
+                <div class="attendance-splitter-note">
+                    <span>ℹ️</span>
+                    <span><strong>Přeskočeno:</strong> ${escapeHtml(skippedSheet.sheet_name)} — ${escapeHtml(skippedSheet.reason)}</span>
+                </div>
+            `;
+        });
+
+        (file.errors || []).forEach((error) => {
+            html += `
+                <div class="attendance-splitter-note error">
+                    <span>❌</span>
+                    <span>${escapeHtml(error)}</span>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+                <div class="output-footer">
+                    <p>Výstupy jsou uložené v podsložce rozdelene_dochazky.</p>
+                </div>
+            </div>
+        `;
+    });
+
+    elements.attendanceSplitterResults.innerHTML = html;
+    elements.attendanceSplitterResults.classList.add('show');
+}
+
+async function processAttendanceSplitter() {
+    try {
+        showLoading(true, { text: 'Rozděluji docházky podle listů...' });
+        setStatusMessage('Rozděluji docházky podle listů...');
+        const result = await window.electronAPI.apiCall(
+            'attendance-splitter/process',
+            'POST',
+            {
+                filePaths: state.selectedFiles['attendance-splitter'].map((file) => file.path)
+            }
+        );
+        renderAttendanceSplitterResults(result);
+        setStatusMessage('Rozdělení docházky dokončeno.', 5000);
+    } catch (error) {
+        console.error('Attendance splitter processing failed:', error);
+        renderAttendanceSplitterResults({
+            status: 'error',
+            data: {
+                created_count: 0,
+                failed_count: state.selectedFiles['attendance-splitter'].length,
+                files: [{
+                    source: 'Rozdělení docházky',
+                    output_dir: '',
+                    status: 'error',
+                    created_files: [],
+                    skipped_sheets: [],
+                    errors: [error.message || 'Neznámá chyba']
+                }]
+            }
+        });
+        showMessage(`Rozdělení docházky selhalo: ${error.message}`, 'error');
+    } finally {
+        showLoading(false);
     }
 }
 
@@ -1664,6 +2068,9 @@ function bindSharedResultInteractionHandlers() {
         switch (action) {
             case 'remove-file':
                 removeFile(actionElement.dataset.tool, actionElement.dataset.filePath);
+                break;
+            case 'remove-attendance-splitter-file':
+                removeAttendanceSplitterFile(actionElement.dataset.filePath);
                 break;
             case 'open-file':
                 event.preventDefault();

@@ -32,15 +32,52 @@ function createGitExecutor(repoRoot) {
     });
 }
 
+function readGitJson(runGit, objectSpec) {
+    try {
+        const rawValue = runGit(['show', objectSpec]);
+        return JSON.parse(rawValue);
+    } catch (error) {
+        return null;
+    }
+}
+
+function compareVersions(leftVersion, rightVersion) {
+    const parseVersion = (version) => {
+        const match = /^(\d+)\.(\d+)\.(\d+)/.exec(version || '');
+        return match ? match.slice(1).map(Number) : null;
+    };
+    const left = parseVersion(leftVersion);
+    const right = parseVersion(rightVersion);
+    if (!left || !right) {
+        return 0;
+    }
+    for (let index = 0; index < 3; index += 1) {
+        if (left[index] !== right[index]) {
+            return left[index] > right[index] ? 1 : -1;
+        }
+    }
+    return 0;
+}
+
+function resolveActiveBranch(runGit, configuredBranch) {
+    try {
+        const checkedOutBranch = runGit(['branch', '--show-current']).trim();
+        return checkedOutBranch || configuredBranch;
+    } catch (error) {
+        return configuredBranch;
+    }
+}
+
 function checkForUpdate({ repoRoot, channelConfig = null, execGit = null } = {}) {
     if (!repoRoot) {
         throw new Error('Repozitář aplikace nebyl nalezen.');
     }
 
     const config = channelConfig || loadChannelConfig(repoRoot);
-    const branch = config.branch || DEFAULT_BRANCH;
-    const channel = config.channel || DEFAULT_CHANNEL;
     const runGit = execGit || createGitExecutor(repoRoot);
+    const configuredBranch = config.branch || DEFAULT_BRANCH;
+    const branch = resolveActiveBranch(runGit, configuredBranch);
+    const channel = branch !== configuredBranch ? 'test' : (config.channel || DEFAULT_CHANNEL);
     const remoteRef = `origin/${branch}`;
 
     runGit(['fetch', 'origin', branch]);
@@ -53,14 +90,32 @@ function checkForUpdate({ repoRoot, channelConfig = null, execGit = null } = {})
         '--date=short',
         remoteRef
     ]).trim();
+    const localPackage = readGitJson(runGit, 'HEAD:package.json');
+    const remotePackage = readGitJson(runGit, `${remoteRef}:package.json`);
+    const remoteReleaseNotes = readGitJson(runGit, `${remoteRef}:release-notes.json`);
+    const releaseNotes = (
+        remoteReleaseNotes?.version &&
+        remoteReleaseNotes?.sections &&
+        remoteReleaseNotes.version === remotePackage?.version &&
+        remoteReleaseNotes.version !== localPackage?.version
+    ) ? remoteReleaseNotes : null;
+    const downgradeBlocked = Boolean(
+        localPackage?.version &&
+        remotePackage?.version &&
+        compareVersions(remotePackage.version, localPackage.version) < 0
+    );
 
     return {
-        updateAvailable: localCommit !== remoteCommit,
+        updateAvailable: localCommit !== remoteCommit && !downgradeBlocked,
         branch,
         channel,
         localCommit,
         remoteCommit,
-        latestSummary
+        latestSummary,
+        currentVersion: localPackage?.version || null,
+        latestVersion: remotePackage?.version || releaseNotes?.version || null,
+        releaseNotes,
+        downgradeBlocked
     };
 }
 
@@ -122,6 +177,7 @@ function findRepoRoot(startPaths, fileExists = fs.existsSync) {
 
 module.exports = {
     checkForUpdate,
+    compareVersions,
     findRepoRoot,
     loadChannelConfig,
     startUpdate

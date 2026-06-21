@@ -19,6 +19,10 @@
                 <i class="icon">🏠</i>
                 <span>Domů</span>
             </div>
+            <div class="nav-item" data-tool="attendance-splitter">
+                <i class="icon">✂️</i>
+                <span>Rozdělení docházky</span>
+            </div>
             <div class="nav-item" data-tool="inv-vzd">
                 <i class="icon">📝</i>
                 <span>Inovativní vzdělávání</span>
@@ -48,6 +52,10 @@
                 <h1>Vítejte v aplikaci pro zpracování projektové dokumentace</h1>
                 <p>Vyberte nástroj z levého menu pro začátek práce.</p>
                 <div class="features">
+                    <div class="feature clickable-feature" data-tool="attendance-splitter">
+                        <h3>✂️ Rozdělení docházky</h3>
+                        <p>Rozdělení hromadného sešitu na samostatné docházky podle listů.</p>
+                    </div>
                     <div class="feature clickable-feature" data-tool="inv-vzd">
                         <h3>📝 Inovativní vzdělávání</h3>
                         <p>Zpracování docházky pro 16 a 32 hodinové inovativního vzdělávání.</p>
@@ -70,7 +78,34 @@
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Attendance Splitter Tool -->
+            <div id="attendance-splitter-tool" class="tool-content">
+                <h2>Rozdělení docházky podle listů</h2>
+                <div class="tool-description">
+                    <p>Každý vhodný list docházky uloží do samostatného Excel souboru.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Vyberte soubory docházky:</label>
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="select-attendance-splitter-files">Vybrat soubory</button>
+                        <button class="btn btn-secondary" id="select-attendance-splitter-folder">Vybrat složku</button>
+                        <button class="btn btn-secondary" id="refresh-attendance-splitter-folder" style="display: none;">
+                            🔄 Obnovit seznam
+                        </button>
+                        <span class="form-hint">💡 Z vybrané složky se načtou všechny docházky vhodné k rozdělení podle listů</span>
+                    </div>
+                    <div id="attendance-splitter-files-list" class="files-list"></div>
+                </div>
+
+                <div class="form-group">
+                    <button class="btn btn-success" id="process-attendance-splitter" disabled>Rozdělit</button>
+                </div>
+
+                <div id="attendance-splitter-results" class="results-container"></div>
+            </div>
+
             <!-- Inv Vzd Tool -->
             <div id="inv-vzd-tool" class="tool-content">
                 <h2>Inovativní vzdělávání - Kopírování docházky</h2>
@@ -441,7 +476,48 @@
             </div>
         </main>
     </div>
-    
+
+    <div id="update-modal" class="update-modal-overlay" hidden>
+        <section class="update-modal" role="dialog" aria-modal="true" aria-labelledby="update-modal-title">
+            <div class="update-modal-hero">
+                <div class="update-modal-mark" aria-hidden="true">↑</div>
+                <div>
+                    <div class="update-modal-kicker">Aktualizace aplikace</div>
+                    <h2 id="update-modal-title">Je dostupná nová verze</h2>
+                    <p id="update-modal-summary">Nová verze přináší další funkce a opravy.</p>
+                </div>
+            </div>
+
+            <div class="update-version-strip">
+                <div>
+                    <span class="update-version-label">Aktuální verze</span>
+                    <strong id="update-modal-current-version">—</strong>
+                </div>
+                <span class="update-version-arrow" aria-hidden="true">→</span>
+                <div>
+                    <span class="update-version-label">Nová verze</span>
+                    <strong id="update-modal-latest-version">—</strong>
+                </div>
+                <div class="update-channel-pill">
+                    Kanál: <span id="update-modal-channel">—</span>
+                </div>
+            </div>
+
+            <div class="update-modal-body">
+                <h3>Co je nového</h3>
+                <div id="update-modal-changes" class="update-change-sections"></div>
+            </div>
+
+            <div class="update-modal-footer">
+                <p>Aplikace spustí aktualizaci v novém okně a poté se restartuje.</p>
+                <div class="update-modal-actions">
+                    <button type="button" id="update-modal-later" class="btn btn-secondary">Později</button>
+                    <button type="button" id="update-modal-install" class="btn btn-success">Aktualizovat nyní</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
     <!-- Status Bar -->
     <div class="status-bar">
         <div class="status-bar-left">

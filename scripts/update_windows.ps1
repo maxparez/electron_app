@@ -186,7 +186,13 @@ $locationPushed = $false
 try {
     $initialConfig = Load-ChannelConfig -ResolvedRepoPath $resolvedRepoPath
     if (-not $Branch) {
-        $Branch = $initialConfig.branch
+        $checkedOutBranch = (& git -C $resolvedRepoPath branch --show-current).Trim()
+        if ($LASTEXITCODE -eq 0 -and $checkedOutBranch) {
+            $Branch = $checkedOutBranch
+        }
+        if (-not $Branch) {
+            $Branch = $initialConfig.branch
+        }
     }
     if (-not $Branch) {
         $Branch = "windows-install"
