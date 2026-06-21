@@ -16,6 +16,7 @@ from tools.zor_spec_dat_processor import ZorSpecDatProcessor
 from tools.plakat_generator import PlakatGenerator
 from tools.dvpp_report_processor import DvppReportProcessor
 from tools.dvpp_certificate_processor import DvppCertificateProcessor
+from tools.attendance_splitter import AttendanceSplitter
 from channel_config import load_channel_config, resolve_debug_mode
 
 # Initialize logging
@@ -300,6 +301,90 @@ def select_folder():
         return jsonify({
             "success": False,
             "message": f"Chyba při procházení složky: {str(e)}"
+        }), 500
+
+
+@app.route('/api/attendance-splitter/scan', methods=['POST'])
+def scan_attendance_splitter_files():
+    """Find workbooks containing at least two attendance sheets."""
+    try:
+        data = request.get_json(silent=True) or {}
+        folder_path = data.get("folderPath")
+        file_paths = data.get("filePaths") or []
+
+        if not folder_path and not file_paths:
+            return jsonify({
+                "success": False,
+                "message": "Nebyla vybrána složka ani soubory",
+                "files": [],
+            }), 400
+
+        processor = AttendanceSplitter(tool_logger)
+        if folder_path:
+            converted_folder = convert_path_if_needed(folder_path)
+            matches = processor.scan_folder(converted_folder)
+        else:
+            matches = []
+            for file_path in file_paths:
+                converted_path = convert_path_if_needed(file_path)
+                try:
+                    inspection = processor.inspect_workbook(converted_path)
+                except Exception as exc:
+                    server_logger.warning(
+                        "Attendance splitter cannot inspect %s: %s",
+                        converted_path,
+                        exc,
+                    )
+                    continue
+                if inspection["eligible"]:
+                    matches.append(inspection)
+
+        return jsonify({
+            "success": True,
+            "message": f"Nalezeno vhodných souborů: {len(matches)}",
+            "files": matches,
+        })
+    except Exception as exc:
+        server_logger.exception("Attendance splitter scan failed")
+        return jsonify({
+            "success": False,
+            "message": f"Chyba při hledání vhodných souborů: {exc}",
+            "files": [],
+        }), 500
+
+
+@app.route('/api/attendance-splitter/process', methods=['POST'])
+def process_attendance_splitter_files():
+    """Split selected attendance workbooks into one XLSX file per sheet."""
+    try:
+        data = request.get_json(silent=True) or {}
+        file_paths = data.get("filePaths") or []
+        if not file_paths:
+            return jsonify({
+                "success": False,
+                "status": "error",
+                "message": "Nebyly vybrány žádné soubory",
+                "data": {
+                    "files": [],
+                    "created_count": 0,
+                    "failed_count": 0,
+                },
+            }), 400
+
+        converted_paths = [convert_path_if_needed(path) for path in file_paths]
+        processor = AttendanceSplitter(tool_logger)
+        return jsonify(processor.process(converted_paths))
+    except Exception as exc:
+        server_logger.exception("Attendance splitter processing failed")
+        return jsonify({
+            "success": False,
+            "status": "error",
+            "message": f"Rozdělení docházky selhalo: {exc}",
+            "data": {
+                "files": [],
+                "created_count": 0,
+                "failed_count": len(file_paths) if "file_paths" in locals() else 0,
+            },
         }), 500
 
 @app.route('/api/process/inv-vzd', methods=['POST'])

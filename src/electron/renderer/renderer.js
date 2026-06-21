@@ -4,6 +4,7 @@
 const state = {
     currentTool: 'welcome',
     selectedFiles: {
+        'attendance-splitter': [],
         'inv-vzd': [],
         'zor-spec': [],
         'dvpp': [],
@@ -13,6 +14,7 @@ const state = {
         'inv-vzd': null
     },
     selectedFolder: {
+        'attendance-splitter': null,
         'inv-vzd': null,
         'dvpp': null,
         'dvpp-certificates': null
@@ -47,7 +49,15 @@ const elements = {
     navItems: document.querySelectorAll('.nav-item'),
     toolContents: document.querySelectorAll('.tool-content'),
     loadingOverlay: document.getElementById('loading-overlay'),
-    
+
+    // Attendance splitter elements
+    attendanceSplitterSelectBtn: document.getElementById('select-attendance-splitter-files'),
+    attendanceSplitterFolderBtn: document.getElementById('select-attendance-splitter-folder'),
+    attendanceSplitterRefreshBtn: document.getElementById('refresh-attendance-splitter-folder'),
+    attendanceSplitterFilesList: document.getElementById('attendance-splitter-files-list'),
+    attendanceSplitterProcessBtn: document.getElementById('process-attendance-splitter'),
+    attendanceSplitterResults: document.getElementById('attendance-splitter-results'),
+
     // Inv Vzd elements
     invSelectBtn: document.getElementById('select-inv-files'),
     invFolderBtn: document.getElementById('select-inv-folder'),
@@ -238,6 +248,10 @@ async function init() {
     });
     
     // Setup file selection buttons
+    elements.attendanceSplitterSelectBtn.addEventListener('click', selectAttendanceSplitterFiles);
+    elements.attendanceSplitterFolderBtn.addEventListener('click', selectAttendanceSplitterFolder);
+    elements.attendanceSplitterRefreshBtn.addEventListener('click', refreshAttendanceSplitterFolder);
+    elements.attendanceSplitterProcessBtn.addEventListener('click', processAttendanceSplitter);
     elements.invSelectBtn.addEventListener('click', () => selectFiles('inv-vzd'));
     elements.invFolderBtn.addEventListener('click', selectInvFolder);
     elements.invRefreshBtn.addEventListener('click', refreshInvFolder);
@@ -510,6 +524,234 @@ async function checkBackendConnection() {
     } catch (error) {
         console.error('Backend connection error:', error);
         showMessage('Chyba připojení k backend serveru', 'error');
+    }
+}
+
+async function scanAttendanceSplitterSelection(payload) {
+    return window.electronAPI.apiCall('attendance-splitter/scan', 'POST', payload);
+}
+
+function applyAttendanceSplitterScanResult(result, selectedCount = null) {
+    const files = result.files || [];
+    state.selectedFiles['attendance-splitter'] = files;
+    updateAttendanceSplitterFilesList();
+    checkAttendanceSplitterReady();
+
+    if (files.length === 0) {
+        showMessage('Nebyly nalezeny žádné sešity vhodné k rozdělení.', 'warning');
+        return;
+    }
+
+    if (selectedCount !== null && selectedCount > files.length) {
+        showMessage(
+            `Nalezeno ${files.length} vhodných souborů z ${selectedCount} vybraných.`,
+            'warning'
+        );
+        return;
+    }
+
+    showMessage(`Nalezeno ${files.length} vhodných souborů.`, 'success');
+}
+
+async function selectAttendanceSplitterFiles() {
+    try {
+        const filePaths = await window.electronAPI.openFile({
+            multiple: true,
+            filters: [{ name: 'Excel Files', extensions: ['xlsx'] }]
+        });
+        if (!filePaths || filePaths.length === 0) {
+            return;
+        }
+
+        const result = await scanAttendanceSplitterSelection({ filePaths });
+        applyAttendanceSplitterScanResult(result, filePaths.length);
+    } catch (error) {
+        console.error('Attendance splitter file selection failed:', error);
+        showMessage(`Kontrola vybraných souborů selhala: ${error.message}`, 'error');
+    }
+}
+
+async function selectAttendanceSplitterFolder() {
+    try {
+        const folderPath = await window.electronAPI.selectFolder({
+            configKey: 'lastAttendanceSplitterFolder',
+            title: 'Vyberte složku se sloučenými docházkami'
+        });
+        if (!folderPath) {
+            return;
+        }
+
+        state.selectedFolder['attendance-splitter'] = folderPath;
+        const result = await scanAttendanceSplitterSelection({ folderPath });
+        applyAttendanceSplitterScanResult(result);
+        elements.attendanceSplitterRefreshBtn.style.display = 'inline-block';
+    } catch (error) {
+        console.error('Attendance splitter folder selection failed:', error);
+        showMessage(`Prohledání složky selhalo: ${error.message}`, 'error');
+    }
+}
+
+async function refreshAttendanceSplitterFolder() {
+    const folderPath = state.selectedFolder['attendance-splitter'];
+    if (!folderPath) {
+        showMessage('Není vybrána žádná složka k obnovení.', 'warning');
+        return;
+    }
+
+    try {
+        const result = await scanAttendanceSplitterSelection({ folderPath });
+        applyAttendanceSplitterScanResult(result);
+    } catch (error) {
+        console.error('Attendance splitter refresh failed:', error);
+        showMessage(`Obnovení seznamu selhalo: ${error.message}`, 'error');
+    }
+}
+
+function updateAttendanceSplitterFilesList() {
+    const files = state.selectedFiles['attendance-splitter'];
+    elements.attendanceSplitterFilesList.innerHTML = '';
+
+    if (files.length === 0) {
+        elements.attendanceSplitterFilesList.innerHTML =
+            '<p class="file-item">Žádné vhodné soubory nebyly vybrány</p>';
+        return;
+    }
+
+    files.forEach((file) => {
+        const fileDiv = document.createElement('div');
+        fileDiv.className = 'file-item';
+        const sheetNames = (file.attendance_sheets || []).map(escapeHtml).join(', ');
+        fileDiv.innerHTML = `
+            <div class="file-item-content">
+                <div class="file-path">
+                    <strong>Cesta:</strong> ${escapeHtml(wslToWindowsPath(file.path))}
+                    <br><strong>Listy k rozdělení:</strong> ${sheetNames}
+                </div>
+                <button
+                    class="btn-remove"
+                    type="button"
+                    data-action="remove-attendance-splitter-file"
+                    data-file-path="${escapeHtml(file.path)}"
+                >✕</button>
+            </div>
+        `;
+        elements.attendanceSplitterFilesList.appendChild(fileDiv);
+    });
+}
+
+function removeAttendanceSplitterFile(filePath) {
+    state.selectedFiles['attendance-splitter'] = state.selectedFiles['attendance-splitter']
+        .filter((file) => file.path !== filePath);
+    updateAttendanceSplitterFilesList();
+    checkAttendanceSplitterReady();
+}
+
+function checkAttendanceSplitterReady() {
+    elements.attendanceSplitterProcessBtn.disabled =
+        state.selectedFiles['attendance-splitter'].length === 0;
+}
+
+function renderAttendanceSplitterResults(result) {
+    const data = result.data || {};
+    const files = data.files || [];
+    const heading = result.status === 'success'
+        ? 'Rozdělení dokončeno ✅'
+        : result.status === 'partial'
+            ? 'Rozdělení dokončeno s chybami ⚠️'
+            : 'Rozdělení selhalo ❌';
+
+    let html = `
+        <h3>${heading}</h3>
+        <div class="result-summary">
+            <p><strong>Vytvořeno souborů:</strong> ${data.created_count || 0}</p>
+            <p><strong>Chyb:</strong> ${data.failed_count || 0}</p>
+            <p>Výstupy jsou uložené v podsložce <strong>rozdelene_dochazky</strong>.</p>
+        </div>
+    `;
+
+    files.forEach((file) => {
+        const sourceName = file.source.split(/[/\\]/).pop();
+        const statusIcon = file.status === 'success' ? '✅' : file.status === 'partial' ? '⚠️' : '❌';
+        html += `
+            <div class="file-processing-block">
+                <div class="file-header">
+                    ${statusIcon} <strong>${escapeHtml(sourceName)}</strong>
+                    <button
+                        class="btn btn-secondary"
+                        type="button"
+                        data-action="open-folder"
+                        data-folder-path="${escapeHtml(wslToWindowsPath(file.output_dir))}"
+                    >Otevřít výstupní složku</button>
+                </div>
+                <div class="processing-steps">
+        `;
+
+        (file.created_files || []).forEach((createdFile) => {
+            html += `
+                <div class="processing-step success">
+                    ✅ ${escapeHtml(createdFile.sheet_name)} →
+                    <button
+                        class="btn btn-secondary"
+                        type="button"
+                        data-action="open-file"
+                        data-file-path="${escapeHtml(wslToWindowsPath(createdFile.path))}"
+                    >${escapeHtml(createdFile.filename)}</button>
+                </div>
+            `;
+        });
+
+        (file.skipped_sheets || []).forEach((skippedSheet) => {
+            html += `
+                <div class="processing-step">
+                    Přeskočeno: ${escapeHtml(skippedSheet.sheet_name)} — ${escapeHtml(skippedSheet.reason)}
+                </div>
+            `;
+        });
+
+        (file.errors || []).forEach((error) => {
+            html += `<div class="processing-step error">❌ ${escapeHtml(error)}</div>`;
+        });
+
+        html += '</div></div>';
+    });
+
+    elements.attendanceSplitterResults.innerHTML = html;
+    elements.attendanceSplitterResults.classList.add('show');
+}
+
+async function processAttendanceSplitter() {
+    try {
+        showLoading(true, { text: 'Rozděluji docházky podle listů...' });
+        setStatusMessage('Rozděluji docházky podle listů...');
+        const result = await window.electronAPI.apiCall(
+            'attendance-splitter/process',
+            'POST',
+            {
+                filePaths: state.selectedFiles['attendance-splitter'].map((file) => file.path)
+            }
+        );
+        renderAttendanceSplitterResults(result);
+        setStatusMessage('Rozdělení docházky dokončeno.', 5000);
+    } catch (error) {
+        console.error('Attendance splitter processing failed:', error);
+        renderAttendanceSplitterResults({
+            status: 'error',
+            data: {
+                created_count: 0,
+                failed_count: state.selectedFiles['attendance-splitter'].length,
+                files: [{
+                    source: 'Rozdělení docházky',
+                    output_dir: '',
+                    status: 'error',
+                    created_files: [],
+                    skipped_sheets: [],
+                    errors: [error.message || 'Neznámá chyba']
+                }]
+            }
+        });
+        showMessage(`Rozdělení docházky selhalo: ${error.message}`, 'error');
+    } finally {
+        showLoading(false);
     }
 }
 
@@ -1664,6 +1906,9 @@ function bindSharedResultInteractionHandlers() {
         switch (action) {
             case 'remove-file':
                 removeFile(actionElement.dataset.tool, actionElement.dataset.filePath);
+                break;
+            case 'remove-attendance-splitter-file':
+                removeAttendanceSplitterFile(actionElement.dataset.filePath);
                 break;
             case 'open-file':
                 event.preventDefault();

@@ -72,6 +72,7 @@ git show "$CURRENT_COMMIT:src/python/tools/base_tool.py" > src/python/tools/base
 git show "$CURRENT_COMMIT:src/python/tools/inv_vzd_processor.py" > src/python/tools/inv_vzd_processor.py
 git show "$CURRENT_COMMIT:src/python/tools/zor_spec_dat_processor.py" > src/python/tools/zor_spec_dat_processor.py
 git show "$CURRENT_COMMIT:src/python/tools/plakat_generator.py" > src/python/tools/plakat_generator.py
+git show "$CURRENT_COMMIT:src/python/tools/attendance_splitter.py" > src/python/tools/attendance_splitter.py
 
 # Templates (Excel files - binary)
 git show "$CURRENT_COMMIT:templates/template_16_hodin.xlsx" > templates/template_16_hodin.xlsx

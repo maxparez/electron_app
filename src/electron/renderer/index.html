@@ -19,6 +19,10 @@
                 <i class="icon">🏠</i>
                 <span>Domů</span>
             </div>
+            <div class="nav-item" data-tool="attendance-splitter">
+                <i class="icon">✂️</i>
+                <span>Rozdělení docházky</span>
+            </div>
             <div class="nav-item" data-tool="inv-vzd">
                 <i class="icon">📝</i>
                 <span>Inovativní vzdělávání</span>
@@ -48,6 +52,10 @@
                 <h1>Vítejte v aplikaci pro zpracování projektové dokumentace</h1>
                 <p>Vyberte nástroj z levého menu pro začátek práce.</p>
                 <div class="features">
+                    <div class="feature clickable-feature" data-tool="attendance-splitter">
+                        <h3>✂️ Rozdělení docházky</h3>
+                        <p>Rozdělení hromadného sešitu na samostatné docházky podle listů.</p>
+                    </div>
                     <div class="feature clickable-feature" data-tool="inv-vzd">
                         <h3>📝 Inovativní vzdělávání</h3>
                         <p>Zpracování docházky pro 16 a 32 hodinové inovativního vzdělávání.</p>
@@ -70,7 +78,34 @@
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Attendance Splitter Tool -->
+            <div id="attendance-splitter-tool" class="tool-content">
+                <h2>Rozdělení docházky podle listů</h2>
+                <div class="tool-description">
+                    <p>Každý vhodný list docházky uloží do samostatného Excel souboru.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Vyberte soubory docházky:</label>
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="select-attendance-splitter-files">Vybrat soubory</button>
+                        <button class="btn btn-secondary" id="select-attendance-splitter-folder">Vybrat složku</button>
+                        <button class="btn btn-secondary" id="refresh-attendance-splitter-folder" style="display: none;">
+                            🔄 Obnovit seznam
+                        </button>
+                        <span class="form-hint">💡 Z vybrané složky se načtou všechny docházky vhodné k rozdělení podle listů</span>
+                    </div>
+                    <div id="attendance-splitter-files-list" class="files-list"></div>
+                </div>
+
+                <div class="form-group">
+                    <button class="btn btn-success" id="process-attendance-splitter" disabled>Rozdělit</button>
+                </div>
+
+                <div id="attendance-splitter-results" class="results-container"></div>
+            </div>
+
             <!-- Inv Vzd Tool -->
             <div id="inv-vzd-tool" class="tool-content">
                 <h2>Inovativní vzdělávání - Kopírování docházky</h2>
