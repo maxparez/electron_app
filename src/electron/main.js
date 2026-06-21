@@ -5,6 +5,7 @@ const keytar = require('keytar');
 const config = require('./config');
 const BackendManager = require('./backend-manager');
 const updateManager = require('./update-manager');
+const { readAboutInfo } = require('./about-info');
 // const Updater = require('./updater');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -147,6 +148,12 @@ ipcMain.handle('app:getVersion', async () => {
         gitInfo,
         full: `v${version}${gitInfo}`
     };
+});
+
+ipcMain.handle('app:getAboutInfo', async () => {
+    return readAboutInfo({
+        repoRoot: getInstallRepoRoot()
+    });
 });
 
 // IPC handlers for communication with renderer

@@ -2170,6 +2170,192 @@ h3.error {
     color: #ffffff;
 }
 
+.about-panel {
+    max-width: 980px;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #f6f8f9;
+    color: #20303c;
+    box-shadow: 0 18px 55px rgba(20, 42, 58, 0.14);
+}
+
+.about-hero {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 30px 34px 26px;
+    color: #ffffff;
+    background:
+        radial-gradient(circle at 90% 0%, rgba(127, 215, 166, 0.3), transparent 34%),
+        linear-gradient(125deg, #173d36 0%, #206c50 58%, #2d8b62 100%);
+}
+
+.about-mark {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 58px;
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    border-radius: 17px;
+    background: rgba(255, 255, 255, 0.13);
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.about-kicker {
+    margin-bottom: 5px;
+    color: #b8ead0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+}
+
+.about-hero h2 {
+    margin: 0 0 8px;
+    color: #ffffff;
+    font-size: 26px;
+}
+
+.about-hero p {
+    max-width: 720px;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.86);
+    line-height: 1.5;
+}
+
+.about-version-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    padding: 17px 34px;
+    border-bottom: 1px solid #dce4e8;
+    background: #ffffff;
+}
+
+.about-version-strip > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.about-version-label {
+    color: #75838d;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+}
+
+.about-version-strip strong {
+    overflow: hidden;
+    color: #173d36;
+    font-size: 16px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.about-body {
+    display: grid;
+    gap: 16px;
+    padding: 26px 34px 32px;
+}
+
+.about-release-card,
+.about-standard-card {
+    overflow: hidden;
+    border: 1px solid #dce4e8;
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.about-release-heading,
+.about-standard-card h3 {
+    margin: 0;
+    padding: 16px 18px;
+    border-bottom: 1px solid #e5ecef;
+    background: #fbfcfd;
+}
+
+.about-release-heading h3,
+.about-standard-card h3 {
+    margin: 0 0 5px;
+    color: #20303c;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+}
+
+.about-release-heading p {
+    margin: 0;
+    color: #62727d;
+    line-height: 1.5;
+}
+
+.about-release-changes {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+}
+
+.about-release-changes .update-change-section {
+    box-shadow: none;
+}
+
+.about-release-empty {
+    padding: 16px;
+    border: 1px dashed #cbd8df;
+    border-radius: 10px;
+    background: #f7fafc;
+}
+
+.about-release-empty h4 {
+    margin: 0 0 6px;
+    color: #315064;
+    font-size: 13px;
+}
+
+.about-release-empty p {
+    margin: 0;
+    color: #62727d;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.about-standard-card dl {
+    display: grid;
+    gap: 0;
+    margin: 0;
+}
+
+.about-standard-card dl > div {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.45fr) 1fr;
+    gap: 16px;
+    padding: 13px 18px;
+    border-bottom: 1px solid #eef2f4;
+}
+
+.about-standard-card dl > div:last-child {
+    border-bottom: 0;
+}
+
+.about-standard-card dt {
+    color: #213846;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.about-standard-card dd {
+    margin: 0;
+    color: #62727d;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 .update-modal-overlay {
     position: fixed;
     inset: 0;
@@ -2379,6 +2565,20 @@ h3.error {
 }
 
 @media (max-width: 680px) {
+    .about-hero {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .about-version-strip {
+        grid-template-columns: 1fr;
+    }
+
+    .about-standard-card dl > div {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+
     .update-version-strip {
         grid-template-columns: 1fr auto 1fr;
     }

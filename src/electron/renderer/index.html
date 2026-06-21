@@ -43,6 +43,10 @@
                 <i class="icon">🖼️</i>
                 <span>Generátor plakátů</span>
             </div>
+            <div class="nav-item" data-tool="about">
+                <i class="icon">ℹ️</i>
+                <span>O aplikaci</span>
+            </div>
         </nav>
         
         <!-- Main Content Area -->
@@ -473,6 +477,64 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div id="about-tool" class="tool-content">
+                <section class="about-panel" aria-labelledby="about-title">
+                    <div class="about-hero">
+                        <div class="about-mark" aria-hidden="true">OP</div>
+                        <div>
+                            <div class="about-kicker">O aplikaci</div>
+                            <h2 id="about-title">Nástroje pro ŠI a ŠII OP JAK</h2>
+                            <p>Lokální desktopová aplikace pro zpracování projektové dokumentace, docházek, ZoR podkladů, DVPP reportů a povinné publicity.</p>
+                        </div>
+                    </div>
+
+                    <div class="about-version-strip">
+                        <div>
+                            <span class="about-version-label">Aktuální verze</span>
+                            <strong id="about-current-version">—</strong>
+                        </div>
+                        <div>
+                            <span class="about-version-label">Kanál aktualizací</span>
+                            <strong id="about-channel">—</strong>
+                        </div>
+                        <div>
+                            <span class="about-version-label">Sestavení</span>
+                            <strong id="about-git">—</strong>
+                        </div>
+                    </div>
+
+                    <div class="about-body">
+                        <section class="about-release-card">
+                            <div class="about-release-heading">
+                                <div>
+                                    <h3>Historie změn</h3>
+                                    <p id="about-release-summary">Načítám poznámky k vydání…</p>
+                                </div>
+                            </div>
+                            <div id="about-release-changes" class="about-release-changes"></div>
+                        </section>
+
+                        <section class="about-standard-card">
+                            <h3>Technické informace</h3>
+                            <dl>
+                                <div>
+                                    <dt>Backend</dt>
+                                    <dd>Lokální Flask server na portu 5000</dd>
+                                </div>
+                                <div>
+                                    <dt>Excel zpracování</dt>
+                                    <dd>Na Windows používá Microsoft Excel přes xlwings kvůli zachování formátování a vzorců.</dd>
+                                </div>
+                                <div>
+                                    <dt>Aktualizace</dt>
+                                    <dd>Stabilní instalace se aktualizuje z větve windows-install.</dd>
+                                </div>
+                            </dl>
+                        </section>
+                    </div>
+                </section>
             </div>
         </main>
     </div>

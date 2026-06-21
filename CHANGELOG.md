@@ -2,6 +2,12 @@
 
 Všechny významné změny v tomto projektu budou zdokumentovány v tomto souboru.
 
+## [1.4.1] - 2026-06-21
+
+### Vylepšení
+
+- **Přehled o aplikaci a historii změn**: Nová sekce O aplikaci ukazuje aktuální verzi, aktualizační kanál, sestavení a čitelně formátované poznámky k vydání.
+
 ## [1.4.0] - 2026-06-21
 
 ### Nové funkce
