@@ -1,15 +1,15 @@
 {
-  "version": "1.4.1",
-  "date": "2026-06-21",
-  "summary": "Verze 1.4.1: 1 vylepšení.",
+  "version": "1.4.2",
+  "date": "2026-06-22",
+  "summary": "Verze 1.4.2: 1 oprava.",
   "sections": {
     "features": [],
-    "improvements": [
+    "improvements": [],
+    "fixes": [
       {
-        "title": "Přehled o aplikaci a historii změn",
-        "description": "Nová sekce O aplikaci ukazuje aktuální verzi, aktualizační kanál, sestavení a čitelně formátované poznámky k vydání."
+        "title": "Správný typ ukládání a viditelné chyby",
+        "description": "Excel export certifikátů nyní v dialogu ukládání přednostně nabízí soubor XLSX a hlášky se zobrazují jako pevné upozornění viditelné i po posunutí stránky."
       }
-    ],
-    "fixes": []
+    ]
   }
 }

@@ -1,6 +1,0 @@
-{
-  "type": "fix",
-  "title": "Správný typ ukládání a viditelné chyby",
-  "description": "Excel export certifikátů nyní v dialogu ukládání přednostně nabízí soubor XLSX a hlášky se zobrazují jako pevné upozornění viditelné i po posunutí stránky.",
-  "breaking": false
-}
