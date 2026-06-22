@@ -1282,13 +1282,17 @@ class InvVzdProcessor(BaseTool):
             wb = load_workbook(source_file, read_only=True)
             sheet_name = "zdroj-dochazka" if "zdroj-dochazka" in wb.sheetnames else wb.sheetnames[0]
             sheet = wb[sheet_name]
-            
+            max_row = sheet.max_row
+            if max_row is None:
+                sheet.calculate_dimension(force=True)
+                max_row = sheet.max_row
+
             student_names = []
             empty_count = 0
-            
-            # Start from row 11 for 32h version, row 12 for 16h version  
+
+            # Start from row 11 for 32h version, row 12 for 16h version
             start_row = 11 if self.version == "16" else 10  # 0-indexed
-            for row in range(start_row, sheet.max_row):
+            for row in range(start_row, max_row):
                 cell_value = sheet.cell(row=row+1, column=2).value  # Column B
                 
                 if cell_value is None or str(cell_value).strip() == "":

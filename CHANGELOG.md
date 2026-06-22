@@ -2,6 +2,12 @@
 
 Všechny významné změny v tomto projektu budou zdokumentovány v tomto souboru.
 
+## [1.4.5] - 2026-06-22
+
+### Opravy
+
+- **Načítání docházek bez uloženého rozměru listu**: Docházky, jejichž XLSX list neobsahuje interní rozměr buněk, už při načítání jmen žáků neselžou.
+
 ## [1.4.4] - 2026-06-22
 
 ### Vylepšení
