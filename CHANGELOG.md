@@ -2,6 +2,12 @@
 
 Všechny významné změny v tomto projektu budou zdokumentovány v tomto souboru.
 
+## [1.4.4] - 2026-06-22
+
+### Vylepšení
+
+- **Delší historie verzí v O aplikaci**: Sekce O aplikaci nyní načítá z changelogu posledních pět vydání místo samotné aktuální verze.
+
 ## [1.4.3] - 2026-06-22
 
 ### Opravy

@@ -1,15 +1,15 @@
 {
-  "version": "1.4.3",
+  "version": "1.4.4",
   "date": "2026-06-22",
-  "summary": "Verze 1.4.3: 1 oprava.",
+  "summary": "Verze 1.4.4: 1 vylepšení.",
   "sections": {
     "features": [],
-    "improvements": [],
-    "fixes": [
+    "improvements": [
       {
-        "title": "Srozumitelnější chyby exportu certifikátů",
-        "description": "Chyby při vytváření ESF importu nyní zobrazují konkrétní důvod z backendu, například chybějící projektové číslo nebo datum."
+        "title": "Delší historie verzí v O aplikaci",
+        "description": "Sekce O aplikaci nyní načítá z changelogu posledních pět vydání místo samotné aktuální verze."
       }
-    ]
+    ],
+    "fixes": []
   }
 }

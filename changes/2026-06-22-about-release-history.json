@@ -1,6 +1,0 @@
-{
-  "type": "improvement",
-  "title": "Delší historie verzí v O aplikaci",
-  "description": "Sekce O aplikaci nyní načítá z changelogu posledních pět vydání místo samotné aktuální verze.",
-  "breaking": false
-}
