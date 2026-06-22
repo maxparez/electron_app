@@ -30,7 +30,7 @@ class Config {
         return {
             app: {
                 name: "Nástroje pro ŠI a ŠII OP JAK",
-                version: "1.4.2",
+                version: "1.4.3",
                 debug: this.isDev
             },
             python: {

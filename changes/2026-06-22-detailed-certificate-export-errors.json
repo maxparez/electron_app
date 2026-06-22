@@ -1,6 +1,0 @@
-{
-  "type": "fix",
-  "title": "Srozumitelnější chyby exportu certifikátů",
-  "description": "Chyby při vytváření ESF importu nyní zobrazují konkrétní důvod z backendu, například chybějící projektové číslo nebo datum.",
-  "breaking": false
-}
