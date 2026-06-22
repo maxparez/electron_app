@@ -487,6 +487,36 @@ function renderAboutReleaseNotes(releaseNotes) {
     return renderUpdateReleaseNotes({ releaseNotes });
 }
 
+function renderAboutReleaseHistory(releaseHistory, fallbackReleaseNotes = null) {
+    if (!Array.isArray(releaseHistory) || !releaseHistory.length) {
+        return renderAboutReleaseNotes(fallbackReleaseNotes);
+    }
+
+    return releaseHistory.map((release) => `
+        <article class="about-release-version">
+            <div class="about-release-version-header">
+                <strong>v${escapeHtml(release.version)}</strong>
+                <span>${escapeHtml(release.date || '')}</span>
+            </div>
+            <div class="about-release-version-sections">
+                ${(release.sections || []).map((section) => `
+                    <section class="about-release-version-section">
+                        <h4>${escapeHtml(section.title)}</h4>
+                        <ul>
+                            ${(section.items || []).map((item) => `
+                                <li>
+                                    <strong>${escapeHtml(item.title)}</strong>
+                                    ${item.description ? `<span>${escapeHtml(item.description)}</span>` : ''}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </section>
+                `).join('')}
+            </div>
+        </article>
+    `).join('');
+}
+
 function formatAboutGitInfo(git) {
     if (!git?.commit) {
         return 'bez git metadat';
@@ -511,8 +541,10 @@ async function loadAboutInfo() {
         elements.aboutChannel.textContent = `${channel} · ${branch}`;
         elements.aboutGit.textContent = formatAboutGitInfo(info.git);
         elements.aboutReleaseSummary.textContent =
-            info.releaseNotes?.summary || 'Poznámky k vydání nejsou v této instalaci dostupné.';
-        elements.aboutReleaseChanges.innerHTML = renderAboutReleaseNotes(info.releaseNotes);
+            info.releaseHistory?.length
+                ? `Zobrazeno posledních ${info.releaseHistory.length} vydání.`
+                : (info.releaseNotes?.summary || 'Poznámky k vydání nejsou v této instalaci dostupné.');
+        elements.aboutReleaseChanges.innerHTML = renderAboutReleaseHistory(info.releaseHistory, info.releaseNotes);
     } catch (error) {
         console.error('Failed to load about info:', error);
         elements.aboutCurrentVersion.textContent = 'neuvedena';

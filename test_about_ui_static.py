@@ -47,6 +47,9 @@ class AboutUiStaticTests(unittest.TestCase):
         self.assertIn("aboutCurrentVersion", renderer)
         self.assertIn("loadAboutInfo", renderer)
         self.assertIn("renderAboutReleaseNotes", renderer)
+        self.assertIn("renderAboutReleaseHistory", renderer)
+        self.assertIn("info.releaseHistory", renderer)
+        self.assertIn("about-release-version", renderer)
         self.assertIn("window.electronAPI.getAboutInfo", renderer)
         self.assertIn("about-release-empty", renderer)
 
@@ -58,6 +61,8 @@ class AboutUiStaticTests(unittest.TestCase):
         self.assertIn(".about-hero", styles)
         self.assertIn(".about-version-strip", styles)
         self.assertIn(".about-release-card", styles)
+        self.assertIn(".about-release-version", styles)
+        self.assertIn(".about-release-version-header", styles)
         self.assertIn(".about-release-empty", styles)
 
 

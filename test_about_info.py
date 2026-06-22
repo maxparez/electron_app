@@ -48,6 +48,10 @@ class AboutInfoTests(unittest.TestCase):
                 assert.strictEqual(info.git.branch, 'windows-install');
                 assert.strictEqual(info.git.date, '2026-06-21');
                 assert.strictEqual(info.releaseNotes.version, packageVersion);
+                assert.ok(Array.isArray(info.releaseHistory));
+                assert.ok(info.releaseHistory.length >= 5);
+                assert.strictEqual(info.releaseHistory[0].version, packageVersion);
+                assert.ok(info.releaseHistory[0].sections.length >= 1);
                 assert.ok(Array.isArray(info.releaseNotes.sections.features));
                 assert.ok(Array.isArray(info.releaseNotes.sections.improvements));
                 assert.ok(Array.isArray(info.releaseNotes.sections.fixes));
@@ -86,6 +90,7 @@ class AboutInfoTests(unittest.TestCase):
                 assert.strictEqual(info.version, '9.8.7');
                 assert.strictEqual(info.channel.branch, 'windows-install');
                 assert.strictEqual(info.releaseNotes, null);
+                assert.deepStrictEqual(info.releaseHistory, []);
                 assert.strictEqual(info.git.commit, null);
 
                 process.stdout.write(JSON.stringify(info));
@@ -95,6 +100,7 @@ class AboutInfoTests(unittest.TestCase):
 
         self.assertEqual("9.8.7", result["version"])
         self.assertIsNone(result["releaseNotes"])
+        self.assertEqual([], result["releaseHistory"])
         self.assertIsNone(result["git"]["commit"])
 
 

@@ -2331,6 +2331,79 @@ h3.error {
     box-shadow: none;
 }
 
+.about-release-version {
+    overflow: hidden;
+    border: 1px solid #dce4e8;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.about-release-version-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 14px;
+    border-bottom: 1px solid #e5ecef;
+    background: #f7faf9;
+}
+
+.about-release-version-header strong {
+    color: #173d36;
+    font-size: 15px;
+}
+
+.about-release-version-header span {
+    color: #75838d;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.about-release-version-sections {
+    display: grid;
+    gap: 10px;
+    padding: 12px 14px 14px;
+}
+
+.about-release-version-section h4 {
+    margin: 0 0 7px;
+    color: #315064;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.about-release-version-section ul {
+    display: grid;
+    gap: 7px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.about-release-version-section li {
+    display: grid;
+    grid-template-columns: minmax(145px, 0.55fr) 1fr;
+    gap: 12px;
+    padding: 7px 0;
+    border-top: 1px solid #eef2f4;
+}
+
+.about-release-version-section li:first-child {
+    border-top: 0;
+}
+
+.about-release-version-section li strong {
+    color: #213846;
+    font-size: 12px;
+}
+
+.about-release-version-section li span {
+    color: #62727d;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
 .about-release-empty {
     padding: 16px;
     border: 1px dashed #cbd8df;
