@@ -1,15 +1,15 @@
 {
-  "version": "1.4.4",
+  "version": "1.4.5",
   "date": "2026-06-22",
-  "summary": "Verze 1.4.4: 1 vylepšení.",
+  "summary": "Verze 1.4.5: 1 oprava.",
   "sections": {
     "features": [],
-    "improvements": [
+    "improvements": [],
+    "fixes": [
       {
-        "title": "Delší historie verzí v O aplikaci",
-        "description": "Sekce O aplikaci nyní načítá z changelogu posledních pět vydání místo samotné aktuální verze."
+        "title": "Načítání docházek bez uloženého rozměru listu",
+        "description": "Docházky, jejichž XLSX list neobsahuje interní rozměr buněk, už při načítání jmen žáků neselžou."
       }
-    ],
-    "fixes": []
+    ]
   }
 }

@@ -1,6 +1,0 @@
-{
-  "type": "fix",
-  "title": "Načítání docházek bez uloženého rozměru listu",
-  "description": "Docházky, jejichž XLSX list neobsahuje interní rozměr buněk, už při načítání jmen žáků neselžou.",
-  "breaking": false
-}
