@@ -3211,15 +3211,28 @@ function updateProgress(current, total) {
     progressText.textContent = `${current} / ${total}`;
 }
 
+function getMessageContainer() {
+    let container = document.querySelector('.message-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'message-container';
+        container.setAttribute('aria-live', 'polite');
+        container.setAttribute('aria-atomic', 'false');
+        document.body.appendChild(container);
+    }
+    return container;
+}
+
 // Show message
 function showMessage(text, type = 'info') {
     const message = document.createElement('div');
     message.className = `message ${type}`;
+    message.setAttribute('role', 'alert');
     message.textContent = text;
-    
-    const content = document.querySelector('.content');
-    content.insertBefore(message, content.firstChild);
-    
+
+    const container = getMessageContainer();
+    container.prepend(message);
+
     // Remove after 5 seconds
     setTimeout(() => {
         message.remove();

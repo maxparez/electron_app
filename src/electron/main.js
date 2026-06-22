@@ -6,6 +6,7 @@ const config = require('./config');
 const BackendManager = require('./backend-manager');
 const updateManager = require('./update-manager');
 const { readAboutInfo } = require('./about-info');
+const { buildSaveDialogOptions } = require('./save-dialog-options');
 // const Updater = require('./updater');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -183,14 +184,10 @@ ipcMain.handle('dialog:openFile', async (event, options = {}) => {
 });
 
 ipcMain.handle('dialog:saveFile', async (event, defaultName) => {
-    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-        defaultPath: defaultName,
-        filters: [
-            { name: 'PDF Files', extensions: ['pdf'] },
-            { name: 'Excel Files', extensions: ['xlsx'] },
-            { name: 'All Files', extensions: ['*'] }
-        ]
-    });
+    const { canceled, filePath } = await dialog.showSaveDialog(
+        mainWindow,
+        buildSaveDialogOptions(defaultName)
+    );
     
     if (!canceled) {
         return filePath;
