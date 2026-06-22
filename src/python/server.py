@@ -1344,10 +1344,12 @@ def export_dvpp_certificates_esf():
                 "info": result.get("info", []),
             })
 
+        error_messages = result.get("errors", [])
+        message = error_messages[0] if error_messages else "ESF import selhal"
         return jsonify({
             "status": "error",
-            "message": "ESF import selhal",
-            "errors": result.get("errors", []),
+            "message": message,
+            "errors": error_messages,
             "warnings": result.get("warnings", []),
             "info": result.get("info", []),
         }), 400

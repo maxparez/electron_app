@@ -2326,6 +2326,28 @@ async function saveCertificateExcel() {
     }
 }
 
+function formatApiErrorMessage(error) {
+    const baseMessage = error?.message || 'Neznámá chyba';
+    const details = Array.isArray(error?.errors)
+        ? error.errors.filter((item) => item)
+        : [];
+
+    if (!details.length) {
+        return baseMessage;
+    }
+
+    const primaryDetail = String(details[0]);
+    const extraDetails = details.length > 1
+        ? ` (+${details.length - 1} další detail${details.length > 2 ? 'y' : ''})`
+        : '';
+
+    if (!baseMessage || baseMessage === primaryDetail) {
+        return `${primaryDetail}${extraDetails}`;
+    }
+
+    return `${baseMessage}: ${primaryDetail}${extraDetails}`;
+}
+
 async function saveCertificateEsfImport() {
     try {
         const outputPath = await window.electronAPI.saveFile('osoby.csv');
@@ -2342,7 +2364,7 @@ async function saveCertificateEsfImport() {
         await openFile(result.data.output_path);
     } catch (error) {
         console.error('Save ESF import error:', error);
-        showMessage(`Chyba při vytváření ESF importu: ${error.message}`, 'error');
+        showMessage(`Chyba při vytváření ESF importu: ${formatApiErrorMessage(error)}`, 'error');
     }
 }
 

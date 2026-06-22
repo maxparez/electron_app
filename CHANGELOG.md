@@ -2,6 +2,12 @@
 
 Všechny významné změny v tomto projektu budou zdokumentovány v tomto souboru.
 
+## [1.4.3] - 2026-06-22
+
+### Opravy
+
+- **Srozumitelnější chyby exportu certifikátů**: Chyby při vytváření ESF importu nyní zobrazují konkrétní důvod z backendu, například chybějící projektové číslo nebo datum.
+
 ## [1.4.2] - 2026-06-22
 
 ### Opravy
