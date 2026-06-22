@@ -2,6 +2,12 @@
 
 Všechny významné změny v tomto projektu budou zdokumentovány v tomto souboru.
 
+## [1.4.2] - 2026-06-22
+
+### Opravy
+
+- **Správný typ ukládání a viditelné chyby**: Excel export certifikátů nyní v dialogu ukládání přednostně nabízí soubor XLSX a hlášky se zobrazují jako pevné upozornění viditelné i po posunutí stránky.
+
 ## [1.4.1] - 2026-06-21
 
 ### Vylepšení

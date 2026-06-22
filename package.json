@@ -1,6 +1,6 @@
 {
   "name": "nastroje-opjak",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Nástroje pro ŠI a ŠII OP JAK - zpracování projektové dokumentace",
   "main": "src/electron/main.js",
   "directories": {
