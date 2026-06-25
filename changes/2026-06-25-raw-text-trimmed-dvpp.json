@@ -1,0 +1,6 @@
+{
+  "type": "fix",
+  "title": "Načítání zkráceného raw textu DVPP",
+  "description": "Import raw textu z Google AI Studia už neselže, když poslední řádek po vložení neobsahuje volitelné koncové sloupce forma a téma.",
+  "breaking": false
+}

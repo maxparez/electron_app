@@ -555,7 +555,15 @@ class InvVzdProcessor(BaseTool):
                 
                 # Get teacher (row 10)
                 ucitel_cell = sheet.cell(row=10, column=col).value
-                ucitel = str(ucitel_cell) if ucitel_cell else 'Neurčeno'
+                if ucitel_cell:
+                    ucitel = str(ucitel_cell)
+                else:
+                    col_letter = get_column_letter(col)
+                    warning = f"Chybí jméno pedagogického pracovníka v buňce {col_letter}10"
+                    if datum:
+                        warning += f" pro aktivitu {datum}"
+                    self.add_warning(warning)
+                    ucitel = 'Neurčeno'
                 
                 # Only add data if datum is valid
                 if datum is not None:

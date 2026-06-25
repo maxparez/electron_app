@@ -62,6 +62,21 @@ class DvppCertificatesRawTextParserTests(unittest.TestCase):
         self.assertEqual("", batch.records[0].working_record.forma)
         self.assertEqual("Kurz AI ve vyuce", batch.records[0].working_record.course_name)
 
+    def test_parse_raw_text_batch_accepts_trimmed_legacy_row_without_optional_tail(self) -> None:
+        batch = parse_raw_text_batch(
+            "Hosová\tVladimíra\t20.12.1959\tNepřátelství, agrese a šikana ve třídě\t28.04.2026\t8"
+        )
+
+        self.assertEqual(1, len(batch.records))
+        self.assertEqual("Hosová", batch.records[0].working_record.surname)
+        self.assertEqual("Vladimíra", batch.records[0].working_record.name)
+        self.assertEqual("Nepřátelství, agrese a šikana ve třídě", batch.records[0].working_record.course_name)
+        self.assertEqual("28.04.2026", batch.records[0].working_record.completion_date)
+        self.assertEqual("8", batch.records[0].working_record.hours)
+        self.assertEqual("", batch.records[0].working_record.sablona)
+        self.assertEqual("", batch.records[0].working_record.forma)
+        self.assertEqual("", batch.records[0].working_record.topic)
+
     def test_parse_raw_text_batch_rejects_empty_input(self) -> None:
         with self.assertRaises(ValueError) as exc_info:
             parse_raw_text_batch(" \n\t\n")

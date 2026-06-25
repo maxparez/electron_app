@@ -6,6 +6,13 @@ from dvpp_certificates.normalization import normalize_certificate_fields
 
 LEGACY_COLUMN_COUNT = 8
 CURRENT_COLUMN_COUNT = 9
+TRIMMED_LEGACY_COLUMN_COUNT = 6
+
+
+def normalize_raw_text_columns(columns: list[str]) -> list[str]:
+    if len(columns) == TRIMMED_LEGACY_COLUMN_COUNT:
+        return columns + ["", ""]
+    return columns
 
 
 def parse_raw_text_batch(text: str) -> ExtractionBatch:
@@ -15,11 +22,11 @@ def parse_raw_text_batch(text: str) -> ExtractionBatch:
         if not line.strip():
             continue
 
-        columns = line.split("\t")
+        columns = normalize_raw_text_columns(line.split("\t"))
         if len(columns) not in (LEGACY_COLUMN_COUNT, CURRENT_COLUMN_COUNT):
             raise ValueError(
                 "Malformed raw text row at line "
-                f"{line_number}: wrong column count, expected 8 or 9 tab-separated columns"
+                f"{line_number}: wrong column count, expected 6, 8 or 9 tab-separated columns"
             )
 
         if len(columns) == CURRENT_COLUMN_COUNT:

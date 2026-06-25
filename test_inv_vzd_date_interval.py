@@ -63,6 +63,31 @@ def test_16h_date_interval_warnings():
         ), invalid_processor.warnings
 
 
+def test_16h_missing_teacher_adds_warning_without_stopping_processing():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        source_path = os.path.join(tmp_dir, "missing_teacher_16h.xlsx")
+        create_16h_source(source_path, [
+            datetime(2025, 8, 25),
+        ])
+
+        from openpyxl import load_workbook
+        workbook = load_workbook(source_path)
+        sheet = workbook["zdroj-dochazka"]
+        sheet["C10"] = None
+        workbook.save(source_path)
+        workbook.close()
+
+        processor = InvVzdProcessor("16")
+        data = processor._read_16_hour_data(source_path)
+
+        assert data is not None
+        assert data.iloc[0]["ucitel"] == "Neurčeno"
+        assert any(
+            "Chybí jméno pedagogického pracovníka v buňce C10" in warning
+            for warning in processor.warnings
+        ), processor.warnings
+
+
 def test_16h_date_interval_warning_is_in_file_result():
     with tempfile.TemporaryDirectory() as tmp_dir:
         source_path = os.path.join(tmp_dir, "invalid_16h.xlsx")
@@ -96,5 +121,6 @@ def test_16h_date_interval_warning_is_in_file_result():
 
 if __name__ == "__main__":
     test_16h_date_interval_warnings()
+    test_16h_missing_teacher_adds_warning_without_stopping_processing()
     test_16h_date_interval_warning_is_in_file_result()
     print("OK")
