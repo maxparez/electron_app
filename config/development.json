@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Nástroje pro ŠI a ŠII OP JAK (DEV)",
-    "version": "1.4.5-dev",
+    "version": "1.4.6-dev",
     "debug": true
   },
   "python": {

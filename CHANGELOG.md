@@ -2,6 +2,13 @@
 
 Všechny významné změny v tomto projektu budou zdokumentovány v tomto souboru.
 
+## [1.4.6] - 2026-06-25
+
+### Opravy
+
+- **Upozornění na chybějícího pedagoga v docházce**: Docházky inovativního vzdělávání se zpracují i bez vyplněného jména pedagogického pracovníka a report nově uvede konkrétní buňku s chybějícím údajem.
+- **Načítání zkráceného raw textu DVPP**: Import raw textu z Google AI Studia už neselže, když poslední řádek po vložení neobsahuje volitelné koncové sloupce forma a téma.
+
 ## [1.4.5] - 2026-06-22
 
 ### Opravy

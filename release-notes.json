@@ -1,14 +1,18 @@
 {
-  "version": "1.4.5",
-  "date": "2026-06-22",
-  "summary": "Verze 1.4.5: 1 oprava.",
+  "version": "1.4.6",
+  "date": "2026-06-25",
+  "summary": "Verze 1.4.6: 2 opravy.",
   "sections": {
     "features": [],
     "improvements": [],
     "fixes": [
       {
-        "title": "Načítání docházek bez uloženého rozměru listu",
-        "description": "Docházky, jejichž XLSX list neobsahuje interní rozměr buněk, už při načítání jmen žáků neselžou."
+        "title": "Upozornění na chybějícího pedagoga v docházce",
+        "description": "Docházky inovativního vzdělávání se zpracují i bez vyplněného jména pedagogického pracovníka a report nově uvede konkrétní buňku s chybějícím údajem."
+      },
+      {
+        "title": "Načítání zkráceného raw textu DVPP",
+        "description": "Import raw textu z Google AI Studia už neselže, když poslední řádek po vložení neobsahuje volitelné koncové sloupce forma a téma."
       }
     ]
   }

@@ -1,6 +1,0 @@
-{
-  "type": "fix",
-  "title": "Upozornění na chybějícího pedagoga v docházce",
-  "description": "Docházky inovativního vzdělávání se zpracují i bez vyplněného jména pedagogického pracovníka a report nově uvede konkrétní buňku s chybějícím údajem.",
-  "breaking": false
-}
